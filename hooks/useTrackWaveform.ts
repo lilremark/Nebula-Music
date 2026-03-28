@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
-const STORAGE_PREFIX = 'nebula_waveform_v1:';
-const WAVEFORM_SAMPLES = 72;
+const STORAGE_PREFIX = 'nebula_waveform_v2:';
+const WAVEFORM_SAMPLES = 180;
 
 interface WaveformCacheEntry {
-    version: 1;
+    version: 2;
     peaks: number[];
     updatedAt: number;
 }
@@ -29,7 +29,7 @@ const readCachedWaveform = (songId: string): number[] | null => {
         const raw = localStorage.getItem(`${STORAGE_PREFIX}${songId}`);
         if (!raw) return null;
         const parsed = JSON.parse(raw) as WaveformCacheEntry;
-        if (parsed?.version !== 1 || !Array.isArray(parsed.peaks)) return null;
+        if (parsed?.version !== 2 || !Array.isArray(parsed.peaks)) return null;
         const peaks = normalizePeaks(parsed.peaks);
         memoryCache.set(songId, peaks);
         return peaks;
@@ -43,7 +43,7 @@ const writeCachedWaveform = (songId: string, peaks: number[]) => {
     memoryCache.set(songId, normalized);
     try {
         const payload: WaveformCacheEntry = {
-            version: 1,
+            version: 2,
             peaks: normalized,
             updatedAt: Date.now(),
         };
@@ -142,4 +142,3 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
 
     return waveform;
 };
-
