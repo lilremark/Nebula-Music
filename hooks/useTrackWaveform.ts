@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
-const STORAGE_PREFIX = 'nebula_waveform_v2:';
+const STORAGE_PREFIX = 'nebula_waveform_v3:';
 const WAVEFORM_SAMPLES = 180;
 
 interface WaveformCacheEntry {
-    version: 2;
+    version: 3;
     peaks: number[];
     updatedAt: number;
 }
@@ -14,40 +14,51 @@ const inFlight = new Map<string, Promise<number[]>>();
 
 const FALLBACK_WAVEFORM = Array.from({ length: WAVEFORM_SAMPLES }, (_, i) => {
     const phase = i / WAVEFORM_SAMPLES;
-    const wave = Math.abs(Math.sin(phase * Math.PI * 5));
-    return 0.25 + wave * 0.6;
+    const wave = Math.abs(Math.sin(phase * Math.PI * 6));
+    return 0.12 + wave * 0.45;
 });
 
 const normalizePeaks = (peaks: number[]) => {
     if (!peaks.length) return [...FALLBACK_WAVEFORM];
     const maxPeak = Math.max(...peaks, 0.001);
-    return peaks.map((peak) => Math.min(1, Math.max(0.05, peak / maxPeak)));
+    return peaks.map((peak) => Math.min(1, Math.max(0.01, peak / maxPeak)));
 };
 
-const readCachedWaveform = (songId: string): number[] | null => {
+const getWaveformCacheKey = (songId: string, streamUrl: string) => {
     try {
-        const raw = localStorage.getItem(`${STORAGE_PREFIX}${songId}`);
+        const url = new URL(streamUrl);
+        const trackId = url.searchParams.get('id') || songId;
+        const format = url.searchParams.get('format') || 'source';
+        return `${url.origin}${url.pathname}|${trackId}|${format}`;
+    } catch {
+        return songId;
+    }
+};
+
+const readCachedWaveform = (cacheKey: string): number[] | null => {
+    try {
+        const raw = localStorage.getItem(`${STORAGE_PREFIX}${cacheKey}`);
         if (!raw) return null;
         const parsed = JSON.parse(raw) as WaveformCacheEntry;
-        if (parsed?.version !== 2 || !Array.isArray(parsed.peaks)) return null;
+        if (parsed?.version !== 3 || !Array.isArray(parsed.peaks)) return null;
         const peaks = normalizePeaks(parsed.peaks);
-        memoryCache.set(songId, peaks);
+        memoryCache.set(cacheKey, peaks);
         return peaks;
     } catch {
         return null;
     }
 };
 
-const writeCachedWaveform = (songId: string, peaks: number[]) => {
+const writeCachedWaveform = (cacheKey: string, peaks: number[]) => {
     const normalized = normalizePeaks(peaks);
-    memoryCache.set(songId, normalized);
+    memoryCache.set(cacheKey, normalized);
     try {
         const payload: WaveformCacheEntry = {
-            version: 2,
+            version: 3,
             peaks: normalized,
             updatedAt: Date.now(),
         };
-        localStorage.setItem(`${STORAGE_PREFIX}${songId}`, JSON.stringify(payload));
+        localStorage.setItem(`${STORAGE_PREFIX}${cacheKey}`, JSON.stringify(payload));
     } catch {
         // Ignore storage limits/errors and keep in-memory cache.
     }
@@ -55,29 +66,48 @@ const writeCachedWaveform = (songId: string, peaks: number[]) => {
 
 const buildWaveformFromBuffer = (audioBuffer: AudioBuffer) => {
     const blockSize = Math.max(1, Math.floor(audioBuffer.length / WAVEFORM_SAMPLES));
-    const peaks: number[] = [];
+    const channels: Float32Array[] = [];
+    const peaks: number[] = new Array(WAVEFORM_SAMPLES).fill(0);
+
+    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel += 1) {
+        channels.push(audioBuffer.getChannelData(channel));
+    }
 
     for (let i = 0; i < WAVEFORM_SAMPLES; i += 1) {
         const start = i * blockSize;
         const end = Math.min(audioBuffer.length, start + blockSize);
-        let peak = 0;
+        let squareSum = 0;
+        let samples = 0;
 
-        for (let channel = 0; channel < audioBuffer.numberOfChannels; channel += 1) {
-            const channelData = audioBuffer.getChannelData(channel);
-            for (let j = start; j < end; j += 1) {
-                const sample = Math.abs(channelData[j] || 0);
-                if (sample > peak) peak = sample;
+        for (let j = start; j < end; j += 1) {
+            let monoSample = 0;
+            for (let channel = 0; channel < channels.length; channel += 1) {
+                monoSample += channels[channel][j] || 0;
             }
+            monoSample /= Math.max(1, channels.length);
+            squareSum += monoSample * monoSample;
+            samples += 1;
         }
 
-        peaks.push(peak);
+        const rms = samples > 0 ? Math.sqrt(squareSum / samples) : 0;
+        peaks[i] = rms;
     }
 
-    return normalizePeaks(peaks);
+    // Light smoothing to avoid jagged "spike-only" look.
+    const smoothed = peaks.map((value, index) => {
+        const prev = peaks[index - 1] ?? value;
+        const next = peaks[index + 1] ?? value;
+        return (prev + value * 2 + next) / 4;
+    });
+
+    // Perceptual compression keeps quieter parts visible like SoundCloud bars.
+    const compressed = smoothed.map((value) => Math.pow(value, 0.55));
+
+    return normalizePeaks(compressed);
 };
 
 const decodeWaveform = async (streamUrl: string) => {
-    const response = await fetch(streamUrl);
+    const response = await fetch(streamUrl, { cache: 'force-cache' });
     if (!response.ok) throw new Error(`Waveform fetch failed: ${response.status}`);
 
     const audioData = await response.arrayBuffer();
@@ -92,26 +122,25 @@ const decodeWaveform = async (streamUrl: string) => {
         audioContext.close().catch(() => undefined);
     }
 };
+const getOrCreateWaveform = async (cacheKey: string, streamUrl: string) => {
+    if (memoryCache.has(cacheKey)) return memoryCache.get(cacheKey)!;
 
-const getOrCreateWaveform = async (songId: string, streamUrl: string) => {
-    if (memoryCache.has(songId)) return memoryCache.get(songId)!;
-
-    const cached = readCachedWaveform(songId);
+    const cached = readCachedWaveform(cacheKey);
     if (cached) return cached;
 
-    if (inFlight.has(songId)) return inFlight.get(songId)!;
+    if (inFlight.has(cacheKey)) return inFlight.get(cacheKey)!;
 
     const promise = decodeWaveform(streamUrl)
-        .catch(() => [...FALLBACK_WAVEFORM])
+        .catch(() => [...FALLBACK_WAVEFORM]) // only if decode genuinely fails
         .then((peaks) => {
-            writeCachedWaveform(songId, peaks);
+            writeCachedWaveform(cacheKey, peaks);
             return peaks;
         })
         .finally(() => {
-            inFlight.delete(songId);
+            inFlight.delete(cacheKey);
         });
 
-    inFlight.set(songId, promise);
+    inFlight.set(cacheKey, promise);
     return promise;
 };
 
@@ -128,10 +157,11 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
             };
         }
 
-        const cached = memoryCache.get(songId) || readCachedWaveform(songId);
+        const cacheKey = getWaveformCacheKey(songId, streamUrl);
+        const cached = memoryCache.get(cacheKey) || readCachedWaveform(cacheKey);
         if (cached) setWaveform(cached);
 
-        getOrCreateWaveform(songId, streamUrl).then((peaks) => {
+        getOrCreateWaveform(cacheKey, streamUrl).then((peaks) => {
             if (!cancelled) setWaveform(peaks);
         });
 
