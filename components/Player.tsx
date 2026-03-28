@@ -314,7 +314,10 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     accentColor={colors.primary}
                                     waveform={waveform}
                                     onScrub={handleScrub}
-                                    trackClassName="h-2 bg-neutral-300 dark:bg-white/10 rounded cursor-pointer"
+                                    trackClassName={`cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
+                                        ? 'h-28 bg-transparent rounded-none'
+                                        : 'h-2 bg-neutral-300 dark:bg-white/10 rounded'
+                                        }`}
                                 />
                                 <div className="flex justify-between mt-2 text-xs font-mono text-neutral-600 dark:text-white/60">
                                     <span>{formatTime(currentTime)}</span>
@@ -659,7 +662,10 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                         accentColor="#ffffff"
                                         waveform={waveform}
                                         onScrub={handleScrub}
-                                        trackClassName="flex-1 h-1.5 bg-white/10 rounded cursor-pointer"
+                                        trackClassName={`flex-1 cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
+                                            ? 'h-16 bg-transparent rounded-none'
+                                            : 'h-1.5 bg-white/10 rounded'
+                                            }`}
                                     />
                                     <span className="text-sm font-mono text-white/60 w-12">{formatTime(duration)}</span>
                                 </div>

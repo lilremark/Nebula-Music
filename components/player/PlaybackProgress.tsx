@@ -13,13 +13,14 @@ interface PlaybackProgressProps {
     showHandle?: boolean;
 }
 
-const FALLBACK_WAVEFORM = Array.from({ length: 72 }, (_, i) => {
-    const phase = i / 72;
+const FALLBACK_WAVEFORM = Array.from({ length: 180 }, (_, i) => {
+    const phase = i / 180;
     const value = Math.abs(Math.sin(phase * Math.PI * 4));
     return 0.2 + value * 0.7;
 });
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const getWaveHeight = (peak: number) => `${Math.max(10, Math.min(98, peak * 100))}%`;
 
 export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     progress,
@@ -38,30 +39,34 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
         <div className={`relative overflow-hidden ${trackClassName}`}>
             {mode === 'waveform' ? (
                 <>
-                    <div className="absolute inset-0 px-[1px] py-[1px]">
-                        <div className="h-full w-full flex items-end gap-[1px]">
+                    <div className="absolute inset-0">
+                        <div className="h-full w-full flex items-center gap-0">
                             {peaks.map((peak, idx) => (
                                 <span
                                     key={`inactive-${idx}`}
-                                    className="flex-1 min-w-[1px] rounded-[1px] bg-neutral-400/45 dark:bg-white/20"
-                                    style={{ height: `${Math.max(12, peak * 100)}%` }}
+                                    className="flex-1 min-w-[1px] bg-neutral-500/50 dark:bg-white/25 self-center"
+                                    style={{ height: getWaveHeight(peak) }}
                                 />
                             ))}
                         </div>
                     </div>
                     <div className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${safeProgress}%` }}>
-                        <div className="absolute inset-0 px-[1px] py-[1px]">
-                            <div className="h-full w-full flex items-end gap-[1px]">
+                        <div className="absolute inset-0">
+                            <div className="h-full w-full flex items-center gap-0">
                                 {peaks.map((peak, idx) => (
                                     <span
                                         key={`active-${idx}`}
-                                        className="flex-1 min-w-[1px] rounded-[1px]"
-                                        style={{ height: `${Math.max(12, peak * 100)}%`, backgroundColor: accentColor }}
+                                        className="flex-1 min-w-[1px] self-center"
+                                        style={{ height: getWaveHeight(peak), backgroundColor: accentColor }}
                                     />
                                 ))}
                             </div>
                         </div>
                     </div>
+                    <div
+                        className="absolute top-0 bottom-0 w-[2px] bg-white/80 dark:bg-white/70 pointer-events-none"
+                        style={{ left: `calc(${safeProgress}% - 1px)` }}
+                    />
                 </>
             ) : (
                 <div
@@ -91,4 +96,3 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
         </div>
     );
 };
-

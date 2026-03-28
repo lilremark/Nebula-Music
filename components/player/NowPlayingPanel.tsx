@@ -168,7 +168,10 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         waveform={waveform}
                         onScrub={handleScrub}
                         showHandle={progressMode === 'bar'}
-                        trackClassName="h-1.5 bg-neutral-300 dark:bg-white/10 rounded-full cursor-pointer"
+                        trackClassName={`cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
+                            ? 'h-24 bg-transparent rounded-none'
+                            : 'h-1.5 bg-neutral-300 dark:bg-white/10 rounded-full'
+                            }`}
                     />
                     <div className="flex justify-between mt-1.5 text-[10px] text-neutral-600 dark:text-white/60 font-mono tabular-nums">
                         <span>{formatTime(currentTime)}</span>

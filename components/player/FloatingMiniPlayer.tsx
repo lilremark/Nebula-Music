@@ -87,7 +87,10 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                     accentColor={colors.primary}
                     waveform={waveform}
                     onScrub={handleScrub}
-                    trackClassName={`group transition-all duration-200 ${isHoverProgress ? 'h-3' : 'h-1.5'} bg-neutral-300 dark:bg-white/10`}
+                    trackClassName={`${progressMode === 'waveform'
+                        ? 'h-16 bg-transparent transition-all duration-300'
+                        : `group transition-all duration-200 ${isHoverProgress ? 'h-3' : 'h-1.5'} bg-neutral-300 dark:bg-white/10`
+                        }`}
                 />
             </div>
 

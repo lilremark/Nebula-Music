@@ -45,7 +45,9 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
                 accentColor={colors.primary}
                 waveform={waveform}
                 scrubbable={false}
-                trackClassName="h-0.5 bg-neutral-300 dark:bg-white/10"
+                trackClassName={settings.progressVisualization === 'waveform'
+                    ? 'h-12 bg-transparent'
+                    : 'h-0.5 bg-neutral-300 dark:bg-white/10'}
             />
 
             <div
