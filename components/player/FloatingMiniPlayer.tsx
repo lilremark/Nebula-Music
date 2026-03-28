@@ -75,8 +75,8 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
             className="flex flex-col rounded-xl bg-neutral-100 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-300 dark:border-white/10 shadow-2xl animate-scale-in overflow-hidden"
             style={{
                 boxShadow: `0 25px 60px -15px rgba(0,0,0,0.6), 0 0 0 1px ${colors.primary}15`,
-                width: '680px',
-                maxWidth: 'calc(100vw - 48px)'
+                width: '760px',
+                maxWidth: 'calc(100vw - 24px)'
             }}
         >
             {/* Progress bar at top - clickable with hover expand */}
@@ -95,7 +95,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
             </div>
 
             {/* Main content */}
-            <div className="flex items-center gap-4 px-4 py-3">
+            <div className="flex items-center gap-3 px-3 pr-5 py-3">
                 {/* Album Art */}
                 <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-lg cursor-pointer" onClick={onExpand}>
                     <img
@@ -106,7 +106,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 </div>
 
                 {/* Song Info */}
-                <div className="min-w-0 w-36 shrink-0">
+                <div className="min-w-0 w-32 shrink-0">
                     <p className="font-semibold text-neutral-900 dark:text-white text-sm truncate">{currentSong.title}</p>
                     <p className="text-xs text-neutral-700 dark:text-white/50 truncate">{currentSong.artist}</p>
                 </div>

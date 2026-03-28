@@ -16,7 +16,7 @@ interface PlaybackProgressProps {
 const FALLBACK_WAVEFORM = Array.from({ length: 180 }, (_, i) => {
     const phase = i / 180;
     const value = Math.abs(Math.sin(phase * Math.PI * 4));
-    return 0.2 + value * 0.7;
+    return 0.1 + value * 0.5;
 });
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -40,11 +40,11 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
             {mode === 'waveform' ? (
                 <>
                     <div className="absolute inset-0">
-                        <div className="h-full w-full flex items-center gap-0">
+                        <div className="h-full w-full flex items-end gap-[1px]">
                             {peaks.map((peak, idx) => (
                                 <span
                                     key={`inactive-${idx}`}
-                                    className="flex-1 min-w-[1px] bg-neutral-500/50 dark:bg-white/25 self-center"
+                                    className="flex-1 min-w-[1px] bg-neutral-500/55 dark:bg-white/25"
                                     style={{ height: getWaveHeight(peak) }}
                                 />
                             ))}
@@ -52,11 +52,11 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
                     </div>
                     <div className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${safeProgress}%` }}>
                         <div className="absolute inset-0">
-                            <div className="h-full w-full flex items-center gap-0">
+                            <div className="h-full w-full flex items-end gap-[1px]">
                                 {peaks.map((peak, idx) => (
                                     <span
                                         key={`active-${idx}`}
-                                        className="flex-1 min-w-[1px] self-center"
+                                        className="flex-1 min-w-[1px]"
                                         style={{ height: getWaveHeight(peak), backgroundColor: accentColor }}
                                     />
                                 ))}
