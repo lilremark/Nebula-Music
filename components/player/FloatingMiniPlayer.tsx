@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Maximize2, PanelRight, Heart, Volume2, Volume1, VolumeX } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Maximize2, PanelRight, Heart, Volume2, Volume1, VolumeX, AudioWaveform } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
+import { useTrackWaveform } from '../../hooks/useTrackWaveform';
+import { PlaybackProgress } from './PlaybackProgress';
 
 interface FloatingMiniPlayerProps {
     onExpand: () => void;
@@ -10,7 +12,7 @@ interface FloatingMiniPlayerProps {
 
 export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand, onRestoreSidebar }) => {
     const {
-        queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, service, audioRef, toggleLike, volume, setVolume
+        queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, service, audioRef, toggleLike, volume, setVolume, settings, updateSettings
     } = useStore();
 
     const [currentTime, setCurrentTime] = useState(0);
@@ -41,21 +43,12 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
     if (!currentSong) return null;
 
     const coverArt = service.getCoverArtUrl(currentSong.id, 200);
+    const streamUrl = service.getStreamUrl(currentSong.id, currentSong.suffix);
+    const waveform = useTrackWaveform(currentSong.id, streamUrl);
+    const progressMode = settings.progressVisualization;
     const { colors } = useAdaptiveColors(coverArt);
     const progress = duration ? (currentTime / duration) * 100 : 0;
     const displayProgress = visualProgress || progress;
-
-    const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const percentage = (clickX / rect.width) * 100;
-        const newTime = (percentage / 100) * duration;
-        const audio = audioRef.current;
-        if (audio) {
-            audio.currentTime = newTime;
-            setCurrentTime(newTime);
-        }
-    };
 
     const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newProgress = parseFloat(e.target.value);
@@ -65,6 +58,10 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
         if (audio) audio.currentTime = newTime;
         setCurrentTime(newTime);
         setTimeout(() => setVisualProgress(0), 50);
+    };
+
+    const toggleProgressMode = () => {
+        updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' });
     };
 
     const formatTime = (s: number) => {
@@ -83,24 +80,14 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
             }}
         >
             {/* Progress bar at top - clickable with hover expand */}
-            <div
-                className={`relative cursor-pointer group transition-all duration-200 ${isHoverProgress ? 'h-3' : 'h-1.5'} bg-neutral-300 dark:bg-white/10`}
-                onClick={handleProgressClick}
-                onMouseEnter={() => setIsHoverProgress(true)}
-                onMouseLeave={() => setIsHoverProgress(false)}
-            >
-                <div
-                    className="absolute inset-y-0 left-0 rounded-r-full"
-                    style={{ width: `${displayProgress}%`, backgroundColor: colors.primary, transition: visualProgress ? 'none' : 'width 0.1s ease-out' }}
-                />
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value={displayProgress}
-                    onChange={handleScrub}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            <div onMouseEnter={() => setIsHoverProgress(true)} onMouseLeave={() => setIsHoverProgress(false)}>
+                <PlaybackProgress
+                    progress={displayProgress}
+                    mode={progressMode}
+                    accentColor={colors.primary}
+                    waveform={waveform}
+                    onScrub={handleScrub}
+                    trackClassName={`group transition-all duration-200 ${isHoverProgress ? 'h-3' : 'h-1.5'} bg-neutral-300 dark:bg-white/10`}
                 />
             </div>
 
@@ -127,6 +114,16 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                     <span className="text-neutral-400 dark:text-white/50">/</span>
                     <span className="tabular-nums">{formatTime(duration)}</span>
                 </div>
+
+                {/* Progress style toggle */}
+                <button
+                    onClick={toggleProgressMode}
+                    className="p-1.5 text-neutral-600 hover:text-neutral-900 transition-colors active:scale-95 dark:text-white/60 dark:hover:text-white"
+                    title={`Progress style: ${progressMode}`}
+                    aria-label={`Switch progress style (current: ${progressMode})`}
+                >
+                    <AudioWaveform className="w-4 h-4" />
+                </button>
 
                 {/* Spacer */}
                 <div className="flex-1" />

@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Volume2, Volume1, VolumeX, ChevronDown,
-    Heart, Repeat, Repeat1, Activity, Eye, EyeOff, Disc3, Minus, Plus, Sliders, X
+    Heart, Repeat, Repeat1, Activity, Eye, EyeOff, Disc3, Minus, Plus, Sliders, X, AudioWaveform
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { Visualizer } from './Visualizer';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { useArtistImage } from '../hooks/useArtistImage';
+import { useTrackWaveform } from '../hooks/useTrackWaveform';
+import { PlaybackProgress } from './player/PlaybackProgress';
 import { VisualizerMode } from '../types';
 
 interface SyncedLine {
@@ -28,7 +30,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         visualizerMode, setVisualizerMode,
         repeatMode, toggleRepeat, toggleLike,
         isZenMode, setZenMode,
-        playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection
+        playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection,
+        settings, updateSettings
     } = useStore();
 
     const [activeTab, setActiveTab] = useState<'playing' | 'queue' | 'lyrics'>('playing');
@@ -45,6 +48,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 800) : '';
+    const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
+    const waveform = useTrackWaveform(currentSong?.id, streamUrl);
+    const progressMode = settings.progressVisualization;
     const { colors } = useAdaptiveColors(coverArt);
     const { image: artistImage } = useArtistImage(currentSong?.artistId, currentSong?.artist);
 
@@ -153,6 +159,10 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         setCurrentTime(newTime);
         // Clear visual progress after a brief delay
         setTimeout(() => setVisualProgress(0), 50);
+    };
+
+    const toggleProgressMode = () => {
+        updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' });
     };
 
     return (
@@ -287,21 +297,25 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
                             {/* Progress Bar */}
                             <div className="w-full mb-8">
-                                <div className="relative h-2 bg-neutral-300 dark:bg-white/10 rounded overflow-hidden group cursor-pointer">
-                                    <div
-                                        className="absolute inset-y-0 left-0 rounded"
-                                        style={{ width: `${displayProgress}%`, backgroundColor: colors.primary, transition: visualProgress ? 'none' : 'width 0.1s ease-out' }}
-                                    />
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        step="0.1"
-                                        value={displayProgress}
-                                        onChange={handleScrub}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
+                                <div className="flex justify-end mb-2">
+                                    <button
+                                        onClick={toggleProgressMode}
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider text-neutral-600 hover:text-neutral-900 bg-neutral-200 hover:bg-neutral-300 transition-all dark:text-white/70 dark:bg-white/10 dark:hover:bg-white/20 dark:hover:text-white"
+                                        title={`Progress style: ${progressMode}`}
+                                        aria-label={`Switch progress style (current: ${progressMode})`}
+                                    >
+                                        <AudioWaveform className="w-3.5 h-3.5" />
+                                        {progressMode === 'waveform' ? 'Waveform' : 'Bar'}
+                                    </button>
                                 </div>
+                                <PlaybackProgress
+                                    progress={displayProgress}
+                                    mode={progressMode}
+                                    accentColor={colors.primary}
+                                    waveform={waveform}
+                                    onScrub={handleScrub}
+                                    trackClassName="h-2 bg-neutral-300 dark:bg-white/10 rounded cursor-pointer"
+                                />
                                 <div className="flex justify-between mt-2 text-xs font-mono text-neutral-600 dark:text-white/60">
                                     <span>{formatTime(currentTime)}</span>
                                     <span>{formatTime(duration)}</span>
@@ -639,10 +653,14 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
                                 <div className="flex items-center gap-4">
                                     <span className="text-sm font-mono text-white/60 w-12 text-right">{formatTime(currentTime)}</span>
-                                    <div className="flex-1 relative h-1.5 bg-white/10 rounded">
-                                        <div className="absolute inset-y-0 left-0 bg-white rounded" style={{ width: `${progress}%` }} />
-                                        <input type="range" min="0" max="100" step="0.01" value={progress} onChange={handleScrub} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                                    </div>
+                                    <PlaybackProgress
+                                        progress={displayProgress}
+                                        mode={progressMode}
+                                        accentColor="#ffffff"
+                                        waveform={waveform}
+                                        onScrub={handleScrub}
+                                        trackClassName="flex-1 h-1.5 bg-white/10 rounded cursor-pointer"
+                                    />
                                     <span className="text-sm font-mono text-white/60 w-12">{formatTime(duration)}</span>
                                 </div>
                             </div>

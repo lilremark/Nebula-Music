@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Volume2, Volume1, VolumeX,
-    Repeat, Repeat1, Heart,
+    Repeat, Repeat1, Heart, AudioWaveform,
     ListMusic, Maximize2, PanelRightClose, Gauge, X, Minus, Plus
 } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
+import { useTrackWaveform } from '../../hooks/useTrackWaveform';
+import { PlaybackProgress } from './PlaybackProgress';
 
 interface NowPlayingPanelProps {
     onExpand: () => void;
@@ -14,7 +16,7 @@ interface NowPlayingPanelProps {
 }
 
 export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCollapse }) => {
-    const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection, repeatMode, toggleRepeat, toggleLike } = useStore();
+    const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection, repeatMode, toggleRepeat, toggleLike, settings, updateSettings } = useStore();
 
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -25,6 +27,9 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 600) : '';
+    const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
+    const waveform = useTrackWaveform(currentSong?.id, streamUrl);
+    const progressMode = settings.progressVisualization;
 
     // Adaptive colors from album art
     const { colors } = useAdaptiveColors(coverArt);
@@ -63,6 +68,10 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
         if (audio) audio.currentTime = newTime;
         setCurrentTime(newTime);
         setTimeout(() => setVisualProgress(0), 50);
+    };
+
+    const toggleProgressMode = () => {
+        updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' });
     };
 
     if (!currentSong) {
@@ -141,25 +150,26 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
                 {/* Progress Bar */}
                 <div className="w-full px-6 mb-2">
-                    <div className="relative h-1.5 bg-neutral-300 dark:bg-white/10 rounded-full overflow-hidden group cursor-pointer">
-                        <div
-                            className="absolute inset-y-0 left-0 rounded-full"
-                            style={{ width: `${displayProgress}%`, backgroundColor: colors.primary, transition: visualProgress ? 'none' : 'width 0.1s ease-out' }}
-                        />
-                        <div
-                            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                            style={{ left: `calc(${displayProgress}% - 6px)` }}
-                        />
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            value={displayProgress}
-                            onChange={handleScrub}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        />
+                    <div className="flex justify-end mb-1.5">
+                        <button
+                            onClick={toggleProgressMode}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider text-neutral-600 hover:text-neutral-900 bg-neutral-200 hover:bg-neutral-300 transition-all dark:text-white/60 dark:bg-white/10 dark:hover:bg-white/20 dark:hover:text-white"
+                            title={`Progress style: ${progressMode}`}
+                            aria-label={`Switch progress style (current: ${progressMode})`}
+                        >
+                            <AudioWaveform className="w-3 h-3" />
+                            {progressMode === 'waveform' ? 'Wave' : 'Bar'}
+                        </button>
                     </div>
+                    <PlaybackProgress
+                        progress={displayProgress}
+                        mode={progressMode}
+                        accentColor={colors.primary}
+                        waveform={waveform}
+                        onScrub={handleScrub}
+                        showHandle={progressMode === 'bar'}
+                        trackClassName="h-1.5 bg-neutral-300 dark:bg-white/10 rounded-full cursor-pointer"
+                    />
                     <div className="flex justify-between mt-1.5 text-[10px] text-neutral-600 dark:text-white/60 font-mono tabular-nums">
                         <span>{formatTime(currentTime)}</span>
                         <span>{formatTime(duration)}</span>

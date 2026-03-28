@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Play, Pause, SkipForward, ChevronUp } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { useTrackWaveform } from '../hooks/useTrackWaveform';
+import { PlaybackProgress } from './player/PlaybackProgress';
 
 interface MobilePlayerBarProps {
     onExpand: () => void;
@@ -9,12 +11,14 @@ interface MobilePlayerBarProps {
 
 export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) => {
     const {
-        queue, currentSongIndex, isPlaying, togglePlay, nextSong, service, audioRef
+        queue, currentSongIndex, isPlaying, togglePlay, nextSong, service, audioRef, settings
     } = useStore();
 
     const [progress, setProgress] = useState(0);
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 200) : '';
+    const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
+    const waveform = useTrackWaveform(currentSong?.id, streamUrl);
 
     const { colors } = useAdaptiveColors(coverArt);
 
@@ -35,12 +39,14 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
     return (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40">
             {/* Progress bar */}
-            <div className="h-0.5 bg-neutral-300 dark:bg-white/10">
-                <div
-                    className="h-full transition-all duration-150"
-                    style={{ width: `${progress}%`, backgroundColor: colors.primary }}
-                />
-            </div>
+            <PlaybackProgress
+                progress={progress}
+                mode={settings.progressVisualization}
+                accentColor={colors.primary}
+                waveform={waveform}
+                scrubbable={false}
+                trackClassName="h-0.5 bg-neutral-300 dark:bg-white/10"
+            />
 
             <div
                 className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-neutral-950/95 backdrop-blur-xl border-t border-neutral-200 dark:border-white/5"
