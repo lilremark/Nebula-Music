@@ -96,6 +96,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     }
   },
   miniPlayerMode: 'sidebar',
+  progressVisualization: 'bar',
 };
 
 
