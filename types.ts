@@ -123,6 +123,7 @@ export interface AppSettings {
     };
   };
   miniPlayerMode: 'floating' | 'sidebar'; // which mini-player style to show
+  progressVisualization: 'bar' | 'waveform';
 }
 
 export type PlaybackMode = 'normal' | 'shuffle';
