@@ -34,6 +34,7 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
 }) => {
     const safeProgress = clamp(progress, 0, 100);
     const peaks = waveform && waveform.length ? waveform : FALLBACK_WAVEFORM;
+    const playedBars = Math.floor((safeProgress / 100) * peaks.length);
 
     return (
         <div className={`relative overflow-hidden ${trackClassName}`}>
@@ -43,24 +44,16 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
                         <div className="h-full w-full flex items-end gap-[1px]">
                             {peaks.map((peak, idx) => (
                                 <span
-                                    key={`inactive-${idx}`}
-                                    className="flex-1 min-w-[1px] bg-neutral-500/55 dark:bg-white/25"
-                                    style={{ height: getWaveHeight(peak) }}
+                                    key={`wave-${idx}`}
+                                    className={`flex-1 min-w-[1px] transition-colors duration-75 ${
+                                        idx < playedBars ? '' : 'bg-neutral-500/55 dark:bg-white/25'
+                                    }`}
+                                    style={{
+                                        height: getWaveHeight(peak),
+                                        backgroundColor: idx < playedBars ? accentColor : undefined,
+                                    }}
                                 />
                             ))}
-                        </div>
-                    </div>
-                    <div className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${safeProgress}%` }}>
-                        <div className="absolute inset-0">
-                            <div className="h-full w-full flex items-end gap-[1px]">
-                                {peaks.map((peak, idx) => (
-                                    <span
-                                        key={`active-${idx}`}
-                                        className="flex-1 min-w-[1px]"
-                                        style={{ height: getWaveHeight(peak), backgroundColor: accentColor }}
-                                    />
-                                ))}
-                            </div>
                         </div>
                     </div>
                     <div
