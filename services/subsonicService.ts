@@ -432,21 +432,47 @@ export class SubsonicService {
     return str.replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s*\[.*?\]\s*/g, ' ').replace(/\b(feat\.|ft\.|featuring|Live|Remix|Mix|Radio Edit)\b.*$/i, '').replace(/\s+/g, ' ').trim();
   }
 
-  async getLyrics(artist: string, title: string, album?: string, duration?: number): Promise<string> {
+  async getLyrics(artist: string, title: string, album?: string, duration?: number, id?: string): Promise<string> {
     if (this.isDemo) return `[00:00.50] (Instrumental Intro)\n[00:04.00] Standing on the edge of the neon light\n[00:08.00] Watching code flow through the night\n[00:12.00] Digital dreams in a binary stream\n[00:16.00] Waking up from a silicon dream`;
-    const cacheKey = `lyrics_${artist}_${title}_${duration || 0}`;
-    const cached = await db.getCachedResponse(cacheKey, 10080);
+    const cacheKey = `lyrics_${id || ''}_${artist}_${title}_${duration || 0}`;
+    const cached = await db.getCachedResponse(cacheKey, 1440);
     if (cached) return cached;
     let lyrics = '';
-    try {
-      const url = new URL('https://lrclib.net/api/get');
-      url.searchParams.append('artist_name', artist);
-      url.searchParams.append('track_name', title);
-      if (album) url.searchParams.append('album_name', album);
-      if (duration) url.searchParams.append('duration', duration.toString());
-      const res = await fetch(url.toString());
-      if (res.ok) { const data = await res.json(); lyrics = data.syncedLyrics || data.plainLyrics; }
-    } catch (e) { }
+    let unsyncedFallback = '';
+    if (id) {
+      try {
+        const res = await fetch(this.buildUrl('getLyricsBySongId.view', { id }));
+        const data = await res.json();
+        const structured = data['subsonic-response']?.lyricsList?.structuredLyrics;
+        if (Array.isArray(structured) && structured.length > 0) {
+          const synced = structured.find((s: { synced: boolean }) => s.synced) ?? structured[0];
+          if (synced.synced && Array.isArray(synced.line)) {
+            lyrics = (synced.line as { start: number; value: string }[])
+              .map(l => {
+                const ms = (l.start ?? 0) + (synced.offset ?? 0);
+                const totalSecs = Math.max(0, ms) / 1000;
+                const mins = Math.floor(totalSecs / 60).toString().padStart(2, '0');
+                const secs = (totalSecs % 60).toFixed(2).padStart(5, '0');
+                return `[${mins}:${secs}] ${l.value}`;
+              })
+              .join('\n');
+          } else if (Array.isArray(synced.line)) {
+            unsyncedFallback = (synced.line as { value: string }[]).map(l => l.value).join('\n');
+          }
+        }
+      } catch (e) { }
+    }
+    if (!lyrics) {
+      try {
+        const url = new URL('https://lrclib.net/api/get');
+        url.searchParams.append('artist_name', artist);
+        url.searchParams.append('track_name', title);
+        if (album) url.searchParams.append('album_name', album);
+        if (duration) url.searchParams.append('duration', duration.toString());
+        const res = await fetch(url.toString());
+        if (res.ok) { const data = await res.json(); lyrics = data.syncedLyrics || data.plainLyrics; }
+      } catch (e) { }
+    }
     if (!lyrics) {
       const searchAndMatch = async (qArtist: string, qTitle: string) => {
         try {
@@ -456,9 +482,9 @@ export class SubsonicService {
           if (res.ok) {
             const list = await res.json();
             if (Array.isArray(list) && list.length > 0) {
-              const validMatches = list.filter((item: any) => duration ? Math.abs(item.duration - duration) > 2 : true);
-              validMatches.sort((a: any, b: any) => (a.syncedLyrics && !b.syncedLyrics) ? -1 : 1);
-              if (validMatches.length > 0) return validMatches[0].syncedLyrics || validMatches[0].plainLyrics;
+              const validMatches = list.filter((item: { duration: number }) => duration ? Math.abs(item.duration - duration) > 2 : true);
+              validMatches.sort((a: { syncedLyrics: string }, b: { syncedLyrics: string }) => (a.syncedLyrics && !b.syncedLyrics) ? -1 : 1);
+              if (validMatches.length > 0) return (validMatches[0] as { syncedLyrics: string; plainLyrics: string }).syncedLyrics || validMatches[0].plainLyrics;
             }
           }
         } catch (e) { }
@@ -473,11 +499,14 @@ export class SubsonicService {
     }
     if (!lyrics) {
       try {
-        const res = await fetch(this.buildUrl('getLyrics.view', { artist, title }));
+        const params: Record<string, string> = { artist, title };
+        if (id) params.id = id;
+        const res = await fetch(this.buildUrl('getLyrics.view', params));
         const data = await res.json();
-        lyrics = data['subsonic-response'].lyrics?.content;
+        lyrics = data['subsonic-response'].lyrics?.value;
       } catch (e) { }
     }
+    if (!lyrics && unsyncedFallback) lyrics = unsyncedFallback;
     if (lyrics) { await db.cacheResponse(cacheKey, lyrics); return lyrics; }
     return "";
   }

@@ -699,7 +699,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         artist: song.artist,
         album: song.album,
         artwork: [
-          { src: service.getCoverArtUrl(song.id, 512), sizes: '512x512', type: 'image/jpeg' }
+          { src: service.getCoverArtUrl(song.id, 96),  sizes: '96x96',   type: 'image/jpeg' },
+          { src: service.getCoverArtUrl(song.id, 128), sizes: '128x128', type: 'image/jpeg' },
+          { src: service.getCoverArtUrl(song.id, 256), sizes: '256x256', type: 'image/jpeg' },
+          { src: service.getCoverArtUrl(song.id, 512), sizes: '512x512', type: 'image/jpeg' },
         ]
       });
     } else { navigator.mediaSession.metadata = null; }
@@ -708,7 +711,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     navigator.mediaSession.setActionHandler('pause', () => setIsPlaying(false));
     navigator.mediaSession.setActionHandler('previoustrack', prevSong);
     navigator.mediaSession.setActionHandler('nexttrack', () => nextSong());
-    navigator.mediaSession.setActionHandler('seekto', (details) => { if (details.seekTime !== undefined && audioRef.current) audioRef.current.currentTime = details.seekTime; });
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined && audioRef.current) audioRef.current.currentTime = details.seekTime;
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - (details.seekOffset ?? 10));
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      if (audioRef.current) audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + (details.seekOffset ?? 10));
+    });
   }, [currentSongIndex, queue, service, isPlaying, initAudioContext]);
 
   useEffect(() => {
@@ -860,6 +871,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!audio) return;
       const progress = (audio.currentTime / audio.duration) * 100;
       const durationErr = 4 * 60; // 4 minutes
+
+      if ('mediaSession' in navigator && audio.duration && !isNaN(audio.duration)) {
+        navigator.mediaSession.setPositionState({
+          duration: audio.duration,
+          playbackRate: audio.playbackRate,
+          position: audio.currentTime,
+        });
+      }
 
       // Report now playing if not already done
       if (currentSong && isPlaying && !hasScrobbledRef.current) {
