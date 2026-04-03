@@ -75,14 +75,21 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
             )}
 
             {shouldShowMarker && (
-                <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-white/80 shadow-lg pointer-events-none"
-                    style={{
-                        left: `calc(${safeProgress}% - 6px)`,
-                        backgroundColor: accentColor,
-                        boxShadow: '0 0 0 2px rgba(10, 10, 10, 0.15)',
-                    }}
-                />
+                mode === 'waveform' ? (
+                    <div
+                        className="absolute top-0 bottom-0 w-[2px] bg-white/80 dark:bg-white/70 pointer-events-none"
+                        style={{ left: `calc(${safeProgress}% - 1px)` }}
+                    />
+                ) : (
+                    <div
+                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-white/80 shadow-lg pointer-events-none"
+                        style={{
+                            left: `calc(${safeProgress}% - 6px)`,
+                            backgroundColor: accentColor,
+                            boxShadow: '0 0 0 2px rgba(10, 10, 10, 0.15)',
+                        }}
+                    />
+                )
             )}
 
             {scrubbable && onScrub && (
