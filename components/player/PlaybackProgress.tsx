@@ -35,6 +35,8 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     const safeProgress = clamp(progress, 0, 100);
     const peaks = waveform && waveform.length ? waveform : FALLBACK_WAVEFORM;
     const progressWidth = `${safeProgress}%`;
+    const progressClipPath = `inset(0 ${100 - safeProgress}% 0 0)`;
+    const shouldShowMarker = mode === 'waveform' || showHandle;
 
     const waveformBars = (barClassName: string, barStyle?: React.CSSProperties) => (
         <div className="h-full w-full flex items-end gap-[1px]">
@@ -59,15 +61,11 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
                         {waveformBars('bg-neutral-500/55 dark:bg-white/25')}
                     </div>
                     <div
-                        className="absolute inset-y-0 left-0 overflow-hidden"
-                        style={{ width: progressWidth }}
+                        className="absolute inset-0 overflow-hidden pointer-events-none"
+                        style={{ clipPath: progressClipPath }}
                     >
                         {waveformBars('', { backgroundColor: accentColor })}
                     </div>
-                    <div
-                        className="absolute top-0 bottom-0 w-[2px] bg-white/80 dark:bg-white/70 pointer-events-none"
-                        style={{ left: `calc(${safeProgress}% - 1px)` }}
-                    />
                 </>
             ) : (
                 <div
@@ -76,10 +74,14 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
                 />
             )}
 
-            {showHandle && (
+            {shouldShowMarker && (
                 <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-lg pointer-events-none"
-                    style={{ left: `calc(${safeProgress}% - 6px)` }}
+                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-white/80 shadow-lg pointer-events-none"
+                    style={{
+                        left: `calc(${safeProgress}% - 6px)`,
+                        backgroundColor: accentColor,
+                        boxShadow: '0 0 0 2px rgba(10, 10, 10, 0.15)',
+                    }}
                 />
             )}
 
