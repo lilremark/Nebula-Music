@@ -232,6 +232,7 @@ export const SetupScreen: React.FC = () => {
                   </p>
                 </div>
               </div>
+            </div>
             </Card>
 
             <Card
