@@ -8,17 +8,22 @@ import {
   Server,
   User,
   LockKeyhole,
-  Radio,
+  AudioWaveform,
+  Music4,
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 
-const nebulaFeatures = [
-  { icon: Disc3, label: 'Full library playback' },
-  { icon: Radio, label: 'Waveform + visualizer views' },
-  { icon: Sparkles, label: 'Adaptive, album-driven color' },
+const equalizerBars = [
+  'h-8',
+  'h-14',
+  'h-10',
+  'h-16',
+  'h-9',
+  'h-12',
+  'h-7',
 ];
 
 export const SetupScreen: React.FC = () => {
@@ -87,7 +92,7 @@ export const SetupScreen: React.FC = () => {
                 style={{ background: 'linear-gradient(180deg, rgba(var(--color-primary),0.16) 0%, rgba(var(--color-secondary),0.04) 70%, transparent 100%)' }}
               />
 
-              <div className="relative flex h-full flex-col justify-between gap-10">
+              <div className="relative flex h-full flex-col justify-between gap-8">
                 <div>
                   <div className="mb-8 flex items-center gap-4">
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-black shadow-[0_10px_30px_rgba(0,0,0,0.18)] dark:bg-white">
@@ -102,35 +107,128 @@ export const SetupScreen: React.FC = () => {
                     <div>
                       <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-neutral-500 dark:text-white/45">Nebula Music</p>
                       <h1 className="mt-1 text-3xl font-black tracking-tight md:text-5xl">
-                        Connect your
+                        Built for
                         <br />
-                        music universe.
+                        focused listening.
                       </h1>
                     </div>
                   </div>
 
                   <p className="max-w-xl text-sm leading-7 text-neutral-600 dark:text-white/60 md:text-base">
-                    Sign in with your Subsonic-compatible server and drop straight into the same immersive playback UI,
-                    queue controls, waveform views, and adaptive visuals used across the rest of the app.
+                    Nebula is a Subsonic-compatible player designed around immersive playback, tactile controls, and
+                    a visual language that reacts like a real music surface instead of a plain admin client.
                   </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {nebulaFeatures.map(({ icon: Icon, label }) => (
-                    <div
-                      key={label}
-                      className="rounded-2xl border border-neutral-200 bg-neutral-100/80 px-4 py-4 dark:border-white/10 dark:bg-white/5"
-                    >
-                      <Icon className="mb-3 h-4 w-4 text-primary" />
-                      <p className="text-sm font-medium text-neutral-800 dark:text-white/80">{label}</p>
+                <div className="relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-neutral-100/80 p-5 dark:border-white/10 dark:bg-black/20">
+                  <div
+                    className="absolute inset-x-0 top-0 h-24 opacity-70"
+                    style={{ background: 'linear-gradient(180deg, rgba(var(--color-primary),0.20) 0%, rgba(var(--color-secondary),0.08) 60%, transparent 100%)' }}
+                  />
+                  <div className="relative">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500 dark:text-white/40">Now Playing</p>
+                        <p className="mt-1 text-lg font-bold tracking-tight text-neutral-900 dark:text-white">A screen that feels like music</p>
+                      </div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-neutral-200 bg-white/80 text-neutral-700 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
+                        <Music4 className="h-4 w-4" />
+                      </div>
                     </div>
-                  ))}
-                </div>
 
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-100/80 p-4 dark:border-white/10 dark:bg-black/20">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">Security</p>
-                  <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-white/60">
-                    Nebula stores a token and salt generated from your password. Your raw password is not kept after sign-in.
+                    <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+                      <div className="rounded-[1.5rem] border border-neutral-200 bg-white/85 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.08)] dark:border-white/10 dark:bg-neutral-950/70">
+                        <div className="flex items-center gap-4">
+                          <div className="relative flex h-28 w-28 shrink-0 items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-primary/30 via-neutral-200 to-secondary/30 dark:from-primary/20 dark:via-neutral-900 dark:to-secondary/20">
+                            <div className="absolute inset-3 rounded-full border border-black/10 dark:border-white/10" />
+                            <div className="absolute h-20 w-20 rounded-full border border-black/10 dark:border-white/10" />
+                            <div className="absolute h-16 w-16 rounded-full bg-neutral-950 shadow-[0_0_25px_rgba(0,0,0,0.35)]" />
+                            <div className="absolute flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-neutral-800 to-black text-white">
+                              <Disc3 className="h-8 w-8 animate-spin" style={{ animationDuration: '5s' }} />
+                            </div>
+                            <div className="absolute h-3 w-3 rounded-full bg-white/90" />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 dark:text-white/35">Waveform Mode</p>
+                            <h3 className="mt-2 truncate text-lg font-bold text-neutral-900 dark:text-white">Midnight Receiver</h3>
+                            <p className="truncate text-sm text-neutral-600 dark:text-white/55">Nebula Session</p>
+
+                            <div className="mt-4">
+                              <div className="mb-2 flex items-end gap-1">
+                                {equalizerBars.map((height, index) => (
+                                  <div
+                                    key={height + index}
+                                    className={`w-1.5 rounded-full bg-neutral-300 dark:bg-white/15 ${height} animate-pulse`}
+                                    style={{
+                                      animationDuration: '1.2s',
+                                      animationDelay: `${index * 120}ms`,
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                              <div className="relative h-12 overflow-hidden rounded-xl">
+                                <div className="absolute inset-x-0 bottom-1 flex items-end gap-[2px]">
+                                  {Array.from({ length: 40 }, (_, index) => (
+                                    <div
+                                      key={index}
+                                      className={`flex-1 rounded-full ${
+                                        index < 23 ? 'bg-primary' : 'bg-neutral-300 dark:bg-white/15'
+                                      }`}
+                                      style={{ height: `${10 + ((index * 11) % 30)}px` }}
+                                    />
+                                  ))}
+                                </div>
+                                <div className="absolute inset-y-0 left-[57%] w-[2px] bg-white/90 shadow-[0_0_12px_rgba(255,255,255,0.6)]" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-4">
+                        <div className="rounded-[1.5rem] border border-neutral-200 bg-white/75 p-4 dark:border-white/10 dark:bg-white/5">
+                          <div className="mb-4 flex items-center justify-between">
+                            <div>
+                              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500 dark:text-white/35">Reactive UI</p>
+                              <p className="mt-1 text-sm font-medium text-neutral-800 dark:text-white/80">Album color, motion, waveform</p>
+                            </div>
+                            <AudioWaveform className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="space-y-2">
+                            <div className="h-2 rounded-full bg-neutral-200 dark:bg-white/10 overflow-hidden">
+                              <div className="h-full w-[68%] rounded-full bg-gradient-to-r from-primary to-secondary animate-pulse" />
+                            </div>
+                            <div className="h-2 rounded-full bg-neutral-200 dark:bg-white/10 overflow-hidden">
+                              <div className="h-full w-[42%] rounded-full bg-neutral-400/60 dark:bg-white/25" />
+                            </div>
+                            <div className="h-2 rounded-full bg-neutral-200 dark:bg-white/10 overflow-hidden">
+                              <div className="h-full w-[84%] rounded-full bg-gradient-to-r from-secondary/70 to-primary/60 animate-pulse" style={{ animationDelay: '220ms' }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-[1.5rem] border border-neutral-200 bg-neutral-100/90 p-4 dark:border-white/10 dark:bg-neutral-950/60">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-500 dark:text-white/35">What you get</p>
+                          <div className="mt-3 space-y-3 text-sm text-neutral-700 dark:text-white/65">
+                            <div className="flex items-center gap-3">
+                              <div className="h-2 w-2 rounded-full bg-primary shadow-glow-sm" />
+                              <span>Fast queue-first playback</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="h-2 w-2 rounded-full bg-secondary shadow-glow-sm" />
+                              <span>Immersive full-screen player</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="h-2 w-2 rounded-full bg-primary shadow-glow-sm animate-pulse" />
+                              <span>Waveform and visualizer-driven progress</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  <p className="mt-4 text-sm leading-6 text-neutral-600 dark:text-white/55">
+                    Sign in and you land in a player that behaves like a listening environment, not a utility panel.
                   </p>
                 </div>
               </div>
@@ -242,9 +340,6 @@ export const SetupScreen: React.FC = () => {
                 </div>
               </form>
 
-              <div className="mt-8 border-t border-neutral-200 pt-5 text-xs text-neutral-500 dark:border-white/10 dark:text-white/45">
-                Subsonic-compatible client. Connect, browse, and play with the same UI system used throughout Nebula.
-              </div>
             </Card>
           </div>
         </div>
