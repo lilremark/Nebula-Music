@@ -1,12 +1,15 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { AppState, ISong, View, SubsonicCredentials, AppSettings, IPlaylist, VisualizerMode, RepeatMode, IArtist, IAlbum, HomeData } from '../types';
+import { AppState, ISong, View, SubsonicCredentials, AppSettings, IPlaylist, VisualizerMode, RepeatMode, IArtist, IAlbum, HomeData, NavigationTarget } from '../types';
 import { SubsonicService } from '../services/subsonicService';
 import { MOCK_PLAYLISTS } from '../constants';
 import { db } from '../services/db';
 
 interface StoreContextType extends AppState {
-  setView: (view: View, data?: any) => void;
+  setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
+  goBack: (fallbackView?: View, fallbackData?: any) => void;
+  canGoBack: boolean;
+  backTarget?: NavigationTarget;
   playSong: (song: ISong, contextQueue?: ISong[]) => void;
   togglePlay: () => void;
   nextSong: () => void;
@@ -104,6 +107,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [service] = useState(() => new SubsonicService(null));
   const [currentView, setCurrentView] = useState<View>('HOME');
   const [viewData, setViewData] = useState<any>(undefined);
+  const [navigationStack, setNavigationStack] = useState<NavigationTarget[]>([]);
   const [credentials, setCredentialsState] = useState<SubsonicCredentials | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -149,6 +153,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioRef = useRef<HTMLAudioElement>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const navigationStackRef = useRef<NavigationTarget[]>([]);
 
   // Use refs for state accessed inside event listeners to avoid constant re-binding
   const stateRef = useRef({ queue, currentSongIndex, isPlaying, repeatMode });
@@ -158,6 +163,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     stateRef.current = { queue, currentSongIndex, isPlaying, repeatMode };
   }, [queue, currentSongIndex, isPlaying, repeatMode]);
+
+  useEffect(() => {
+    navigationStackRef.current = navigationStack;
+  }, [navigationStack]);
 
   const getMostPlayedSongs = useCallback(() => {
     const historyItems = Object.values(playHistory) as { count: number, song: ISong }[];
@@ -740,7 +749,38 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addToQueue = (song: ISong) => { setQueue(prev => [...prev, song]); };
-  const setView = (v: View, data?: any) => { setCurrentView(v); setViewData(data); };
+  const setView = useCallback((v: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => {
+    const sameTarget = currentView === v && viewData === data;
+    if (sameTarget) return;
+
+    if (options?.clearHistory) {
+      navigationStackRef.current = [];
+      setNavigationStack([]);
+    } else if (!options?.replace) {
+      const nextStack = [...navigationStackRef.current, { view: currentView, data: viewData }].slice(-50);
+      navigationStackRef.current = nextStack;
+      setNavigationStack(nextStack);
+    }
+
+    setCurrentView(v);
+    setViewData(data);
+  }, [currentView, viewData]);
+  const goBack = useCallback((fallbackView: View = 'HOME', fallbackData?: any) => {
+    const stack = navigationStackRef.current;
+
+    if (stack.length === 0) {
+      setCurrentView(fallbackView);
+      setViewData(fallbackData);
+      return;
+    }
+
+    const target = stack[stack.length - 1];
+    const nextStack = stack.slice(0, -1);
+    navigationStackRef.current = nextStack;
+    setNavigationStack(nextStack);
+    setCurrentView(target.view);
+    setViewData(target.data);
+  }, []);
   const performSearch = async (query: string) => {
     setLastSearchQuery(query); setIsSearching(true);
     const results = await service.search(query);
@@ -749,6 +789,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
   const openSearchModal = () => setIsSearchModalOpen(true);
   const closeSearchModal = () => setIsSearchModalOpen(false);
+  const canGoBack = navigationStack.length > 0;
+  const backTarget = canGoBack ? navigationStack[navigationStack.length - 1] : undefined;
 
   const updateSettings = (newSettings: Partial<AppSettings>) => {
     setSettings(prev => {
@@ -816,6 +858,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     service.setCredentials(null as any); setCredentialsState(null);
     await db.clear('settings'); await db.clear('api_cache');
     setQueue([]); setPlaylists([]); setCurrentSongIndex(-1); setIsPlaying(false); setIsDemoMode(false);
+    navigationStackRef.current = [];
+    setNavigationStack([]);
+    setCurrentView('HOME');
+    setViewData(undefined);
     setHomeData({ randomSongs: [], recentAlbums: [], newestAlbums: [], exploreAlbums: [], recommendedTracks: [], lastFetched: 0 });
     setCachedArtists([]);
   };
@@ -945,7 +991,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <StoreContext.Provider value={{
-      currentView, setView, viewData, queue, currentSongIndex, isPlaying, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
+      currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
       credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
       playSong, togglePlay, nextSong, prevSong, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
       connectToSubsonic, disconnect, enableDemoMode, addToQueue, updateSettings,

@@ -5,7 +5,7 @@ import { Play, Disc, ArrowLeft, Music, ListPlus, Mic2, Heart, ChevronDown, Chevr
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 
 export const ArtistDetailView: React.FC = () => {
-    const { viewData, setView, service, playSong, openPlaylistModal, toggleLike } = useStore();
+    const { viewData, setView, goBack, backTarget, service, playSong, openPlaylistModal, toggleLike } = useStore();
     const [artist, setArtist] = useState<IArtist | null>(null);
     const [albums, setAlbums] = useState<IAlbum[]>([]);
     const [topSongs, setTopSongs] = useState<ISong[]>([]);
@@ -60,6 +60,22 @@ export const ArtistDetailView: React.FC = () => {
     };
 
     const displayedTracks = showAllTracks ? topSongs : topSongs.slice(0, 5);
+    const backLabel = (() => {
+        switch (backTarget?.view) {
+            case 'HOME': return 'Home';
+            case 'BROWSE': return 'Browse';
+            case 'ALBUMS': return 'Albums';
+            case 'ALBUM_DETAIL': return 'Album';
+            case 'ARTISTS': return 'Artists';
+            case 'PLAYLISTS': return 'Playlists';
+            case 'PLAYLIST_DETAIL': return 'Playlist';
+            case 'SEARCH': return 'Search';
+            case 'LIKED_ALBUMS': return 'Liked Albums';
+            case 'LIKED_SONGS': return 'Liked Songs';
+            case 'SONGS': return 'Songs';
+            default: return 'Artists';
+        }
+    })();
 
     return (
         <div className="min-h-full pb-32 w-full">
@@ -84,10 +100,10 @@ export const ArtistDetailView: React.FC = () => {
                 <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10">
                     {/* Back button */}
                     <button
-                        onClick={() => setView('ARTISTS')}
+                        onClick={() => goBack('ARTISTS')}
                         className="mb-5 flex items-center text-neutral-600 hover:text-neutral-900 transition text-sm font-medium group dark:text-white/50 dark:hover:text-white"
                     >
-                        <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> Artists
+                        <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> {backLabel}
                     </button>
 
                     <div className="flex flex-col md:flex-row gap-5 items-center md:items-end">

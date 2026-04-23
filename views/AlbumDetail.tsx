@@ -5,7 +5,7 @@ import { Play, Shuffle, Heart, ArrowLeft, ListPlus, BarChart2, Disc, Pause, Info
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 
 export const AlbumDetailView: React.FC = () => {
-    const { viewData, setView, service, playSong, isPlaying, queue, currentSongIndex, openPlaylistModal, toggleLike } = useStore();
+    const { viewData, setView, goBack, backTarget, service, playSong, isPlaying, queue, currentSongIndex, openPlaylistModal, toggleLike } = useStore();
     const [album, setAlbum] = useState<IAlbum | null>(null);
     const [relatedAlbums, setRelatedAlbums] = useState<IAlbum[]>([]);
     const [showFullNotes, setShowFullNotes] = useState(false);
@@ -88,6 +88,22 @@ export const AlbumDetailView: React.FC = () => {
 
     const currentSong = queue[currentSongIndex];
     const isAlbumPlaying = currentSong?.albumId === album.id || currentSong?.album === album.name;
+    const backLabel = (() => {
+        switch (backTarget?.view) {
+            case 'HOME': return 'Home';
+            case 'BROWSE': return 'Browse';
+            case 'ARTISTS': return 'Artists';
+            case 'ARTIST_DETAIL': return 'Artist';
+            case 'ALBUM_DETAIL': return 'Album';
+            case 'PLAYLISTS': return 'Playlists';
+            case 'PLAYLIST_DETAIL': return 'Playlist';
+            case 'SEARCH': return 'Search';
+            case 'LIKED_ALBUMS': return 'Liked Albums';
+            case 'LIKED_SONGS': return 'Liked Songs';
+            case 'SONGS': return 'Songs';
+            default: return 'Albums';
+        }
+    })();
 
     return (
         <div className="min-h-full pb-32 w-full">
@@ -115,11 +131,11 @@ export const AlbumDetailView: React.FC = () => {
                 <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10">
                     {/* Back button */}
                     <button
-                        onClick={() => setView('ALBUMS')}
+                        onClick={() => goBack('ALBUMS')}
                         className="mb-5 flex items-center text-neutral-600 hover:text-neutral-900 transition text-sm font-medium group dark:text-white/50 dark:hover:text-white"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                        Albums
+                        {backLabel}
                     </button>
 
                     <div className="flex flex-col md:flex-row gap-8">

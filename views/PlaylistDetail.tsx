@@ -5,7 +5,7 @@ import { Play, Clock, ArrowLeft, Trash2, ListMusic, Shuffle, Save, ListPlus, Inf
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 
 export const PlaylistDetailView: React.FC = () => {
-    const { viewData, setView, playSong, isPlaying, queue, currentSongIndex, playlists, deletePlaylist, savePlaylist, service, openPlaylistModal, isDemoMode, toggleLike } = useStore();
+    const { viewData, setView, goBack, backTarget, playSong, isPlaying, queue, currentSongIndex, playlists, deletePlaylist, savePlaylist, service, openPlaylistModal, isDemoMode, toggleLike } = useStore();
     const [playlist, setPlaylist] = useState<IPlaylist | null>(null);
     const [isSavedPlaylist, setIsSavedPlaylist] = useState(true);
     const [showFullNotes, setShowFullNotes] = useState(false);
@@ -70,6 +70,24 @@ export const PlaylistDetailView: React.FC = () => {
 
     const currentSong = queue[currentSongIndex];
     const comment = playlist.comment || (!isSavedPlaylist ? (playlist as any).desc : null);
+    const defaultBackView = isSavedPlaylist ? 'PLAYLISTS' : 'BROWSE';
+    const backLabel = (() => {
+        switch (backTarget?.view) {
+            case 'HOME': return 'Home';
+            case 'BROWSE': return 'Browse';
+            case 'ARTISTS': return 'Artists';
+            case 'ARTIST_DETAIL': return 'Artist';
+            case 'ALBUMS': return 'Albums';
+            case 'ALBUM_DETAIL': return 'Album';
+            case 'PLAYLISTS': return 'Playlists';
+            case 'PLAYLIST_DETAIL': return 'Playlist';
+            case 'SEARCH': return 'Search';
+            case 'LIKED_ALBUMS': return 'Liked Albums';
+            case 'LIKED_SONGS': return 'Liked Songs';
+            case 'SONGS': return 'Songs';
+            default: return isSavedPlaylist ? 'Playlists' : 'Browse';
+        }
+    })();
 
     return (
         <div className="min-h-full pb-32 w-full">
@@ -92,11 +110,11 @@ export const PlaylistDetailView: React.FC = () => {
                 <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10">
                     {/* Back button */}
                     <button
-                        onClick={() => setView(isSavedPlaylist ? 'PLAYLISTS' : 'BROWSE')}
+                        onClick={() => goBack(defaultBackView)}
                         className="mb-5 flex items-center text-neutral-600 hover:text-neutral-900 transition text-sm font-medium group dark:text-white/50 dark:hover:text-white"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                        {isSavedPlaylist ? 'Playlists' : 'Browse'}
+                        {backLabel}
                     </button>
 
                     <div className="flex flex-col md:flex-row gap-8">
