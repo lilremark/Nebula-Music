@@ -185,7 +185,10 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
     return (
         <div className={`fixed inset-0 z-[60] flex flex-col bg-neutral-200 dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded || isZenMode ? 'translate-y-0' : 'translate-y-full'}`}
-            style={{ background: colors.gradient }}
+            style={{
+                backgroundColor: '#0a0a0a',
+                backgroundImage: colors.gradient,
+            }}
         >
             {/* Dot pattern background */}
             <div

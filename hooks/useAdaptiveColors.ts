@@ -29,9 +29,12 @@ const defaultColors: AdaptiveColors = {
     gradient: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
 };
 
+const clampChannel = (value: number): number => Math.min(255, Math.max(0, Math.round(value)));
+
 // Calculate relative luminance for contrast calculations
 const getLuminance = (r: number, g: number, b: number): number => {
-    const [rs, gs, bs] = [r, g, b].map(c => {
+    const [rs, gs, bs] = [r, g, b].map(channel => {
+        let c = clampChannel(channel);
         c /= 255;
         return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
     });
@@ -47,24 +50,24 @@ const isLightColor = (r: number, g: number, b: number): boolean => {
 const adjustSaturation = (r: number, g: number, b: number, factor: number): [number, number, number] => {
     const gray = 0.2989 * r + 0.5870 * g + 0.1140 * b;
     return [
-        Math.round(gray + factor * (r - gray)),
-        Math.round(gray + factor * (g - gray)),
-        Math.round(gray + factor * (b - gray)),
+        clampChannel(gray + factor * (r - gray)),
+        clampChannel(gray + factor * (g - gray)),
+        clampChannel(gray + factor * (b - gray)),
     ];
 };
 
 // Darken or lighten a color
 const adjustBrightness = (r: number, g: number, b: number, factor: number): [number, number, number] => {
     return [
-        Math.round(Math.min(255, Math.max(0, r * factor))),
-        Math.round(Math.min(255, Math.max(0, g * factor))),
-        Math.round(Math.min(255, Math.max(0, b * factor))),
+        clampChannel(r * factor),
+        clampChannel(g * factor),
+        clampChannel(b * factor),
     ];
 };
 
 // Convert RGB to hex
 const rgbToHex = (r: number, g: number, b: number): string => {
-    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+    return '#' + [r, g, b].map(channel => clampChannel(channel).toString(16).padStart(2, '0')).join('');
 };
 
 // Extract dominant colors from image using canvas
@@ -141,7 +144,7 @@ const extractColors = async (imageUrl: string): Promise<AdaptiveColors> => {
                 surfaceHover: `rgba(${surfHR}, ${surfHG}, ${surfHB}, 0.4)`,
                 text: textColor,
                 textMuted: textMuted,
-                gradient: `linear-gradient(135deg, rgba(${surfR}, ${surfG}, ${surfB}, 0.8) 0%, rgba(10, 10, 10, 0.95) 100%)`,
+                gradient: `linear-gradient(135deg, rgb(${surfR}, ${surfG}, ${surfB}) 0%, rgb(10, 10, 10) 100%)`,
             });
         };
 
