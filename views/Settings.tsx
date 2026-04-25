@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { VisualizerMode } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
+import { CustomDropdown } from '../components/CustomDropdown';
 
 // Helper components moved outside to prevent re-renders
 const ToggleRow = ({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (v: boolean) => void }) => (
@@ -125,6 +126,7 @@ export const SettingsView: React.FC = () => {
     const [connStatus, setConnStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [isInsecure, setIsInsecure] = useState(false);
     const [editingKey, setEditingKey] = useState<string | null>(null);
+    const settingsInputClass = 'w-full rounded-lg px-4 py-3 border transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 text-neutral-900 placeholder-neutral-500 bg-neutral-100 border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-white/10 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-800';
 
     useEffect(() => {
         if (url && !url.startsWith('https://') && url.length > 7) {
@@ -185,7 +187,7 @@ export const SettingsView: React.FC = () => {
                                 value={url}
                                 onChange={e => setUrl(e.target.value)}
                                 placeholder="https://music.example.com"
-                                className={`w-full bg-white border rounded-lg px-4 py-3 text-neutral-900 dark:text-white placeholder-neutral-500 dark:placeholder-white/30 focus:bg-white dark:focus:bg-white/15 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all ${isInsecure ? 'border-yellow-500/50' : 'border-neutral-300 dark:border-white/10'
+                                className={`${settingsInputClass} ${isInsecure ? 'border-yellow-500/50' : 'border-neutral-300 dark:border-white/10'
                                     }`}
                             />
                             {isInsecure && (
@@ -202,7 +204,7 @@ export const SettingsView: React.FC = () => {
                                 value={user}
                                 onChange={e => setUser(e.target.value)}
                                 placeholder="admin"
-                                className="w-full bg-white border border-neutral-300 dark:border-white/10 rounded-lg px-4 py-3 text-neutral-900 dark:text-white placeholder-neutral-500 dark:placeholder-white/30 focus:bg-white dark:focus:bg-white/15 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                className={settingsInputClass}
                             />
                         </div>
                         <div className="py-4 px-6 border-b border-neutral-200 dark:border-white/10">
@@ -212,7 +214,7 @@ export const SettingsView: React.FC = () => {
                                 value={pass}
                                 onChange={e => setPass(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full bg-white border border-neutral-300 dark:border-white/10 rounded-lg px-4 py-3 text-neutral-900 dark:text-white placeholder-neutral-500 dark:placeholder-white/30 focus:bg-white dark:focus:bg-white/15 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                                className={settingsInputClass}
                             />
                         </div>
                         <div className="py-4 px-6">
@@ -301,32 +303,27 @@ export const SettingsView: React.FC = () => {
                             {/* Preset Selector */}
                             <div className="flex items-center gap-3">
                                 <span className="text-xs font-medium text-neutral-700 dark:text-white/60 uppercase tracking-wider">Preset</span>
-                                <div className="relative group">
-                                    <select
+                                <div className="w-48">
+                                    <CustomDropdown
                                         value={settings.eq.preset}
-                                        onChange={(e) => {
-                                            const newPreset = e.target.value as any;
+                                        onChange={(newPreset) => {
+                                            const typedPreset = newPreset as typeof settings.eq.preset;
                                             const newBands = newPreset === 'custom' ? settings.eq.bands : { ...EQ_PRESETS[newPreset] };
                                             updateSettings({
                                                 eq: {
                                                     ...settings.eq,
-                                                    preset: newPreset,
+                                                    preset: typedPreset,
                                                     bands: { ...settings.eq.bands, ...newBands }
                                                 }
                                             });
                                         }}
+                                        options={Object.entries(EQ_PRESET_LABELS).map(([key, label]) => ({
+                                            value: key,
+                                            label,
+                                        }))}
                                         disabled={!settings.eq.enabled}
-                                        className="appearance-none bg-white border border-neutral-300 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/20 text-neutral-900 dark:text-white text-xs font-bold py-2 pl-4 pr-10 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50"
-                                    >
-                                        {Object.entries(EQ_PRESET_LABELS).map(([key, label]) => (
-                                            <option key={key} value={key} className="bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white">
-                                                {label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-500 dark:text-white/50">
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                    </div>
+                                        className="text-xs font-bold"
+                                    />
                                 </div>
                             </div>
                         </div>

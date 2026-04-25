@@ -8,6 +8,7 @@ interface CustomDropdownProps {
     placeholder?: string;
     icon?: React.ReactNode;
     className?: string;
+    disabled?: boolean;
 }
 
 export const CustomDropdown: React.FC<CustomDropdownProps> = ({
@@ -16,7 +17,8 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     options,
     placeholder = 'Select...',
     icon,
-    className = ''
+    className = '',
+    disabled = false,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -69,8 +71,12 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
             {/* Trigger button */}
             <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 px-4 text-sm focus:border-primary/60 focus:bg-white focus:outline-none text-neutral-900 transition-all hover:bg-neutral-50 flex items-center justify-between gap-2 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white dark:hover:bg-white/10"
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                disabled={disabled}
+                className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:border-primary/60 focus:outline-none transition-all flex items-center justify-between gap-2
+                    bg-neutral-100 border-neutral-300 text-neutral-900 hover:bg-neutral-50
+                    dark:bg-neutral-900 dark:border-white/10 dark:text-white dark:hover:bg-neutral-800
+                    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-100 dark:disabled:hover:bg-neutral-900 ${className}`}
             >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     {icon && <span className="text-neutral-500 shrink-0">{icon}</span>}
