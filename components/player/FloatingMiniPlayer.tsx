@@ -85,6 +85,8 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                     progress={displayProgress}
                     mode={progressMode}
                     accentColor={colors.primary}
+                    baseColor={colors.primaryMuted}
+                    markerColor={colors.secondary || colors.primary}
                     waveform={waveform}
                     onScrub={handleScrub}
                     trackClassName={`${progressMode === 'waveform'

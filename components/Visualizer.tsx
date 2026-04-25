@@ -24,7 +24,37 @@ function project(point: Point3D, width: number, height: number, fov: number = 30
     return { x, y, scale };
 }
 
-export const Visualizer: React.FC<{ className?: string }> = ({ className }) => {
+const withAlpha = (color: string, alpha: number) => {
+  if (color.startsWith('#')) {
+    const hex = color.slice(1);
+    const normalized = hex.length === 3
+      ? hex.split('').map(char => char + char).join('')
+      : hex;
+
+    if (normalized.length === 6) {
+      const r = parseInt(normalized.slice(0, 2), 16);
+      const g = parseInt(normalized.slice(2, 4), 16);
+      const b = parseInt(normalized.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+  }
+
+  if (color.startsWith('rgb(')) {
+    return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+  }
+
+  if (color.startsWith('rgba(')) {
+    return color.replace(/rgba\((.+),\s*[\d.]+\)/, `rgba($1, ${alpha})`);
+  }
+
+  return color;
+};
+
+export const Visualizer: React.FC<{ className?: string; primaryColor?: string; secondaryColor?: string }> = ({
+  className,
+  primaryColor = '#06b6d4',
+  secondaryColor = '#8b5cf6',
+}) => {
   const { analyser, visualizerMode } = useStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number>(0);
@@ -71,8 +101,8 @@ export const Visualizer: React.FC<{ className?: string }> = ({ className }) => {
 
       // Gradient Setup
       const gradient = ctx.createLinearGradient(0, height, width, 0);
-      gradient.addColorStop(0, '#06b6d4'); // primary
-      gradient.addColorStop(1, '#8b5cf6'); // secondary
+      gradient.addColorStop(0, primaryColor);
+      gradient.addColorStop(1, secondaryColor);
 
       // Global Config
       ctx.lineWidth = 2 * dpr;
@@ -179,7 +209,7 @@ export const Visualizer: React.FC<{ className?: string }> = ({ className }) => {
              
              // Add glow effect
              ctx.shadowBlur = 15;
-             ctx.shadowColor = '#8b5cf6';
+             ctx.shadowColor = secondaryColor;
 
              ctx.fillRect(xRight, y, barWidth - 1, h);
              ctx.fillRect(xLeft, y, barWidth - 1, h);
@@ -215,7 +245,7 @@ export const Visualizer: React.FC<{ className?: string }> = ({ className }) => {
               const size = (1 - p.z / width) * 4 * dpr + (bass * 2);
               const alpha = 1 - p.z / width;
 
-              ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+              ctx.fillStyle = withAlpha(primaryColor, Math.max(0.18, alpha));
               ctx.beginPath();
               ctx.arc(projection.x, projection.y, size, 0, Math.PI * 2);
               ctx.fill();
@@ -282,7 +312,7 @@ export const Visualizer: React.FC<{ className?: string }> = ({ className }) => {
               return project(r, width, height, 400);
           });
 
-          ctx.strokeStyle = '#ffffff';
+          ctx.strokeStyle = withAlpha(secondaryColor, 0.9);
           ctx.lineWidth = 2 * dpr;
 
           edges.forEach(edge => {
@@ -313,7 +343,7 @@ export const Visualizer: React.FC<{ className?: string }> = ({ className }) => {
           // Audio modulation on X axis (cols)
           const freqStep = Math.floor(bufferLength / cols);
 
-          ctx.strokeStyle = '#8b5cf6'; // Violet grid
+          ctx.strokeStyle = withAlpha(secondaryColor, 0.9);
           ctx.lineWidth = 1 * dpr;
           
           // Draw Vertical Lines
@@ -365,18 +395,21 @@ export const Visualizer: React.FC<{ className?: string }> = ({ className }) => {
 
           // Horizon Glow
           const grad = ctx.createLinearGradient(0, horizonY, 0, height);
-          grad.addColorStop(0, 'rgba(6, 182, 212, 0.5)'); // Cyan glow
+          grad.addColorStop(0, withAlpha(primaryColor, 0.5));
           grad.addColorStop(0.5, 'transparent');
           ctx.fillStyle = grad;
           ctx.fillRect(0, horizonY, width, height - horizonY);
       }
       else {
-          // Spectrum Fallback (Simple lines)
+          // Spectrum fallback using the adaptive album palette
           const bars = 100;
           const barWidth = width / bars;
           for(let i=0; i<bars; i++) {
               const h = (dataArray[i] / 255) * height;
-              ctx.fillStyle = `hsl(${i * 360 / bars}, 100%, 50%)`;
+              const barGradient = ctx.createLinearGradient(0, height, 0, height - h);
+              barGradient.addColorStop(0, primaryColor);
+              barGradient.addColorStop(1, secondaryColor);
+              ctx.fillStyle = barGradient;
               ctx.fillRect(i * barWidth, height - h, barWidth, h);
           }
       }
@@ -387,7 +420,7 @@ export const Visualizer: React.FC<{ className?: string }> = ({ className }) => {
     return () => {
       cancelAnimationFrame(animationIdRef.current);
     };
-  }, [analyser, visualizerMode]);
+  }, [analyser, visualizerMode, primaryColor, secondaryColor]);
 
   return (
     <div className={`w-full h-full ${className}`}>

@@ -43,6 +43,8 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
                 progress={progress}
                 mode={settings.progressVisualization}
                 accentColor={colors.primary}
+                baseColor={colors.primaryMuted}
+                markerColor={colors.secondary || colors.primary}
                 waveform={waveform}
                 scrubbable={false}
                 trackClassName={settings.progressVisualization === 'waveform'

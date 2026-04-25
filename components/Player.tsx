@@ -22,6 +22,24 @@ interface PlayerProps {
     onClose: () => void;
 }
 
+const withAlpha = (color: string, alpha: number) => {
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+        const normalized = hex.length === 3
+            ? hex.split('').map(char => char + char).join('')
+            : hex;
+
+        if (normalized.length === 6) {
+            const r = parseInt(normalized.slice(0, 2), 16);
+            const g = parseInt(normalized.slice(2, 4), 16);
+            const b = parseInt(normalized.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+    }
+
+    return color;
+};
+
 export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const {
         queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong,
@@ -167,12 +185,13 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
     return (
         <div className={`fixed inset-0 z-[60] flex flex-col bg-neutral-200 dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded || isZenMode ? 'translate-y-0' : 'translate-y-full'}`}
+            style={{ background: colors.gradient }}
         >
             {/* Dot pattern background */}
             <div
                 className="absolute inset-0 pointer-events-none opacity-30"
                 style={{
-                    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)',
+                    backgroundImage: `radial-gradient(circle, ${withAlpha(colors.primary, 0.18)} 1px, transparent 1px)`,
                     backgroundSize: '24px 24px'
                 }}
             />
@@ -190,14 +209,14 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             {/* Ambient Visualizer with gaussian blur */}
             {isPlaying && !isZenMode && (
                 <div className="absolute inset-0 z-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
-                    <Visualizer className="w-full h-full opacity-15" />
+                    <Visualizer className="w-full h-full opacity-15" primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
                 </div>
             )}
 
             {/* Zen Mode Visualizer */}
             {isZenMode && (
                 <div className="absolute inset-0 z-0">
-                    <Visualizer className="w-full h-full opacity-80" />
+                    <Visualizer className="w-full h-full opacity-80" primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
                 </div>
             )}
 
@@ -312,6 +331,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     progress={displayProgress}
                                     mode={progressMode}
                                     accentColor={colors.primary}
+                                    baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.24 : 0.16)}
+                                    markerColor={colors.secondary || colors.primary}
                                     waveform={waveform}
                                     onScrub={handleScrub}
                                     trackClassName={`cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
@@ -659,7 +680,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     <PlaybackProgress
                                         progress={displayProgress}
                                         mode={progressMode}
-                                        accentColor="#ffffff"
+                                        accentColor={colors.primary}
+                                        baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
+                                        markerColor={colors.secondary || colors.primary}
                                         waveform={waveform}
                                         onScrub={handleScrub}
                                         trackClassName={`flex-1 cursor-pointer transition-all duration-300 ${progressMode === 'waveform'

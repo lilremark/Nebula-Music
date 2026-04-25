@@ -6,10 +6,13 @@ interface PlaybackProgressProps {
     progress: number;
     mode: ProgressVisualizationMode;
     accentColor: string;
+    baseColor?: string;
+    markerColor?: string;
     waveform?: number[] | null;
     onScrub?: (e: React.ChangeEvent<HTMLInputElement>) => void;
     scrubbable?: boolean;
     trackClassName?: string;
+    trackStyle?: React.CSSProperties;
     showHandle?: boolean;
 }
 
@@ -21,15 +24,43 @@ const FALLBACK_WAVEFORM = Array.from({ length: 180 }, (_, i) => {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const getWaveHeight = (peak: number) => `${Math.max(10, Math.min(98, peak * 100))}%`;
+const withAlpha = (color: string, alpha: number) => {
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+        const normalized = hex.length === 3
+            ? hex.split('').map(char => char + char).join('')
+            : hex;
+
+        if (normalized.length === 6) {
+            const r = parseInt(normalized.slice(0, 2), 16);
+            const g = parseInt(normalized.slice(2, 4), 16);
+            const b = parseInt(normalized.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+    }
+
+    if (color.startsWith('rgb(')) {
+        return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+    }
+
+    if (color.startsWith('rgba(')) {
+        return color.replace(/rgba\((.+),\s*[\d.]+\)/, `rgba($1, ${alpha})`);
+    }
+
+    return color;
+};
 
 export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     progress,
     mode,
     accentColor,
+    baseColor,
+    markerColor,
     waveform,
     onScrub,
     scrubbable = true,
     trackClassName = '',
+    trackStyle,
     showHandle = false,
 }) => {
     const safeProgress = clamp(progress, 0, 100);
@@ -37,6 +68,8 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     const progressWidth = `${safeProgress}%`;
     const progressClipPath = `inset(0 ${100 - safeProgress}% 0 0)`;
     const shouldShowMarker = mode === 'waveform' || showHandle;
+    const resolvedBaseColor = baseColor || withAlpha(accentColor, mode === 'waveform' ? 0.28 : 0.18);
+    const resolvedMarkerColor = markerColor || accentColor;
 
     const waveformBars = (barClassName: string, barStyle?: React.CSSProperties) => (
         <div className="h-full w-full flex items-end gap-[1px]">
@@ -54,11 +87,17 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     );
 
     return (
-        <div className={`relative overflow-hidden ${trackClassName}`}>
+        <div
+            className={`relative overflow-hidden ${trackClassName}`}
+            style={{
+                ...(mode === 'bar' ? { backgroundColor: resolvedBaseColor } : undefined),
+                ...trackStyle,
+            }}
+        >
             {mode === 'waveform' ? (
                 <>
                     <div className="absolute inset-0">
-                        {waveformBars('bg-neutral-500/55 dark:bg-white/25')}
+                        {waveformBars('', { backgroundColor: resolvedBaseColor })}
                     </div>
                     <div
                         className="absolute inset-0 overflow-hidden pointer-events-none"
@@ -77,16 +116,20 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
             {shouldShowMarker && (
                 mode === 'waveform' ? (
                     <div
-                        className="absolute top-0 bottom-0 w-[2px] bg-white/80 dark:bg-white/70 pointer-events-none"
-                        style={{ left: `calc(${safeProgress}% - 1px)` }}
+                        className="absolute top-0 bottom-0 w-[2px] pointer-events-none"
+                        style={{
+                            left: `calc(${safeProgress}% - 1px)`,
+                            backgroundColor: resolvedMarkerColor,
+                            boxShadow: `0 0 10px ${withAlpha(resolvedMarkerColor, 0.45)}`,
+                        }}
                     />
                 ) : (
                     <div
                         className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-white/80 shadow-lg pointer-events-none"
                         style={{
                             left: `calc(${safeProgress}% - 6px)`,
-                            backgroundColor: accentColor,
-                            boxShadow: '0 0 0 2px rgba(10, 10, 10, 0.15)',
+                            backgroundColor: resolvedMarkerColor,
+                            boxShadow: `0 0 0 2px ${withAlpha(resolvedMarkerColor, 0.2)}`,
                         }}
                     />
                 )

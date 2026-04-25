@@ -165,6 +165,8 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         progress={displayProgress}
                         mode={progressMode}
                         accentColor={colors.primary}
+                        baseColor={colors.primaryMuted}
+                        markerColor={colors.secondary || colors.primary}
                         waveform={waveform}
                         onScrub={handleScrub}
                         showHandle={progressMode === 'bar'}
