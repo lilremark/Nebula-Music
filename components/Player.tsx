@@ -11,6 +11,7 @@ import { useArtistImage } from '../hooks/useArtistImage';
 import { useTrackWaveform } from '../hooks/useTrackWaveform';
 import { PlaybackProgress } from './player/PlaybackProgress';
 import { VisualizerMode } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 interface SyncedLine {
     time: number;
@@ -41,6 +42,7 @@ const withAlpha = (color: string, alpha: number) => {
 };
 
 export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
+    const { mode } = useTheme();
     const {
         queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong,
         volume, setVolume, playSong,
@@ -72,6 +74,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const progressMode = settings.progressVisualization;
     const { colors } = useAdaptiveColors(coverArt);
     const { image: artistImage } = useArtistImage(currentSong?.artistId, currentSong?.artist);
+    const isLightMode = mode === 'light';
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -198,36 +201,51 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' });
     };
 
+    const playerBackground = isLightMode
+        ? {
+            backgroundColor: '#f4f4f5',
+            backgroundImage: [
+                `radial-gradient(circle at 18% 18%, ${withAlpha(colors.primary, 0.18)}, transparent 34%)`,
+                `radial-gradient(circle at 78% 82%, ${withAlpha(colors.secondary || colors.primary, 0.14)}, transparent 36%)`,
+                'linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(244,244,245,0.94) 44%, rgba(229,229,229,0.92) 100%)'
+            ].join(', '),
+        }
+        : {
+            backgroundColor: '#0a0a0a',
+            backgroundImage: colors.gradient,
+        };
+
     return (
         <div className={`fixed inset-0 z-[60] flex flex-col bg-neutral-200 dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded || isZenMode ? 'translate-y-0' : 'translate-y-full'}`}
-            style={{
-                backgroundColor: '#0a0a0a',
-                backgroundImage: colors.gradient,
-            }}
+            style={playerBackground}
         >
             {/* Dot pattern background */}
             <div
-                className="absolute inset-0 pointer-events-none opacity-30"
+                className={`absolute inset-0 pointer-events-none ${isLightMode ? 'opacity-45' : 'opacity-30'}`}
                 style={{
-                    backgroundImage: `radial-gradient(circle, ${withAlpha(colors.primary, 0.18)} 1px, transparent 1px)`,
+                    backgroundImage: `radial-gradient(circle, ${withAlpha(colors.primary, isLightMode ? 0.14 : 0.18)} 1px, transparent 1px)`,
                     backgroundSize: '24px 24px'
                 }}
             />
 
+            {isLightMode && (
+                <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/50 via-white/25 to-neutral-200/55" />
+            )}
+
             {/* Subtle album color orbs */}
             <div
-                className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full opacity-[0.05] blur-[180px] pointer-events-none"
+                className={`absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[180px] pointer-events-none ${isLightMode ? 'opacity-[0.16]' : 'opacity-[0.05]'}`}
                 style={{ backgroundColor: colors.primary }}
             />
             <div
-                className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full opacity-[0.04] blur-[160px] pointer-events-none"
+                className={`absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full blur-[160px] pointer-events-none ${isLightMode ? 'opacity-[0.12]' : 'opacity-[0.04]'}`}
                 style={{ backgroundColor: colors.secondary || colors.primary }}
             />
 
             {/* Ambient Visualizer with gaussian blur */}
             {isPlaying && !isZenMode && (
                 <div className="absolute inset-0 z-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
-                    <Visualizer className="w-full h-full opacity-15" primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
+                    <Visualizer className={`w-full h-full ${isLightMode ? 'opacity-10' : 'opacity-15'}`} primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
                 </div>
             )}
 

@@ -1,117 +1,128 @@
 import React, { useState, useEffect } from 'react';
+import {
+    Activity, AlertCircle, CheckCircle, Keyboard, Layout, LogOut, Monitor,
+    Moon, Palette, Server, ShieldAlert, Sliders, Sun
+} from 'lucide-react';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
-import {
-    Server, Palette, Layout, CheckCircle, AlertCircle,
-    Activity, ShieldAlert, LogOut, Keyboard, Sliders, Monitor, Volume2, Sun, Moon
-} from 'lucide-react';
 import { VisualizerMode } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { CustomDropdown } from '../components/CustomDropdown';
 
-// Helper components moved outside to prevent re-renders
+const rowClass = 'flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-neutral-100 dark:hover:bg-white/5';
+const inputClass = 'w-full rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900 placeholder-neutral-500 transition-all hover:bg-neutral-50 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-neutral-950/70 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-900';
+
+const SettingPanel = ({
+    icon: Icon,
+    title,
+    description,
+    children,
+    className = '',
+}: {
+    icon: React.ElementType;
+    title: string;
+    description?: string;
+    children: React.ReactNode;
+    className?: string;
+}) => (
+    <section className={`grid overflow-hidden rounded-lg border border-neutral-200 bg-white/70 shadow-sm dark:border-white/10 dark:bg-neutral-900/50 lg:grid-cols-[260px_minmax(0,1fr)] ${className}`}>
+        <div className="flex items-start gap-3 border-b border-neutral-200 bg-neutral-100/70 px-5 py-4 dark:border-white/10 dark:bg-white/[0.03] lg:border-b-0 lg:border-r">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
+                <Icon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white">{title}</h2>
+                {description && <p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</p>}
+            </div>
+        </div>
+        <div className="min-w-0 divide-y divide-neutral-200 dark:divide-white/10">
+            {children}
+        </div>
+    </section>
+);
+
 const ToggleRow = ({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (v: boolean) => void }) => (
-    <div
-        className="flex items-center justify-between py-4 px-6 hover:bg-neutral-200/60 dark:hover:bg-white/5 cursor-pointer transition-colors border-b border-neutral-200 dark:border-white/10"
+    <button
+        type="button"
+        className={`${rowClass} w-full text-left`}
         onClick={() => onChange(!checked)}
+        aria-pressed={checked}
     >
-        <div>
-            <span className="text-sm font-medium text-neutral-900 dark:text-white">{label}</span>
-            {description && <p className="text-xs text-neutral-600 dark:text-white/50 mt-0.5">{description}</p>}
-        </div>
-        <div className={`w-12 h-7 rounded-full p-1 transition-all ${checked ? 'bg-primary' : 'bg-neutral-300 dark:bg-white/20'}`}>
-            <div className={`w-5 h-5 bg-white dark:bg-white rounded-full shadow transform transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
-        </div>
-    </div>
+        <span className="min-w-0">
+            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
+            {description && <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</span>}
+        </span>
+        <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-neutral-300 dark:bg-white/20'}`}>
+            <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+        </span>
+    </button>
 );
 
 const ShortcutRow = ({ id, label, value, editingKey, setEditingKey }: { id: string; label: string; value: string, editingKey: string | null, setEditingKey: (k: string | null) => void }) => (
-    <div className="flex items-center justify-between py-4 px-6 hover:bg-neutral-200/60 dark:hover:bg-white/5 transition-colors border-b border-neutral-200 dark:border-white/10">
-        <span className="text-sm font-medium text-neutral-900 dark:text-white">{label}</span>
+    <div className={rowClass}>
+        <span className="text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
         <button
+            type="button"
             onClick={() => setEditingKey(id)}
-            className={`px-4 py-2 rounded-lg text-xs font-mono transition-all ${editingKey === id
-                ? 'bg-primary text-black font-bold'
-                : 'bg-neutral-200 text-neutral-900 dark:bg-white/10 dark:text-white hover:bg-neutral-300 dark:hover:bg-white/20'
+            className={`min-w-24 rounded-lg px-4 py-2 text-xs font-bold transition-all ${editingKey === id
+                ? 'bg-primary text-black shadow-lg shadow-primary/20'
+                : 'bg-neutral-200 text-neutral-800 hover:bg-neutral-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15'
                 }`}
         >
-            {editingKey === id ? 'Press key...' : (value === ' ' ? 'SPACE' : value.toUpperCase())}
+            {editingKey === id ? 'Press key' : (value === ' ' ? 'SPACE' : value.toUpperCase())}
         </button>
     </div>
 );
 
-const EQSlider = ({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) => (
-    <div className="py-4 px-6 border-b border-neutral-200 dark:border-white/10">
-        <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-neutral-900 dark:text-white">{label}</span>
-            <span className="text-xs font-mono text-neutral-600 dark:text-white/50">{value > 0 ? `+${value}` : value} dB</span>
-        </div>
-        <input
-            type="range"
-            min="-12"
-            max="12"
-            step="1"
-            value={value}
-            onChange={(e) => onChange(parseInt(e.target.value))}
-            className="w-full h-2 bg-neutral-200 dark:bg-white/10 rounded-full appearance-none cursor-pointer accent-primary"
-        />
-    </div>
-);
-
-const Section = ({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) => (
-    <div className="mb-4 bg-white/80 dark:bg-neutral-900/80 rounded-xl overflow-hidden border border-neutral-200 dark:border-white/10">
-        <div className="flex items-center gap-3 py-4 px-6 bg-neutral-100 dark:bg-white/5 border-b border-neutral-200 dark:border-white/10">
-            <Icon className="w-5 h-5 text-primary" />
-            <h2 className="text-sm font-bold text-neutral-900 dark:text-white uppercase tracking-wider">{title}</h2>
-        </div>
-        <div>
-            {children}
-        </div>
-    </div>
-);
-
 const ColorRow = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
-    <div className="flex items-center justify-between py-4 px-6 border-b border-neutral-200 dark:border-white/10">
-        <div>
-            <span className="text-sm font-medium text-neutral-900 dark:text-white">{label}</span>
-            <p className="text-xs text-neutral-600 dark:text-white/60 font-mono mt-0.5">{value}</p>
+    <div className={rowClass}>
+        <div className="min-w-0">
+            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
+            <span className="mt-1 block font-mono text-xs text-neutral-600 dark:text-white/50">{value}</span>
         </div>
-        <div className="relative">
+        <label className="relative h-10 w-14 shrink-0 overflow-hidden rounded-lg border border-neutral-300 bg-neutral-100 shadow-inner dark:border-white/15 dark:bg-white/10">
+            <span className="absolute inset-1 rounded-md" style={{ backgroundColor: value }} />
             <input
                 type="color"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-14 h-10 rounded-lg cursor-pointer bg-transparent border-2 border-neutral-300 dark:border-white/20"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                aria-label={label}
             />
-        </div>
+        </label>
     </div>
 );
 
 const OptionRow = ({ label, description, options, value, onChange }: {
     label: string;
     description?: string;
-    options: { value: string; label: string }[];
+    options: { value: string; label: string; icon?: React.ElementType }[];
     value: string;
     onChange: (v: string) => void
 }) => (
-    <div className="py-4 px-6 border-b border-neutral-200 dark:border-white/10">
+    <div className="px-5 py-4">
         <div className="mb-3">
-            <span className="text-sm font-medium text-neutral-900 dark:text-white">{label}</span>
-            {description && <p className="text-xs text-neutral-600 dark:text-white/50 mt-0.5">{description}</p>}
+            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
+            {description && <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</span>}
         </div>
-        <div className="flex gap-2">
-            {options.map(opt => (
-                <button
-                    key={opt.value}
-                    onClick={() => onChange(opt.value)}
-                    className={`flex-1 py-3 px-4 rounded-lg text-xs font-semibold transition-all ${value === opt.value
-                        ? 'bg-primary text-black'
-                        : 'bg-neutral-200 text-neutral-800 dark:bg-white/10 dark:text-white/70 hover:bg-neutral-300 dark:hover:bg-white/15 hover:text-neutral-900 dark:hover:text-white'
-                        }`}
-                >
-                    {opt.label}
-                </button>
-            ))}
+        <div className="grid grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-white/5">
+            {options.map(opt => {
+                const Icon = opt.icon;
+                return (
+                    <button
+                        type="button"
+                        key={opt.value}
+                        onClick={() => onChange(opt.value)}
+                        className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-xs font-bold transition-all ${value === opt.value
+                            ? 'bg-white text-neutral-950 shadow-sm dark:bg-white dark:text-black'
+                            : 'text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
+                            }`}
+                    >
+                        {Icon && <Icon className="h-4 w-4" />}
+                        {opt.label}
+                    </button>
+                );
+            })}
         </div>
     </div>
 );
@@ -126,14 +137,9 @@ export const SettingsView: React.FC = () => {
     const [connStatus, setConnStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [isInsecure, setIsInsecure] = useState(false);
     const [editingKey, setEditingKey] = useState<string | null>(null);
-    const settingsInputClass = 'w-full rounded-lg px-4 py-3 border transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 text-neutral-900 placeholder-neutral-500 bg-neutral-100 border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-900 dark:border-white/10 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-800';
 
     useEffect(() => {
-        if (url && !url.startsWith('https://') && url.length > 7) {
-            setIsInsecure(true);
-        } else {
-            setIsInsecure(false);
-        }
+        setIsInsecure(Boolean(url && !url.startsWith('https://') && url.length > 7));
     }, [url]);
 
     const handleConnect = async (e: React.FormEvent) => {
@@ -148,369 +154,308 @@ export const SettingsView: React.FC = () => {
         const handleKeyDown = (e: KeyboardEvent) => {
             e.preventDefault();
             e.stopPropagation();
-            const newShortcuts = { ...settings.shortcuts, [editingKey]: e.key };
-            updateSettings({ shortcuts: newShortcuts });
+            updateSettings({ shortcuts: { ...settings.shortcuts, [editingKey]: e.key } });
             setEditingKey(null);
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [editingKey, settings, updateSettings]);
+    }, [editingKey, settings.shortcuts, updateSettings]);
+
+    const setEqBand = (freq: string, newVal: number) => {
+        updateSettings({
+            eq: {
+                ...settings.eq,
+                preset: 'custom',
+                bands: { ...settings.eq.bands, [freq]: newVal }
+            }
+        });
+    };
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar bg-neutral-50 dark:bg-neutral-950">
-            {/* Header */}
-            <div className="sticky top-0 z-10 bg-neutral-50/95 dark:bg-neutral-950/95 backdrop-blur-sm border-b border-neutral-200 dark:border-white/10">
-                <div className="flex items-center justify-between px-6 lg:px-10 py-5">
-                    <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Settings</h1>
-                    {!isDemoMode && (
-                        <button
-                            onClick={disconnect}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-500/25 transition-all text-sm font-medium border border-red-500/30"
-                        >
-                            <LogOut className="w-4 h-4" />
-                            Disconnect
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Content */}
-            <div className="px-6 lg:px-10 py-6 pb-32 text-neutral-900 dark:text-white">
-
-                {/* Server Connection */}
-                <Section icon={Server} title="Server Connection">
-                    <form onSubmit={handleConnect}>
-                        <div className="py-4 px-6 border-b border-neutral-200 dark:border-white/10">
-                            <label className="block text-xs font-medium text-neutral-700 dark:text-white/60 uppercase tracking-wider mb-2">Server URL</label>
-                            <input
-                                type="text"
-                                value={url}
-                                onChange={e => setUrl(e.target.value)}
-                                placeholder="https://music.example.com"
-                                className={`${settingsInputClass} ${isInsecure ? 'border-yellow-500/50' : 'border-neutral-300 dark:border-white/10'
-                                    }`}
-                            />
-                            {isInsecure && (
-                                <div className="flex items-center gap-1.5 mt-2 text-yellow-600 dark:text-yellow-500 text-xs">
-                                    <ShieldAlert className="w-3 h-3" />
-                                    <span>Warning: Not using HTTPS</span>
-                                </div>
-                            )}
+        <div className="h-full overflow-y-auto bg-neutral-50 text-neutral-900 custom-scrollbar dark:bg-neutral-950 dark:text-white">
+            <div className="w-full px-6 py-8 pb-32 lg:px-10">
+                <header className="mb-8">
+                    <div>
+                        <div className="mb-3 inline-flex items-center gap-2 rounded bg-primary/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary ring-1 ring-primary/20">
+                            <Monitor className="h-3.5 w-3.5" />
+                            Nebula Controls
                         </div>
-                        <div className="py-4 px-6 border-b border-neutral-200 dark:border-white/10">
-                            <label className="block text-xs font-medium text-neutral-700 dark:text-white/60 uppercase tracking-wider mb-2">Username</label>
-                            <input
-                                type="text"
-                                value={user}
-                                onChange={e => setUser(e.target.value)}
-                                placeholder="admin"
-                                className={settingsInputClass}
-                            />
-                        </div>
-                        <div className="py-4 px-6 border-b border-neutral-200 dark:border-white/10">
-                            <label className="block text-xs font-medium text-neutral-700 dark:text-white/60 uppercase tracking-wider mb-2">Password</label>
-                            <input
-                                type="password"
-                                value={pass}
-                                onChange={e => setPass(e.target.value)}
-                                placeholder="••••••••"
-                                className={settingsInputClass}
-                            />
-                        </div>
-                        <div className="py-4 px-6">
-                            <button
-                                disabled={connStatus === 'loading'}
-                                className="w-full bg-white text-black font-bold py-3.5 rounded-lg hover:bg-primary hover:text-white transition-all text-sm"
-                            >
-                                {connStatus === 'loading' ? 'Connecting...' : 'Save & Connect'}
-                            </button>
-                            {connStatus === 'success' && (
-                                <div className="flex items-center justify-center gap-2 text-green-400 text-sm mt-3">
-                                    <CheckCircle className="w-4 h-4" />
-                                    Connected successfully
-                                </div>
-                            )}
-                            {connStatus === 'error' && (
-                                <div className="flex items-center justify-center gap-2 text-red-400 text-sm mt-3">
-                                    <AlertCircle className="w-4 h-4" />
-                                    Connection failed
-                                </div>
-                            )}
-                            {isDemoMode && connStatus === 'idle' && (
-                                <p className="text-xs text-neutral-600 dark:text-white/60 text-center mt-3">Currently in Demo Mode</p>
-                            )}
-                        </div>
-                    </form>
-                </Section>
-
-                {/* Theme Colors */}
-                <Section icon={Palette} title="Theme Colors">
-                    <ColorRow
-                        label="Primary Color"
-                        value={settings.theme.primaryColor}
-                        onChange={(v) => updateSettings({ theme: { ...settings.theme, primaryColor: v } })}
-                    />
-                    <ColorRow
-                        label="Secondary Color"
-                        value={settings.theme.secondaryColor}
-                        onChange={(v) => updateSettings({ theme: { ...settings.theme, secondaryColor: v } })}
-                    />
-                    <ColorRow
-                        label="Background Tint"
-                        value={settings.theme.backgroundColor}
-                        onChange={(v) => updateSettings({ theme: { ...settings.theme, backgroundColor: v } })}
-                    />
-                </Section>
-
-                {/* Appearance Mode */}
-                <Section icon={Layout} title="Appearance">
-                    <OptionRow
-                        label="Theme Mode"
-                        description="Switch between light and dark modes"
-                        options={[
-                            { value: 'dark', label: '🌙 Dark' },
-                            { value: 'light', label: '☀️ Light' },
-                        ]}
-                        value={mode}
-                        onChange={(v) => setTheme(v as 'light' | 'dark')}
-                    />
-                </Section>
-
-                {/* Player Settings */}
-                <Section icon={Monitor} title="Player Display">
-                    <OptionRow
-                        label="Mini Player Style"
-                        description="Choose how the mini player appears when music is playing"
-                        options={[
-                            { value: 'sidebar', label: 'Sidebar Panel' },
-                            { value: 'floating', label: 'Floating Bar' },
-                        ]}
-                        value={settings.miniPlayerMode}
-                        onChange={(v) => updateSettings({ miniPlayerMode: v as 'floating' | 'sidebar' })}
-                    />
-                    <div
-                        className="flex items-center justify-between py-4 px-6 hover:bg-neutral-200/60 dark:hover:bg-white/5 cursor-pointer transition-colors border-b border-neutral-200 dark:border-white/10"
-                        onClick={() => updateSettings({ magicCrossfade: !settings.magicCrossfade })}
-                    >
-                        <div>
-                            <span className="text-sm font-medium text-neutral-900 dark:text-white">Magic Crossfade</span>
-                            <p className="text-xs text-neutral-600 dark:text-white/50 mt-0.5">Detects track endings and fades into the next song</p>
-                        </div>
-                        <div className={`w-12 h-7 rounded-full p-1 transition-all ${settings.magicCrossfade ? 'bg-primary' : 'bg-neutral-300 dark:bg-white/20'}`}>
-                            <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${settings.magicCrossfade ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </div>
+                        <h1 className="text-3xl font-black tracking-tight text-neutral-950 dark:text-white">Settings</h1>
+                        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-600 dark:text-white/55">
+                            Tune the connection, playback, appearance, navigation, and keyboard controls for this device.
+                        </p>
                     </div>
-                </Section>
+                </header>
 
-                {/* Enhanced Equalizer */}
-                <Section icon={Sliders} title="Equalizer">
-                    <div className="p-6">
-                        <div className="flex items-center justify-between mb-8">
-                            <ToggleRow
-                                label="Enable Equalizer"
-                                checked={settings.eq.enabled}
-                                onChange={(v) => updateSettings({ eq: { ...settings.eq, enabled: v } })}
-                            />
-
-                            {/* Preset Selector */}
-                            <div className="flex items-center gap-3">
-                                <span className="text-xs font-medium text-neutral-700 dark:text-white/60 uppercase tracking-wider">Preset</span>
-                                <div className="w-48">
-                                    <CustomDropdown
-                                        value={settings.eq.preset}
-                                        onChange={(newPreset) => {
-                                            const typedPreset = newPreset as typeof settings.eq.preset;
-                                            const newBands = newPreset === 'custom' ? settings.eq.bands : { ...EQ_PRESETS[newPreset] };
-                                            updateSettings({
-                                                eq: {
-                                                    ...settings.eq,
-                                                    preset: typedPreset,
-                                                    bands: { ...settings.eq.bands, ...newBands }
-                                                }
-                                            });
-                                        }}
-                                        options={Object.entries(EQ_PRESET_LABELS).map(([key, label]) => ({
-                                            value: key,
-                                            label,
-                                        }))}
-                                        disabled={!settings.eq.enabled}
-                                        className="text-xs font-bold"
+                <div className="space-y-5">
+                        <SettingPanel icon={Server} title="Server Connection" description="Subsonic-compatible server credentials are stored locally.">
+                            <form onSubmit={handleConnect} className="divide-y divide-neutral-200 dark:divide-white/10">
+                                <div className="px-5 py-4">
+                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Server URL</label>
+                                    <input
+                                        type="text"
+                                        value={url}
+                                        onChange={e => setUrl(e.target.value)}
+                                        placeholder="https://music.example.com"
+                                        className={`${inputClass} ${isInsecure ? 'border-yellow-500/60 focus:border-yellow-500 focus:ring-yellow-500/20' : ''}`}
                                     />
+                                    {isInsecure && (
+                                        <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400">
+                                            <ShieldAlert className="h-3.5 w-3.5" />
+                                            HTTPS is recommended for remote servers.
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        </div>
+                                <div className="grid gap-px divide-y divide-neutral-200 dark:divide-white/10 md:grid-cols-2 md:divide-x md:divide-y-0">
+                                    <div className="px-5 py-4">
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Username</label>
+                                        <input
+                                            type="text"
+                                            value={user}
+                                            onChange={e => setUser(e.target.value)}
+                                            placeholder="admin"
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                    <div className="px-5 py-4">
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Password</label>
+                                        <input
+                                            type="password"
+                                            value={pass}
+                                            onChange={e => setPass(e.target.value)}
+                                            placeholder="Password"
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="px-5 py-4">
+                                    <div className="flex flex-col gap-3 sm:flex-row">
+                                        <button
+                                            type="submit"
+                                            disabled={connStatus === 'loading'}
+                                            className="flex flex-1 items-center justify-center rounded-lg bg-neutral-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-primary"
+                                        >
+                                            {connStatus === 'loading' ? 'Connecting...' : 'Save & Connect'}
+                                        </button>
+                                        {(credentials || isDemoMode) && (
+                                            <button
+                                                type="button"
+                                                onClick={disconnect}
+                                                className="flex items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-3.5 text-sm font-bold text-red-600 transition hover:bg-red-500/20 dark:text-red-400"
+                                            >
+                                                <LogOut className="h-4 w-4" />
+                                                Disconnect Server
+                                            </button>
+                                        )}
+                                    </div>
+                                    {connStatus === 'success' && (
+                                        <div className="mt-3 flex items-center justify-center gap-2 text-sm font-medium text-green-600 dark:text-green-400">
+                                            <CheckCircle className="h-4 w-4" />
+                                            Connected successfully
+                                        </div>
+                                    )}
+                                    {connStatus === 'error' && (
+                                        <div className="mt-3 flex items-center justify-center gap-2 text-sm font-medium text-red-600 dark:text-red-400">
+                                            <AlertCircle className="h-4 w-4" />
+                                            Connection failed
+                                        </div>
+                                    )}
+                                    {isDemoMode && connStatus === 'idle' && (
+                                        <p className="mt-3 text-center text-xs text-neutral-600 dark:text-white/50">Currently in Demo Mode</p>
+                                    )}
+                                </div>
+                            </form>
+                        </SettingPanel>
 
-                        {/* Mixing Board Style EQ */}
-                        <div className={`transition-all duration-500 ${settings.eq.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none grayscale'}`}>
-                            <div className="relative bg-neutral-100 dark:bg-black/20 rounded-xl p-6 border border-neutral-200 dark:border-white/5 shadow-inner">
-                                {/* Grid Background */}
-                                <div className="absolute inset-0 opacity-10"
-                                    style={{ backgroundImage: 'linear-gradient(to right, #000000 1px, transparent 1px), linear-gradient(to bottom, #000000 1px, transparent 1px)', backgroundSize: '20px 20px' }}
-                                />
+                        <SettingPanel icon={Sliders} title="Equalizer" description="Shape playback with presets or individual frequency bands.">
+                            <div className="px-5 py-4">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                    <ToggleRow
+                                        label="Enable Equalizer"
+                                        checked={settings.eq.enabled}
+                                        onChange={(v) => updateSettings({ eq: { ...settings.eq, enabled: v } })}
+                                    />
+                                    <div className="min-w-48">
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Preset</label>
+                                        <CustomDropdown
+                                            value={settings.eq.preset}
+                                            onChange={(newPreset) => {
+                                                const typedPreset = newPreset as typeof settings.eq.preset;
+                                                const newBands = newPreset === 'custom' ? settings.eq.bands : { ...EQ_PRESETS[newPreset] };
+                                                updateSettings({
+                                                    eq: {
+                                                        ...settings.eq,
+                                                        preset: typedPreset,
+                                                        bands: { ...settings.eq.bands, ...newBands }
+                                                    }
+                                                });
+                                            }}
+                                            options={Object.entries(EQ_PRESET_LABELS).map(([key, label]) => ({
+                                                value: key,
+                                                label,
+                                            }))}
+                                            disabled={!settings.eq.enabled}
+                                            className="text-xs font-bold"
+                                        />
+                                    </div>
+                                </div>
 
-                                <div className="flex items-end justify-between gap-2 relative z-10 h-64">
-                                    {/* Center Line */}
-                                    <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-neutral-300 dark:bg-white/10 -z-10" />
+                                <div className={`mt-6 transition-all duration-500 ${settings.eq.enabled ? 'opacity-100' : 'pointer-events-none opacity-40 grayscale'}`}>
+                                    <div className="relative overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100 p-5 dark:border-white/10 dark:bg-black/20">
+                                        <div
+                                            className="absolute inset-0 opacity-10"
+                                            style={{ backgroundImage: 'linear-gradient(to right, #000 1px, transparent 1px), linear-gradient(to bottom, #000 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                                        />
 
-                                    {Object.entries(EQ_BAND_LABELS).map(([freq, label]) => {
-                                        const val = settings.eq.bands[freq as keyof typeof settings.eq.bands] || 0;
-                                        const percent = ((val + 12) / 24) * 100;
+                                        <div className="relative z-10 flex h-64 items-end justify-between gap-2">
+                                            <div className="absolute left-0 right-0 top-1/2 -z-10 h-px bg-neutral-300 dark:bg-white/10" />
 
-                                        return (
-                                            <div key={freq} className="flex-1 flex flex-col items-center group relative h-full">
-                                                {/* Fader Track */}
-                                                <div className="relative w-full h-full flex justify-center pb-8 pt-2">
-                                                    {/* Slot */}
-                                                    <div className="absolute top-2 bottom-8 w-2 bg-black/20 dark:bg-black/50 rounded-full shadow-[inset_0_2px_4px_rgba(0,0,0,0.35)] border border-neutral-300 dark:border-white/5">
-                                                        {/* Center Notch */}
-                                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-0.5 bg-neutral-400 dark:bg-white/20" />
-                                                    </div>
+                                            {Object.entries(EQ_BAND_LABELS).map(([freq, label]) => {
+                                                const val = settings.eq.bands[freq as keyof typeof settings.eq.bands] || 0;
+                                                const percent = ((val + 12) / 24) * 100;
 
-                                                    {/* Active Fill (Neon Glow) */}
-                                                    <div
-                                                        className={`absolute w-1 rounded-full text-primary transition-all duration-200 pointer-events-none ${val === 0 ? 'opacity-0' : 'opacity-100 shadow-[0_0_8px_currentColor]'}`}
-                                                        style={{
-                                                            height: `${Math.abs(val) / 24 * 100}%`,
-                                                            top: val > 0 ? 'auto' : '50%',
-                                                            bottom: val > 0 ? '50%' : 'auto',
-                                                            backgroundColor: 'currentColor'
-                                                        }}
-                                                    />
+                                                return (
+                                                    <div key={freq} className="group relative flex h-full flex-1 flex-col items-center">
+                                                        <div className="relative flex h-full w-full justify-center pb-8 pt-2">
+                                                            <div className="absolute bottom-8 top-2 w-2 rounded-full border border-neutral-300 bg-black/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.35)] dark:border-white/5 dark:bg-black/50">
+                                                                <div className="absolute left-1/2 top-1/2 h-0.5 w-4 -translate-x-1/2 -translate-y-1/2 bg-neutral-400 dark:bg-white/20" />
+                                                            </div>
 
-                                                    {/* Hidden Range Input - Rotated -90deg for stable vertical behavior */}
-                                                    <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                                                        <input
-                                                            type="range"
-                                                            min="-12"
-                                                            max="12"
-                                                            step="1"
-                                                            value={val}
-                                                            onChange={(e) => {
-                                                                const newVal = parseInt(e.target.value);
-                                                                updateSettings({
-                                                                    eq: {
-                                                                        ...settings.eq,
-                                                                        preset: 'custom',
-                                                                        bands: { ...settings.eq.bands, [freq]: newVal }
-                                                                    }
-                                                                });
-                                                            }}
-                                                            className="w-[220px] h-10 opacity-0 cursor-pointer pointer-events-auto appearance-none bg-transparent"
-                                                            style={{
-                                                                transform: 'rotate(-90deg)',
-                                                                height: '40px' // Touch target width when rotated
-                                                            }}
-                                                            title={`${label}: ${val > 0 ? '+' : ''}${val}dB`}
-                                                        />
-                                                    </div>
+                                                            <div
+                                                                className={`pointer-events-none absolute w-1 rounded-full bg-primary transition-all duration-200 ${val === 0 ? 'opacity-0' : 'opacity-100 shadow-[0_0_8px_currentColor]'}`}
+                                                                style={{
+                                                                    height: `${Math.abs(val) / 24 * 100}%`,
+                                                                    top: val > 0 ? 'auto' : '50%',
+                                                                    bottom: val > 0 ? '50%' : 'auto',
+                                                                }}
+                                                            />
 
-                                                    {/* Realistic Fader Handle (Thumb) */}
-                                                    <div
-                                                        className="absolute w-8 h-12 pointer-events-none transition-all duration-75 z-10 flex items-center justify-center"
-                                                        style={{ bottom: `calc(${percent}% - 24px + 10px)` }} // Adjust for track padding
-                                                    >
-                                                        {/* Physical Cap */}
-                                                        <div className={`w-8 h-12 rounded bg-gradient-to-b from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-800 shadow-[0_4px_6px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.2)] border border-neutral-300 dark:border-black group-hover:from-neutral-300 group-hover:to-neutral-400 dark:group-hover:from-neutral-600 dark:group-hover:to-neutral-700 relative flex flex-col items-center justify-center gap-1`}>
-                                                            {/* Grip Lines */}
-                                                            <div className="w-6 h-0.5 bg-black/20 dark:bg-black/30 shadow-[0_1px_0_rgba(255,255,255,0.1)]" />
-                                                            <div className="w-6 h-0.5 bg-black/20 dark:bg-black/30 shadow-[0_1px_0_rgba(255,255,255,0.1)]" />
-                                                            <div className="w-6 h-0.5 bg-black/20 dark:bg-black/30 shadow-[0_1px_0_rgba(255,255,255,0.1)]" />
+                                                            <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+                                                                <input
+                                                                    type="range"
+                                                                    min="-12"
+                                                                    max="12"
+                                                                    step="1"
+                                                                    value={val}
+                                                                    onChange={(e) => setEqBand(freq, parseInt(e.target.value))}
+                                                                    className="pointer-events-auto h-10 w-[220px] cursor-pointer appearance-none bg-transparent opacity-0"
+                                                                    style={{ transform: 'rotate(-90deg)' }}
+                                                                    title={`${label}: ${val > 0 ? '+' : ''}${val}dB`}
+                                                                />
+                                                            </div>
 
-                                                            {/* Indicator Colored Line */}
-                                                            <div className="w-full h-0.5 bg-primary shadow-[0_0_5px_rgba(var(--primary-rgb),0.8)] mt-1" />
+                                                            <div
+                                                                className="pointer-events-none absolute z-10 flex h-11 w-8 items-center justify-center transition-all duration-75"
+                                                                style={{ bottom: `calc(${percent}% - 22px + 10px)` }}
+                                                            >
+                                                                <div className="relative flex h-11 w-8 flex-col items-center justify-center gap-1 rounded bg-gradient-to-b from-neutral-200 to-neutral-300 shadow-[0_4px_6px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] ring-1 ring-neutral-300 group-hover:from-neutral-300 group-hover:to-neutral-400 dark:from-neutral-700 dark:to-neutral-800 dark:ring-black dark:group-hover:from-neutral-600 dark:group-hover:to-neutral-700">
+                                                                    <div className="h-0.5 w-6 bg-black/20 dark:bg-black/30" />
+                                                                    <div className="h-0.5 w-6 bg-black/20 dark:bg-black/30" />
+                                                                    <div className="h-0.5 w-6 bg-black/20 dark:bg-black/30" />
+                                                                    <div className="mt-1 h-0.5 w-full bg-primary shadow-[0_0_5px_rgba(var(--primary-rgb),0.8)]" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="absolute bottom-0 w-full truncate text-center text-[10px] font-bold uppercase tracking-widest text-neutral-600 transition-colors group-hover:text-neutral-900 dark:text-white/60 dark:group-hover:text-white">
+                                                            {label}
+                                                        </div>
+
+                                                        <div className="pointer-events-none absolute -top-5 translate-y-2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-black opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
+                                                            {val > 0 ? '+' : ''}{val}dB
                                                         </div>
                                                     </div>
-                                                </div>
-
-                                                {/* Label */}
-                                                <div className="absolute bottom-0 text-[10px] font-bold text-neutral-600 dark:text-white/60 uppercase tracking-widest text-center w-full truncate group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
-                                                    {label}
-                                                </div>
-
-                                                {/* Value Floating Bubble */}
-                                                <div className="absolute -top-6 bg-primary text-black text-[10px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 pointer-events-none">
-                                                    {val > 0 ? '+' : ''}{val}dB
-                                                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rotate-45" />
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </Section>
+                        </SettingPanel>
 
-                {/* Visualizer */}
-                <Section icon={Activity} title="Visualizer Style">
-                    <div className="py-4 px-6">
-                        <div className="grid grid-cols-3 gap-2">
-                            {(['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM', 'PARTICLES', 'HEXAGON', 'CUBE', 'GRID'] as VisualizerMode[]).map((mode) => (
-                                <button
-                                    key={mode}
-                                    onClick={() => setVisualizerMode(mode)}
-                                    className={`py-3 px-4 rounded-lg text-xs font-semibold transition-all ${visualizerMode === mode
-                                        ? 'bg-primary text-black'
-                                        : 'bg-neutral-200 text-neutral-800 dark:bg-white/10 dark:text-white/60 hover:bg-neutral-300 dark:hover:bg-white/15 hover:text-neutral-900 dark:hover:text-white'
-                                        }`}
-                                >
-                                    {mode}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </Section>
+                        <SettingPanel icon={Palette} title="Appearance">
+                            <OptionRow
+                                label="Theme Mode"
+                                options={[
+                                    { value: 'dark', label: 'Dark', icon: Moon },
+                                    { value: 'light', label: 'Light', icon: Sun },
+                                ]}
+                                value={mode}
+                                onChange={(v) => setTheme(v as 'light' | 'dark')}
+                            />
+                            <ColorRow
+                                label="Primary Color"
+                                value={settings.theme.primaryColor}
+                                onChange={(v) => updateSettings({ theme: { ...settings.theme, primaryColor: v } })}
+                            />
+                            <ColorRow
+                                label="Secondary Color"
+                                value={settings.theme.secondaryColor}
+                                onChange={(v) => updateSettings({ theme: { ...settings.theme, secondaryColor: v } })}
+                            />
+                            <ColorRow
+                                label="Background Tint"
+                                value={settings.theme.backgroundColor}
+                                onChange={(v) => updateSettings({ theme: { ...settings.theme, backgroundColor: v } })}
+                            />
+                        </SettingPanel>
 
-                {/* Navigation */}
-                <Section icon={Layout} title="Navigation Items">
-                    <ToggleRow
-                        label="Show Home"
-                        checked={settings.sidebar.showHome}
-                        onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showHome: v } })}
-                    />
-                    <ToggleRow
-                        label="Show Browse"
-                        checked={settings.sidebar.showBrowse}
-                        onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showBrowse: v } })}
-                    />
-                    <ToggleRow
-                        label="Show Internet Radio"
-                        checked={settings.sidebar.showRadio}
-                        onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showRadio: v } })}
-                    />
-                    <ToggleRow
-                        label="Show Artists"
-                        checked={settings.sidebar.showArtists}
-                        onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showArtists: v } })}
-                    />
-                    <ToggleRow
-                        label="Show Albums"
-                        checked={settings.sidebar.showAlbums}
-                        onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showAlbums: v } })}
-                    />
-                    <ToggleRow
-                        label="Show Songs"
-                        checked={settings.sidebar.showSongs}
-                        onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showSongs: v } })}
-                    />
-                    <ToggleRow
-                        label="Show Playlists"
-                        checked={settings.sidebar.showPlaylists}
-                        onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showPlaylists: v } })}
-                    />
-                </Section>
+                        <SettingPanel icon={Monitor} title="Player Display">
+                            <OptionRow
+                                label="Mini Player Style"
+                                options={[
+                                    { value: 'sidebar', label: 'Sidebar Panel' },
+                                    { value: 'floating', label: 'Floating Bar' },
+                                ]}
+                                value={settings.miniPlayerMode}
+                                onChange={(v) => updateSettings({ miniPlayerMode: v as 'floating' | 'sidebar' })}
+                            />
+                            <ToggleRow
+                                label="Magic Crossfade"
+                                description="Detects track endings and fades into the next song."
+                                checked={settings.magicCrossfade}
+                                onChange={(v) => updateSettings({ magicCrossfade: v })}
+                            />
+                        </SettingPanel>
 
-                {/* Keyboard Shortcuts */}
-                <Section icon={Keyboard} title="Keyboard Shortcuts">
-                    <ShortcutRow id="playPause" label="Play / Pause" value={settings.shortcuts.playPause} editingKey={editingKey} setEditingKey={setEditingKey} />
-                    <ShortcutRow id="prev" label="Previous Song" value={settings.shortcuts.prev} editingKey={editingKey} setEditingKey={setEditingKey} />
-                    <ShortcutRow id="next" label="Next Song" value={settings.shortcuts.next} editingKey={editingKey} setEditingKey={setEditingKey} />
-                    <ShortcutRow id="loop" label="Toggle Loop" value={settings.shortcuts.loop} editingKey={editingKey} setEditingKey={setEditingKey} />
-                    <ShortcutRow id="zen" label="Toggle Zen Mode" value={settings.shortcuts.zen} editingKey={editingKey} setEditingKey={setEditingKey} />
-                    <ShortcutRow id="visualizer" label="Cycle Visualizer" value={settings.shortcuts.visualizer} editingKey={editingKey} setEditingKey={setEditingKey} />
-                </Section>
+                        <SettingPanel icon={Activity} title="Visualizer Style">
+                            <div className="grid grid-cols-3 gap-2 px-5 py-4">
+                                {(['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM', 'PARTICLES', 'HEXAGON', 'CUBE', 'GRID'] as VisualizerMode[]).map((mode) => (
+                                    <button
+                                        type="button"
+                                        key={mode}
+                                        onClick={() => setVisualizerMode(mode)}
+                                        className={`rounded-lg px-3 py-2.5 text-xs font-bold transition-all ${visualizerMode === mode
+                                            ? 'bg-primary text-black shadow-lg shadow-primary/20'
+                                            : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
+                                            }`}
+                                    >
+                                        {mode}
+                                    </button>
+                                ))}
+                            </div>
+                        </SettingPanel>
+
+                        <SettingPanel icon={Layout} title="Navigation Items">
+                            <ToggleRow label="Show Home" checked={settings.sidebar.showHome} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showHome: v } })} />
+                            <ToggleRow label="Show Browse" checked={settings.sidebar.showBrowse} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showBrowse: v } })} />
+                            <ToggleRow label="Show Internet Radio" checked={settings.sidebar.showRadio} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showRadio: v } })} />
+                            <ToggleRow label="Show Artists" checked={settings.sidebar.showArtists} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showArtists: v } })} />
+                            <ToggleRow label="Show Albums" checked={settings.sidebar.showAlbums} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showAlbums: v } })} />
+                            <ToggleRow label="Show Songs" checked={settings.sidebar.showSongs} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showSongs: v } })} />
+                            <ToggleRow label="Show Playlists" checked={settings.sidebar.showPlaylists} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showPlaylists: v } })} />
+                        </SettingPanel>
+
+                        <SettingPanel icon={Keyboard} title="Keyboard Shortcuts">
+                            <ShortcutRow id="playPause" label="Play / Pause" value={settings.shortcuts.playPause} editingKey={editingKey} setEditingKey={setEditingKey} />
+                            <ShortcutRow id="prev" label="Previous Song" value={settings.shortcuts.prev} editingKey={editingKey} setEditingKey={setEditingKey} />
+                            <ShortcutRow id="next" label="Next Song" value={settings.shortcuts.next} editingKey={editingKey} setEditingKey={setEditingKey} />
+                            <ShortcutRow id="loop" label="Toggle Loop" value={settings.shortcuts.loop} editingKey={editingKey} setEditingKey={setEditingKey} />
+                            <ShortcutRow id="zen" label="Toggle Zen Mode" value={settings.shortcuts.zen} editingKey={editingKey} setEditingKey={setEditingKey} />
+                            <ShortcutRow id="visualizer" label="Cycle Visualizer" value={settings.shortcuts.visualizer} editingKey={editingKey} setEditingKey={setEditingKey} />
+                        </SettingPanel>
+                </div>
             </div>
         </div>
     );
 };
-
