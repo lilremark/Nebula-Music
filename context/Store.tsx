@@ -14,6 +14,7 @@ interface StoreContextType extends AppState {
   playRadioStation: (station: IRadioStation) => void;
   toggleRadioPlay: () => void;
   stopRadio: () => void;
+  setRadioPitch: (val: number) => void;
   togglePlay: () => void;
   nextSong: () => void;
   prevSong: () => void;
@@ -156,6 +157,22 @@ const isHlsStreamUrl = (streamUrl: string) => {
   }
 };
 
+type EqBandKey = keyof AppSettings['eq']['bands'];
+
+const EQ_BAND_FREQUENCIES: Record<EqBandKey, number> = {
+  '32': 32,
+  '64': 64,
+  '125': 125,
+  '250': 250,
+  '500': 500,
+  '1k': 1000,
+  '2k': 2000,
+  '4k': 4000,
+  '8k': 8000,
+  '16k': 16000,
+};
+
+const EQ_BAND_KEYS = Object.keys(EQ_BAND_FREQUENCIES) as EqBandKey[];
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [service] = useState(() => new SubsonicService(null));
@@ -175,6 +192,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isRadioPlaying, setIsRadioPlaying] = useState(false);
   const [radioMetadata, setRadioMetadata] = useState<IRadioMetadata | null>(null);
   const [isRadioMetadataLoading, setIsRadioMetadataLoading] = useState(false);
+  const [radioPitch, setRadioPitchState] = useState(0);
   const [volume, setVolume] = useState(1);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [pitchCorrection, setPitchCorrection] = useState(true);
@@ -214,9 +232,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const crossfadeAudioRef = useRef<HTMLAudioElement>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const dspInputRef = useRef<GainNode | null>(null);
+  const eqFiltersRef = useRef<Array<{ key: EqBandKey; filter: BiquadFilterNode }>>([]);
+  const compressorRef = useRef<DynamicsCompressorNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const crossfadeAudioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const radioAudioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const radioPitchShiftNodeRef = useRef<AudioWorkletNode | null>(null);
+  const pitchWorkletLoadRef = useRef<Promise<void> | null>(null);
   const radioHlsRef = useRef<import('hls.js').default | null>(null);
   const navigationStackRef = useRef<NavigationTarget[]>([]);
   const crossfadeAnimationRef = useRef<number | null>(null);
@@ -499,45 +523,144 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentSongIndex, isPlaying, queue]);
 
+  const applyEqToGraph = useCallback(() => {
+    const ctx = audioContextRef.current;
+    const now = ctx?.currentTime ?? 0;
+
+    eqFiltersRef.current.forEach(({ key, filter }) => {
+      const targetGain = settings.eq.enabled ? settings.eq.bands[key] || 0 : 0;
+      filter.gain.cancelScheduledValues(now);
+      filter.gain.setTargetAtTime(targetGain, now, 0.015);
+    });
+  }, [settings.eq.bands, settings.eq.enabled]);
+
+  const ensureDspGraph = useCallback((ctx: AudioContext) => {
+    if (dspInputRef.current && analyserRef.current) {
+      applyEqToGraph();
+      return;
+    }
+
+    const input = ctx.createGain();
+    input.gain.value = 1;
+    dspInputRef.current = input;
+
+    let currentNode: AudioNode = input;
+    eqFiltersRef.current = EQ_BAND_KEYS.map((key, index) => {
+      const filter = ctx.createBiquadFilter();
+      filter.type = index === 0 ? 'lowshelf' : index === EQ_BAND_KEYS.length - 1 ? 'highshelf' : 'peaking';
+      filter.frequency.value = EQ_BAND_FREQUENCIES[key];
+      filter.Q.value = index === 0 || index === EQ_BAND_KEYS.length - 1 ? 0.707 : 1.1;
+      filter.gain.value = 0;
+      currentNode.connect(filter);
+      currentNode = filter;
+      return { key, filter };
+    });
+
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -1;
+    compressor.knee.value = 6;
+    compressor.ratio.value = 2;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.18;
+    currentNode.connect(compressor);
+    compressorRef.current = compressor;
+
+    const ana = ctx.createAnalyser();
+    ana.fftSize = 2048;
+    ana.smoothingTimeConstant = 0.85;
+    compressor.connect(ana);
+    ana.connect(ctx.destination);
+
+    analyserRef.current = ana;
+    setAnalyser(ana);
+    applyEqToGraph();
+  }, [applyEqToGraph]);
+
+  const ensureRadioPitchNode = useCallback(async (ctx: AudioContext) => {
+    if (!('audioWorklet' in ctx)) return null;
+
+    if (!pitchWorkletLoadRef.current) {
+      pitchWorkletLoadRef.current = ctx.audioWorklet.addModule('/audio/pitch-shift-processor.js');
+    }
+
+    await pitchWorkletLoadRef.current;
+
+    if (!radioPitchShiftNodeRef.current) {
+      radioPitchShiftNodeRef.current = new AudioWorkletNode(ctx, 'nebula-pitch-shift', {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+        parameterData: { semitones: radioPitch },
+      });
+    }
+
+    radioPitchShiftNodeRef.current.parameters.get('semitones')?.setTargetAtTime(radioPitch, ctx.currentTime, 0.02);
+    return radioPitchShiftNodeRef.current;
+  }, [radioPitch]);
+
+  useEffect(() => {
+    applyEqToGraph();
+  }, [applyEqToGraph]);
+
   // Audio Context Initialization (Lazy)
-  const initAudioContext = useCallback((target: 'music' | 'radio' = 'music') => {
+  const initAudioContext = useCallback(async (target: 'music' | 'crossfade' | 'radio' = 'music') => {
     try {
       let ctx = audioContextRef.current;
-      let ana = analyserRef.current;
 
       if (!ctx) {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         ctx = new AudioContext();
-        ana = ctx.createAnalyser();
-        ana.fftSize = 2048;
-        ana.smoothingTimeConstant = 0.85;
-        ana.connect(ctx.destination);
         audioContextRef.current = ctx;
-        analyserRef.current = ana;
-        setAnalyser(ana);
       }
+
+      ensureDspGraph(ctx);
 
       if (ctx.state === 'suspended') {
         ctx.resume().catch(e => console.warn("Context resume failed", e));
       }
 
-      if (!ana) return;
+      const dspInput = dspInputRef.current;
+      if (!dspInput) return;
 
       if (target === 'radio') {
         const radioAudio = radioAudioRef.current;
         if (radioAudio && !radioAudioSourceRef.current) {
           radioAudioSourceRef.current = ctx.createMediaElementSource(radioAudio);
-          radioAudioSourceRef.current.connect(ana);
+        }
+
+        if (radioAudioSourceRef.current) {
+          radioAudioSourceRef.current.disconnect();
+          const pitchNode = await ensureRadioPitchNode(ctx);
+          if (pitchNode) {
+            pitchNode.disconnect();
+            radioAudioSourceRef.current.connect(pitchNode);
+            pitchNode.connect(dspInput);
+          } else {
+            radioAudioSourceRef.current.connect(dspInput);
+          }
+        }
+      } else if (target === 'crossfade') {
+        const crossfadeAudio = crossfadeAudioRef.current;
+        if (crossfadeAudio && !crossfadeAudioSourceRef.current) {
+          crossfadeAudioSourceRef.current = ctx.createMediaElementSource(crossfadeAudio);
+          crossfadeAudioSourceRef.current.connect(dspInput);
         }
       } else {
         const audio = audioRef.current;
         if (audio && !audioSourceRef.current) {
           audioSourceRef.current = ctx.createMediaElementSource(audio);
-          audioSourceRef.current.connect(ana);
+          audioSourceRef.current.connect(dspInput);
         }
       }
     } catch (e) { console.warn("Audio Context init error:", e); }
-  }, []);
+  }, [ensureDspGraph, ensureRadioPitchNode]);
+
+  useEffect(() => {
+    const ctx = audioContextRef.current;
+    const pitchNode = radioPitchShiftNodeRef.current;
+    if (!ctx || !pitchNode) return;
+    pitchNode.parameters.get('semitones')?.setTargetAtTime(radioPitch, ctx.currentTime, 0.02);
+  }, [radioPitch]);
 
   const applyPlaybackAttributes = useCallback((audio: HTMLAudioElement) => {
     const { playbackRate, pitch, pitchCorrection } = stateRef.current;
@@ -620,6 +743,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const startingVolume = audio.volume;
     nextAudio.volume = 0;
     applyPlaybackAttributes(nextAudio);
+    initAudioContext('crossfade');
 
     const step = (now: number) => {
       if (
@@ -672,7 +796,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       beginFade();
     }
-  }, [applyPlaybackAttributes, cancelCrossfade, getMagicFadeSeconds, prepareCrossfadeTrack]);
+  }, [applyPlaybackAttributes, cancelCrossfade, getMagicFadeSeconds, initAudioContext, prepareCrossfadeTrack]);
 
   const playInstantMix = useCallback(async () => {
     cancelCrossfade();
@@ -930,6 +1054,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setPitch = useCallback((val: number) => {
     setPitchState(val);
+  }, []);
+
+  const setRadioPitch = useCallback((val: number) => {
+    setRadioPitchState(Math.max(-12, Math.min(12, val)));
   }, []);
 
   // Apply pitch shifting via playbackRate
@@ -1681,9 +1809,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <StoreContext.Provider value={{
-      currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
+      currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, radioPitch, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
       credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
-      playSong, playRadioStation, toggleRadioPlay, stopRadio, togglePlay, nextSong, prevSong, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
+      playSong, playRadioStation, toggleRadioPlay, stopRadio, setRadioPitch, togglePlay, nextSong, prevSong, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
       connectToSubsonic, disconnect, enableDemoMode, addToQueue, updateSettings,
       openPlaylistModal, closePlaylistModal, createPlaylist, savePlaylist, addSongToPlaylist, deletePlaylist, reorderPlaylist, addRadioStation, updateRadioStation, deleteRadioStation,
       performSearch, searchResults, isSearching, lastSearchQuery, isSearchModalOpen, openSearchModal, closeSearchModal,

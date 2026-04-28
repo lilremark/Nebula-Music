@@ -1,5 +1,5 @@
-import React from 'react';
-import { Activity, ChevronDown, ExternalLink, Maximize2, Music2, PanelRight, PanelRightClose, Pause, Play, Radio, Square, Volume1, Volume2, VolumeX } from 'lucide-react';
+import React, { useState } from 'react';
+import { Activity, ChevronDown, ExternalLink, Gauge, Maximize2, Minus, Music2, PanelRight, PanelRightClose, Pause, Play, Plus, Radio, Sliders, Square, Volume1, Volume2, VolumeX, X } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { Visualizer } from '../Visualizer';
@@ -233,7 +233,10 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
         stopRadio,
         visualizerMode,
         setVisualizerMode,
+        radioPitch,
+        setRadioPitch,
     } = useStore();
+    const [showRadioDspModal, setShowRadioDspModal] = useState(false);
     const { artworkUrl, title, artist, album, subtitle, radioMetadata, isRadioMetadataLoading } = useRadioDisplay();
     const { colors } = useAdaptiveColors(artworkUrl);
     if (!currentRadioStation) return null;
@@ -352,11 +355,85 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                             <Music2 className="h-4 w-4" />
                             <span className="text-xs font-semibold uppercase tracking-wide">Live Stream</span>
                         </div>
+                        <button
+                            onClick={() => setShowRadioDspModal(true)}
+                            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition ${radioPitch !== 0
+                                ? 'bg-white text-black'
+                                : 'bg-white/5 text-white/55 hover:bg-white/10 hover:text-white'
+                                }`}
+                            aria-label="Open radio DSP controls"
+                        >
+                            <Sliders className="h-4 w-4" />
+                            {radioPitch === 0 ? 'DSP' : `${radioPitch > 0 ? '+' : ''}${radioPitch}`}
+                        </button>
                     </div>
 
                     <VolumeSlider className="mt-8 w-full max-w-xs" />
                 </div>
             </div>
+
+            {showRadioDspModal && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 px-4 backdrop-blur-md"
+                    onClick={() => setShowRadioDspModal(false)}
+                >
+                    <div
+                        className="w-full max-w-sm rounded-xl border border-white/15 bg-neutral-950 p-6 shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="mb-6 flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-white">Radio DSP</h2>
+                            <button
+                                onClick={() => setShowRadioDspModal(false)}
+                                className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
+                                aria-label="Close radio DSP controls"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <div className="mb-2 flex items-center justify-between">
+                                <label className="text-xs font-semibold uppercase tracking-wide text-white/55">Pitch</label>
+                                <span className="font-mono text-xs text-white/60">{radioPitch > 0 ? '+' : ''}{radioPitch}</span>
+                            </div>
+                            <div className="flex items-center justify-between rounded-xl bg-white/5 p-1">
+                                <button
+                                    onClick={() => setRadioPitch(radioPitch - 1)}
+                                    className="flex h-10 w-10 items-center justify-center rounded-lg text-white/60 transition hover:bg-white/10 hover:text-white"
+                                    aria-label="Decrease radio pitch"
+                                >
+                                    <Minus className="h-5 w-5" />
+                                </button>
+                                <button
+                                    onClick={() => setRadioPitch(radioPitch + 1)}
+                                    className="flex h-10 w-10 items-center justify-center rounded-lg text-white/60 transition hover:bg-white/10 hover:text-white"
+                                    aria-label="Increase radio pitch"
+                                >
+                                    <Plus className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="mb-6 rounded-xl bg-white/5 p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-white/70">
+                                    <Gauge className="h-4 w-4" />
+                                    <span className="text-xs font-semibold uppercase tracking-wide">Live Speed</span>
+                                </div>
+                                <span className="font-mono text-xs text-white/60">1.0x</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setRadioPitch(0)}
+                            className="w-full rounded-xl bg-white/10 py-3.5 text-sm font-bold text-white transition hover:bg-white/20"
+                        >
+                            Reset Pitch
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

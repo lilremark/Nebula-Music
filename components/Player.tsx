@@ -60,6 +60,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const [duration, setDuration] = useState(0);
     const [showSpeedPitchModal, setShowSpeedPitchModal] = useState(false);
     const [visualProgress, setVisualProgress] = useState(0); // For immediate visual feedback
+    const [showZenControls, setShowZenControls] = useState(false);
 
     const lyricsContainerRef = useRef<HTMLDivElement>(null);
     const activeLineRef = useRef<HTMLParagraphElement>(null);
@@ -182,6 +183,20 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const toggleProgressMode = () => {
         updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' });
     };
+
+    useEffect(() => {
+        if (!isZenMode) {
+            setShowZenControls(false);
+            return;
+        }
+
+        const handleMouseMove = (event: MouseEvent) => {
+            setShowZenControls(window.innerHeight - event.clientY < 190);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, [isZenMode]);
 
     return (
         <div className={`fixed inset-0 z-[60] flex flex-col bg-neutral-200 dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded || isZenMode ? 'translate-y-0' : 'translate-y-full'}`}
@@ -673,45 +688,61 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             {/* Zen Mode Controls */}
             {
                 isZenMode && (
-                    <div className="absolute bottom-0 left-0 right-0 z-50 opacity-0 hover:opacity-100 transition-opacity duration-500">
-                        <div className="bg-gradient-to-t from-black via-black/90 to-transparent pt-24 pb-10 px-8">
-                            <div className="max-w-2xl mx-auto text-center">
-                                <h2 className="text-3xl font-black text-white mb-2">{currentSong.title}</h2>
-                                <p className="text-lg text-white/50 mb-8">{currentSong.artist}</p>
-
-                                <div className="flex items-center justify-center gap-8 mb-6">
-                                    <button onClick={prevSong} className="p-4 text-white/50 hover:text-white transition" aria-label="Previous track">
-                                        <SkipBack className="w-7 h-7" fill="currentColor" />
-                                    </button>
-                                    <button
-                                        onClick={togglePlay}
-                                        className="w-16 h-16 bg-white text-black rounded-lg flex items-center justify-center hover:scale-105 transition shadow-xl"
-                                        aria-label={isPlaying ? 'Pause' : 'Play'}
-                                    >
-                                        {isPlaying ? <Pause className="w-7 h-7" fill="currentColor" /> : <Play className="w-7 h-7 ml-0.5" fill="currentColor" />}
-                                    </button>
-                                    <button onClick={nextSong} className="p-4 text-white/50 hover:text-white transition" aria-label="Next track">
-                                        <SkipForward className="w-7 h-7" fill="currentColor" />
-                                    </button>
+                    <div className={`absolute bottom-0 left-0 right-0 z-50 transition-all duration-300 ${showZenControls ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'}`}>
+                        <div className="bg-gradient-to-t from-black via-black/90 to-transparent px-6 pb-8 pt-24 md:px-10">
+                            <div className="grid items-end gap-6 md:grid-cols-[minmax(220px,320px)_1fr_minmax(220px,320px)]">
+                                <div className="flex min-w-0 items-center gap-4">
+                                    <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white/10 shadow-2xl md:h-24 md:w-24">
+                                        <img src={coverArt} alt={currentSong.title} className="h-full w-full object-cover" />
+                                    </div>
+                                    <div className="min-w-0 text-left">
+                                        <div className="relative max-w-full overflow-hidden">
+                                            <h2 className="zen-title-marquee text-lg font-black text-white md:text-2xl">
+                                                <span>{currentSong.title}</span>
+                                                <span aria-hidden="true">{currentSong.title}</span>
+                                            </h2>
+                                        </div>
+                                        <p className="mt-1 truncate text-sm font-medium text-white/55 md:text-base">{currentSong.artist}</p>
+                                    </div>
                                 </div>
 
-                                <div className="flex items-center gap-4">
-                                    <span className="text-sm font-mono text-white/60 w-12 text-right">{formatTime(currentTime)}</span>
-                                    <PlaybackProgress
-                                        progress={displayProgress}
-                                        mode={progressMode}
-                                        accentColor={colors.primary}
-                                        baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
-                                        markerColor={colors.secondary || colors.primary}
-                                        waveform={waveform}
-                                        onScrub={handleScrub}
-                                        trackClassName={`flex-1 cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
-                                            ? 'h-16 bg-transparent rounded-none'
-                                            : 'h-1.5 bg-white/10 rounded'
-                                            }`}
-                                    />
-                                    <span className="text-sm font-mono text-white/60 w-12">{formatTime(duration)}</span>
+                                <div className="min-w-0">
+                                    <div className="mb-5 flex items-center justify-center gap-8">
+                                        <button onClick={prevSong} className="p-4 text-white/50 transition hover:text-white" aria-label="Previous track">
+                                            <SkipBack className="h-7 w-7" fill="currentColor" />
+                                        </button>
+                                        <button
+                                            onClick={togglePlay}
+                                            className="flex h-16 w-16 items-center justify-center rounded-lg bg-white text-black shadow-xl transition hover:scale-105"
+                                            aria-label={isPlaying ? 'Pause' : 'Play'}
+                                        >
+                                            {isPlaying ? <Pause className="h-7 w-7" fill="currentColor" /> : <Play className="ml-0.5 h-7 w-7" fill="currentColor" />}
+                                        </button>
+                                        <button onClick={nextSong} className="p-4 text-white/50 transition hover:text-white" aria-label="Next track">
+                                            <SkipForward className="h-7 w-7" fill="currentColor" />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-4">
+                                        <span className="w-12 text-right font-mono text-sm text-white/60">{formatTime(currentTime)}</span>
+                                        <PlaybackProgress
+                                            progress={displayProgress}
+                                            mode={progressMode}
+                                            accentColor={colors.primary}
+                                            baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
+                                            markerColor={colors.secondary || colors.primary}
+                                            waveform={waveform}
+                                            onScrub={handleScrub}
+                                            trackClassName={`flex-1 cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
+                                                ? 'h-16 bg-transparent rounded-none'
+                                                : 'h-1.5 bg-white/10 rounded'
+                                                }`}
+                                        />
+                                        <span className="w-12 font-mono text-sm text-white/60">{formatTime(duration)}</span>
+                                    </div>
                                 </div>
+
+                                <div className="hidden md:block" />
                             </div>
                         </div>
                     </div>
@@ -720,5 +751,3 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         </div >
     );
 };
-
-

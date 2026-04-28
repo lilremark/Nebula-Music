@@ -168,6 +168,7 @@ export interface AppState {
   isRadioPlaying: boolean;
   radioMetadata: IRadioMetadata | null;
   isRadioMetadataLoading: boolean;
+  radioPitch: number;
   volume: number;
   playbackRate: number;
   pitch: number; // Semitones adjustment for audio pitch

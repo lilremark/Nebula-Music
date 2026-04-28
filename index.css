@@ -450,6 +450,31 @@ body {
     min-width: 8rem;
   }
 
+  @keyframes zen-title-marquee {
+    0%,
+    14% {
+      transform: translateX(0);
+    }
+
+    86%,
+    100% {
+      transform: translateX(calc(-50% - 1.5rem));
+    }
+  }
+
+  .zen-title-marquee {
+    display: inline-flex;
+    width: max-content;
+    gap: 3rem;
+    padding-right: 3rem;
+    animation: zen-title-marquee 16s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+
+  .zen-title-marquee span {
+    flex: 0 0 auto;
+  }
+
   @keyframes radio-live-bar {
     0%,
     100% {
