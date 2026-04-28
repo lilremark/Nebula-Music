@@ -427,18 +427,20 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             {/* Speed & Pitch Toggle Button */}
                             <button
                                 onClick={() => setShowSpeedPitchModal(!showSpeedPitchModal)}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all ${showSpeedPitchModal || playbackRate !== 1.0 || pitch !== 0
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all ${showSpeedPitchModal || playbackRate !== 1.0 || pitch !== 0 || settings.magicCrossfade
                                     ? 'bg-neutral-100 text-neutral-900 dark:bg-white/10 dark:text-white'
                                     : 'bg-neutral-50 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 dark:bg-white/5 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
                                     }`}
                             >
                                 <Sliders className="w-4 h-4" />
                                 <span className="text-sm font-medium">Speed & Pitch</span>
-                                {(playbackRate !== 1.0 || pitch !== 0) && (
+                                {(playbackRate !== 1.0 || pitch !== 0 || settings.magicCrossfade) && (
                                     <span className="text-xs font-mono bg-white/10 px-1.5 py-0.5 rounded">
                                         {playbackRate !== 1.0 && `${playbackRate.toFixed(1)}x`}
-                                        {playbackRate !== 1.0 && pitch !== 0 && ' / '}
+                                        {playbackRate !== 1.0 && (pitch !== 0 || settings.magicCrossfade) && ' / '}
                                         {pitch !== 0 && `${pitch > 0 ? '+' : ''}${pitch}`}
+                                        {pitch !== 0 && settings.magicCrossfade && ' / '}
+                                        {settings.magicCrossfade && 'Magic XF'}
                                     </span>
                                 )}
                             </button>
@@ -474,7 +476,6 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                                     onClick={() => {
                                                         const newSpeed = Math.max(0.5, Math.round((playbackRate - 0.1) * 10) / 10);
                                                         setPlaybackRate(newSpeed);
-                                                        if (audioRef.current) audioRef.current.playbackRate = newSpeed;
                                                     }}
                                                     className="w-10 h-10 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-300 rounded-lg transition-all dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10"
                                                     aria-label="Decrease speed"
@@ -486,7 +487,6 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                                     onClick={() => {
                                                         const newSpeed = Math.min(2.0, Math.round((playbackRate + 0.1) * 10) / 10);
                                                         setPlaybackRate(newSpeed);
-                                                        if (audioRef.current) audioRef.current.playbackRate = newSpeed;
                                                     }}
                                                     className="w-10 h-10 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-300 rounded-lg transition-all dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10"
                                                     aria-label="Increase speed"
@@ -548,11 +548,28 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                             </p>
                                         </div>
 
+                                        {/* Magic Crossfade Toggle */}
+                                        <div className="mb-6">
+                                            <button
+                                                onClick={() => updateSettings({ magicCrossfade: !settings.magicCrossfade })}
+                                                className="w-full flex items-center justify-between rounded-xl bg-neutral-200 p-4 text-left transition-all hover:bg-neutral-300 dark:bg-black/30 dark:hover:bg-white/10"
+                                                aria-pressed={settings.magicCrossfade}
+                                            >
+                                                <div>
+                                                    <div className="text-xs font-semibold text-neutral-500 dark:text-white/60 uppercase tracking-wide">Magic Crossfade</div>
+                                                    <p className="mt-1 text-xs text-neutral-600 dark:text-white/60">Detects the ending and fades into the preloaded next track.</p>
+                                                </div>
+                                                <div className={`ml-4 h-7 w-12 shrink-0 rounded-full p-1 transition-all ${settings.magicCrossfade ? 'bg-primary' : 'bg-neutral-300 dark:bg-white/20'}`}>
+                                                    <div className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${settings.magicCrossfade ? 'translate-x-5' : 'translate-x-0'}`} />
+                                                </div>
+                                            </button>
+                                        </div>
+
                                         <button
                                             onClick={() => {
                                                 setPlaybackRate(1.0);
                                                 setPitch(0);
-                                                if (audioRef.current) audioRef.current.playbackRate = 1.0;
+                                                updateSettings({ magicCrossfade: false });
                                             }}
                                             className="w-full py-3.5 text-sm font-bold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all dark:text-white dark:bg-white/10 dark:hover:bg-white/20"
                                         >

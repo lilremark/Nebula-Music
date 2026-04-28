@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../context/Store';
 import { ISong, IAlbum } from '../types';
-import { Play, Plus, Clock, Flame, Compass, Music, ListPlus, RefreshCw, ChevronRight, BarChart2 } from 'lucide-react';
+import { Play, Plus, Clock, Flame, Compass, ListPlus, RefreshCw, ChevronRight, BarChart2 } from 'lucide-react';
 
 // Album Card Component - Square, minimal rounding
 const AlbumCard: React.FC<{ album: IAlbum; onClick: () => void }> = ({ album, onClick }) => {
@@ -248,11 +248,10 @@ const SongRow: React.FC<SongRowProps> = ({ song, onClick, getCoverArtUrl }) => (
 );
 
 export const HomeView: React.FC = () => {
-    const { service, playSong, setView, getMostPlayedSongs, homeData, refreshHomeData, refreshQuickPicks, refreshDiscovery, openPlaylistModal, isInitialized } = useStore();
+    const { service, playSong, setView, getMostPlayedSongs, homeData, refreshHomeData, refreshQuickPicks, refreshDiscovery, isInitialized } = useStore();
     const [loadingExplore, setLoadingExplore] = useState(false);
     const [loadingQuickPicks, setLoadingQuickPicks] = useState(false);
     const [activeTab, setActiveTab] = useState<'played' | 'recommended'>('played');
-    const mostPlayedTracks = getMostPlayedSongs().slice(0, 50);
 
     useEffect(() => {
         // Wait for Store initialization to complete before fetching data

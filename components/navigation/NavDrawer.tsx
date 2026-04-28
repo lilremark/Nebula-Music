@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Home, Compass, Mic2, Disc, Music, ListMusic, Heart, Star, Settings, X } from 'lucide-react';
+import { Home, Compass, Mic2, Disc, Music, ListMusic, Heart, Star, Settings, X, Radio } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { View } from '../../types';
 
@@ -120,6 +120,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                     <div className="space-y-1">
                         {s.showHome && <NavItem icon={Home} label="Home" view="HOME" />}
                         {s.showBrowse && <NavItem icon={Compass} label="Browse" view="BROWSE" />}
+                        {s.showRadio && <NavItem icon={Radio} label="Internet Radio" view="RADIO" />}
                     </div>
 
                     <SectionLabel>Library</SectionLabel>

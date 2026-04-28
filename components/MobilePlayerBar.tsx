@@ -16,7 +16,7 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
 
     const [progress, setProgress] = useState(0);
     const currentSong = queue[currentSongIndex];
-    const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 200) : '';
+    const coverArt = currentSong ? service.getCoverArtUrl(currentSong.coverArt || currentSong.id, 200) : '';
     const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
     const waveform = useTrackWaveform(currentSong?.id, streamUrl);
 

@@ -145,13 +145,15 @@ const getOrCreateWaveform = async (cacheKey: string, streamUrl: string) => {
 };
 
 export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => {
-    const [waveform, setWaveform] = useState<number[] | null>(null);
+    const [waveform, setWaveform] = useState<number[] | null>(FALLBACK_WAVEFORM);
 
     useEffect(() => {
         let cancelled = false;
+        let timeoutId: number | null = null;
+        let idleId: number | null = null;
 
         if (!songId || !streamUrl) {
-            setWaveform(null);
+            setWaveform(FALLBACK_WAVEFORM);
             return () => {
                 cancelled = true;
             };
@@ -159,14 +161,30 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
 
         const cacheKey = getWaveformCacheKey(songId, streamUrl);
         const cached = memoryCache.get(cacheKey) || readCachedWaveform(cacheKey);
-        if (cached) setWaveform(cached);
+        if (cached) {
+            setWaveform(cached);
+        } else {
+            setWaveform(FALLBACK_WAVEFORM);
+        }
 
-        getOrCreateWaveform(cacheKey, streamUrl).then((peaks) => {
-            if (!cancelled) setWaveform(peaks);
-        });
+        const loadWaveform = () => {
+            getOrCreateWaveform(cacheKey, streamUrl).then((peaks) => {
+                if (!cancelled) setWaveform(peaks);
+            });
+        };
+
+        const requestIdle = (window as any).requestIdleCallback as ((callback: () => void, options?: { timeout: number }) => number) | undefined;
+        const cancelIdle = (window as any).cancelIdleCallback as ((id: number) => void) | undefined;
+        if (!cached && requestIdle) {
+            idleId = requestIdle(loadWaveform, { timeout: 1500 });
+        } else if (!cached) {
+            timeoutId = window.setTimeout(loadWaveform, 250);
+        }
 
         return () => {
             cancelled = true;
+            if (timeoutId !== null) window.clearTimeout(timeoutId);
+            if (idleId !== null && cancelIdle) cancelIdle(idleId);
         };
     }, [songId, streamUrl]);
 

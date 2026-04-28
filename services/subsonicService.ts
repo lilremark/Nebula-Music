@@ -197,6 +197,30 @@ export class SubsonicService {
     } catch (e) { return []; }
   }
 
+  async getSimilarSongs(id: string, count: number = 20): Promise<ISong[]> {
+    if (this.isDemo) {
+      const seed = MOCK_SONGS.find(s => s.id === id);
+      const pool = MOCK_SONGS.filter(s =>
+        s.id !== id && (seed ? (s.artist === seed.artist || s.genre === seed.genre) : true)
+      );
+      return (pool.length > 0 ? pool : MOCK_SONGS.filter(s => s.id !== id)).slice(0, count);
+    }
+
+    const methods = ['getSimilarSongs2.view', 'getSimilarSongs.view'];
+
+    for (const method of methods) {
+      try {
+        const res = await fetch(this.buildUrl(method, { id, count: count.toString() }));
+        const data = await res.json();
+        const response = data['subsonic-response'];
+        const songs = response?.similarSongs2?.song || response?.similarSongs?.song || [];
+        if (songs.length > 0) return songs.map((s: any) => this.mapSong(s));
+      } catch (e) { }
+    }
+
+    return [];
+  }
+
   async getAlbumList(type: string, size: number = 20, offset: number = 0, params: Record<string, string> = {}): Promise<IAlbum[]> {
     if (this.isDemo) {
       let sorted = [...MOCK_ALBUMS];

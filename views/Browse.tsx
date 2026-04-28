@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStore } from '../context/Store';
 import { ISong, IAlbum, IPlaylist } from '../types';
-import { Play, Music, RefreshCw, Heart, Radio, Zap, Calendar, Sparkles } from 'lucide-react';
+import { Play, Music, RefreshCw, Heart, Radio, Zap, Calendar, Sparkles, Loader2 } from 'lucide-react';
 
 // Mix Card Component
 const MixCard: React.FC<{
@@ -117,12 +117,14 @@ const SectionHeader: React.FC<{
 );
 
 export const BrowseView: React.FC = () => {
-    const { service, playSong, setView, getMostPlayedSongs } = useStore();
+    const { service, playSong, setView, getMostPlayedSongs, playInstantMix } = useStore();
     const [generatedMixes, setGeneratedMixes] = useState<(IPlaylist & { icon: any; desc: string })[]>([]);
     const [dailyAlbums, setDailyAlbums] = useState<IAlbum[]>([]);
     const [recommendedAlbums, setRecommendedAlbums] = useState<IAlbum[]>([]);
     const [newAlbums, setNewAlbums] = useState<IAlbum[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isInstantMixLoading, setIsInstantMixLoading] = useState(false);
+    const [instantMixError, setInstantMixError] = useState('');
 
     const loadData = useCallback(async (force = false) => {
         setIsLoading(true);
@@ -221,6 +223,19 @@ export const BrowseView: React.FC = () => {
         loadData();
     }, [loadData]);
 
+    const handleInstantMix = async () => {
+        setIsInstantMixLoading(true);
+        setInstantMixError('');
+        try {
+            const mix = await playInstantMix();
+            if (mix.length === 0) setInstantMixError('No listening history found yet.');
+        } catch (e) {
+            setInstantMixError('Could not build an instant mix.');
+        } finally {
+            setIsInstantMixLoading(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] text-neutral-600 dark:text-white/60">
@@ -245,6 +260,26 @@ export const BrowseView: React.FC = () => {
 
             {/* Generated Mixes */}
             <SectionHeader icon={Sparkles} title="Generated For You" iconColor="text-yellow-500" />
+
+            <div className="mb-4 flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-100 p-4 dark:border-white/10 dark:bg-neutral-900/60 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-neutral-700 dark:text-white/70">
+                    Builds a mix based off your listening history.
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    {instantMixError && (
+                        <span className="text-sm text-red-500 dark:text-red-400">{instantMixError}</span>
+                    )}
+                    <button
+                        onClick={handleInstantMix}
+                        disabled={isInstantMixLoading}
+                        className="inline-flex items-center justify-center gap-2 rounded bg-neutral-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
+                    >
+                        {isInstantMixLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                        Instant Mix
+                    </button>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
                 {generatedMixes.map((mix) => (
                     <MixCard

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Compass, Search, Library, Settings } from 'lucide-react';
+import { Home, Compass, Search, Radio, Settings } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { View } from '../types';
 
@@ -10,8 +10,6 @@ export const MobileNav: React.FC = () => {
     if (Array.isArray(view)) return view.includes(currentView);
     return currentView === view;
   };
-
-  const isLibraryActive = isActive(['ARTISTS', 'ALBUMS', 'SONGS', 'LIKED_SONGS', 'LIKED_ALBUMS', 'PLAYLISTS', 'PLAYLIST_DETAIL', 'ALBUM_DETAIL', 'ARTIST_DETAIL']);
 
   const NavButton = ({
     icon: Icon,
@@ -83,10 +81,10 @@ export const MobileNav: React.FC = () => {
           </button>
 
           <NavButton
-            icon={Library}
-            label="Library"
-            active={isLibraryActive}
-            onClick={() => setView('ALBUMS')}
+            icon={Radio}
+            label="Radio"
+            active={isActive('RADIO')}
+            onClick={() => setView('RADIO')}
           />
 
           <NavButton

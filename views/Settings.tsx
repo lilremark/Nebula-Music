@@ -288,6 +288,18 @@ export const SettingsView: React.FC = () => {
                         value={settings.miniPlayerMode}
                         onChange={(v) => updateSettings({ miniPlayerMode: v as 'floating' | 'sidebar' })}
                     />
+                    <div
+                        className="flex items-center justify-between py-4 px-6 hover:bg-neutral-200/60 dark:hover:bg-white/5 cursor-pointer transition-colors border-b border-neutral-200 dark:border-white/10"
+                        onClick={() => updateSettings({ magicCrossfade: !settings.magicCrossfade })}
+                    >
+                        <div>
+                            <span className="text-sm font-medium text-neutral-900 dark:text-white">Magic Crossfade</span>
+                            <p className="text-xs text-neutral-600 dark:text-white/50 mt-0.5">Detects track endings and fades into the next song</p>
+                        </div>
+                        <div className={`w-12 h-7 rounded-full p-1 transition-all ${settings.magicCrossfade ? 'bg-primary' : 'bg-neutral-300 dark:bg-white/20'}`}>
+                            <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${settings.magicCrossfade ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </div>
+                    </div>
                 </Section>
 
                 {/* Enhanced Equalizer */}
@@ -460,6 +472,11 @@ export const SettingsView: React.FC = () => {
                         label="Show Browse"
                         checked={settings.sidebar.showBrowse}
                         onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showBrowse: v } })}
+                    />
+                    <ToggleRow
+                        label="Show Internet Radio"
+                        checked={settings.sidebar.showRadio}
+                        onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showRadio: v } })}
                     />
                     <ToggleRow
                         label="Show Artists"

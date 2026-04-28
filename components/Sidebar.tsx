@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Home, Disc, Mic2, Music, ListMusic, Settings, Compass, Search, Heart, Star, ChevronLeft } from 'lucide-react';
+import { Home, Disc, Mic2, Music, ListMusic, Settings, Compass, Search, Heart, Star, ChevronLeft, Radio } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { View } from '../types';
 import { Tooltip } from './ui/Tooltip';
@@ -174,6 +174,7 @@ export const Sidebar: React.FC = () => {
           <SectionHeader title="Discover" />
           {s.showHome && <NavItem icon={Home} label="Home" view="HOME" />}
           {s.showBrowse && <NavItem icon={Compass} label="Browse" view="BROWSE" />}
+          {s.showRadio && <NavItem icon={Radio} label="Internet Radio" view="RADIO" />}
         </div>
 
         {(s.showArtists || s.showAlbums || s.showSongs) && (

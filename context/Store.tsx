@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { AppState, ISong, View, SubsonicCredentials, AppSettings, IPlaylist, VisualizerMode, RepeatMode, IArtist, IAlbum, HomeData, NavigationTarget } from '../types';
+import { AppState, ISong, View, SubsonicCredentials, AppSettings, IPlaylist, VisualizerMode, RepeatMode, IArtist, IAlbum, HomeData, NavigationTarget, IRadioStation, IRadioMetadata } from '../types';
 import { SubsonicService } from '../services/subsonicService';
 import { MOCK_PLAYLISTS } from '../constants';
 import { db } from '../services/db';
@@ -11,6 +11,9 @@ interface StoreContextType extends AppState {
   canGoBack: boolean;
   backTarget?: NavigationTarget;
   playSong: (song: ISong, contextQueue?: ISong[]) => void;
+  playRadioStation: (station: IRadioStation) => void;
+  toggleRadioPlay: () => void;
+  stopRadio: () => void;
   togglePlay: () => void;
   nextSong: () => void;
   prevSong: () => void;
@@ -35,6 +38,9 @@ interface StoreContextType extends AppState {
   addSongToPlaylist: (playlistId: string, song: ISong) => void;
   deletePlaylist: (id: string) => void;
   reorderPlaylist: (playlistId: string, fromIndex: number, toIndex: number) => void;
+  addRadioStation: (station: Omit<IRadioStation, 'id' | 'created'>) => void;
+  updateRadioStation: (station: IRadioStation) => void;
+  deleteRadioStation: (id: string) => void;
 
   // Search
   performSearch: (query: string) => void;
@@ -45,10 +51,12 @@ interface StoreContextType extends AppState {
   // Stats & History
   getMostPlayedSongs: () => ISong[];
   refreshMostPlayed: () => Promise<void>;
+  playInstantMix: () => Promise<ISong[]>;
   history: ISong[];
 
   service: SubsonicService;
   audioRef: React.RefObject<HTMLAudioElement>;
+  radioAudioRef: React.RefObject<HTMLAudioElement>;
   analyser: AnalyserNode | null;
 
   // Data Fetching
@@ -69,6 +77,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   sidebar: {
     showHome: true,
     showBrowse: true,
+    showRadio: true,
     showArtists: true,
     showAlbums: true,
     showSongs: true,
@@ -100,6 +109,43 @@ const DEFAULT_SETTINGS: AppSettings = {
   },
   miniPlayerMode: 'sidebar',
   progressVisualization: 'bar',
+  magicCrossfade: false,
+};
+
+const parseIcyMetadata = (bytes: Uint8Array): Pick<IRadioMetadata, 'title' | 'artist' | 'album' | 'rawTitle'> | null => {
+  const text = new TextDecoder('utf-8').decode(bytes).replace(/\0/g, '').trim();
+  if (!text) return null;
+
+  const streamTitleMatch = text.match(/StreamTitle='([^']*)'/i) || text.match(/StreamTitle="([^"]*)"/i);
+  const rawTitle = (streamTitleMatch?.[1] || '').trim();
+  if (!rawTitle) return null;
+
+  const [artistPart, ...titleParts] = rawTitle.split(/\s+-\s+/);
+  if (artistPart && titleParts.length > 0) {
+    return {
+      artist: artistPart.trim(),
+      title: titleParts.join(' - ').trim(),
+      rawTitle,
+    };
+  }
+
+  return { title: rawTitle, rawTitle };
+};
+
+const fetchRadioArtwork = async (metadata: Pick<IRadioMetadata, 'title' | 'artist'>, signal: AbortSignal): Promise<string | undefined> => {
+  const query = [metadata.artist, metadata.title].filter(Boolean).join(' ').trim();
+  if (!query) return undefined;
+
+  try {
+    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`, { signal });
+    if (!response.ok) return undefined;
+    const data = await response.json();
+    const artwork = data?.results?.[0]?.artworkUrl100;
+    return typeof artwork === 'string' ? artwork.replace('100x100bb', '600x600bb') : undefined;
+  } catch (error: any) {
+    if (error?.name !== 'AbortError') console.warn('Radio artwork lookup failed', error);
+    return undefined;
+  }
 };
 
 
@@ -116,6 +162,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [queue, setQueue] = useState<ISong[]>([]);
   const [currentSongIndex, setCurrentSongIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [radioStations, setRadioStations] = useState<IRadioStation[]>([]);
+  const [currentRadioStation, setCurrentRadioStation] = useState<IRadioStation | null>(null);
+  const [isRadioPlaying, setIsRadioPlaying] = useState(false);
+  const [radioMetadata, setRadioMetadata] = useState<IRadioMetadata | null>(null);
+  const [isRadioMetadataLoading, setIsRadioMetadataLoading] = useState(false);
   const [volume, setVolume] = useState(1);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [pitchCorrection, setPitchCorrection] = useState(true);
@@ -151,18 +202,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [cachedArtists, setCachedArtists] = useState<IArtist[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
+  const radioAudioRef = useRef<HTMLAudioElement>(null);
+  const crossfadeAudioRef = useRef<HTMLAudioElement>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const navigationStackRef = useRef<NavigationTarget[]>([]);
+  const crossfadeAnimationRef = useRef<number | null>(null);
+  const isCrossfadingRef = useRef(false);
+  const isCrossfadeStartingRef = useRef(false);
+  const crossfadeHandoffRef = useRef<{ songId: string; currentTime: number } | null>(null);
 
   // Use refs for state accessed inside event listeners to avoid constant re-binding
-  const stateRef = useRef({ queue, currentSongIndex, isPlaying, repeatMode });
+  const stateRef = useRef({ queue, currentSongIndex, isPlaying, repeatMode, volume, playbackRate, pitch, pitchCorrection, magicCrossfade: settings.magicCrossfade });
 
   const currentSong = queue[currentSongIndex];
 
   useEffect(() => {
-    stateRef.current = { queue, currentSongIndex, isPlaying, repeatMode };
-  }, [queue, currentSongIndex, isPlaying, repeatMode]);
+    stateRef.current = { queue, currentSongIndex, isPlaying, repeatMode, volume, playbackRate, pitch, pitchCorrection, magicCrossfade: settings.magicCrossfade };
+  }, [queue, currentSongIndex, isPlaying, repeatMode, volume, playbackRate, pitch, pitchCorrection, settings.magicCrossfade]);
 
   useEffect(() => {
     navigationStackRef.current = navigationStack;
@@ -291,42 +348,34 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Stats
   const [mostPlayed, setMostPlayed] = useState<ISong[]>([]);
 
+  const loadMostPlayedSongs = useCallback(async (limit: number = 50) => {
+    if (!service.getCredentials() && !credentials) return [];
+
+    // Full library scan because Subsonic-compatible servers expose user play counts
+    // on song records, but not a portable "top played tracks" endpoint.
+    const BATCH_SIZE = 500;
+    let offset = 0;
+    let allSongs: ISong[] = [];
+    let fetched = 0;
+
+    do {
+      const batch = await service.searchSongs('', BATCH_SIZE, offset);
+      fetched = batch.length;
+      allSongs = [...allSongs, ...batch.filter(s => (s.playCount || 0) > 0 && !s.isVideo)];
+      offset += BATCH_SIZE;
+    } while (fetched === BATCH_SIZE && offset < 20000);
+
+    allSongs.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
+    return allSongs.slice(0, limit);
+  }, [credentials, service]);
+
   const refreshMostPlayed = useCallback(async () => {
-    if (!service.getCredentials() && !credentials) return;
     try {
-      // FULL LIBRARY SCAN for Most Played (Top 50)
-      // This is network intensive but requested by user for accuracy.
-      const BATCH_SIZE = 500;
-      let offset = 0;
-      let allSongs: ISong[] = [];
-      let fetched = 0;
-
-      // Fetch all songs in batches
-      do {
-        const batch = await service.searchSongs('', BATCH_SIZE, offset);
-        fetched = batch.length;
-
-        // Optimization: Only keep songs with play counts during accumulation to save memory?
-        // Actually, we need to scan everything to find them.
-        const playedSongs = batch.filter(s => (s.playCount || 0) > 0);
-        allSongs = [...allSongs, ...playedSongs];
-
-        offset += BATCH_SIZE;
-
-        // Safety break for massive libraries (e.g. > 20k processed) to avoid freezing UI
-        // Check if we retrieved fewer than batch size, meaning end of list
-      } while (fetched === BATCH_SIZE && offset < 20000);
-
-      // Sort by play count descending
-      allSongs.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
-
-      // Take Top 50
-      setMostPlayed(allSongs.slice(0, 50));
-
+      setMostPlayed(await loadMostPlayedSongs(50));
     } catch (e) {
       console.warn("Failed to perform library scan for stats", e);
     }
-  }, [credentials, service]);
+  }, [loadMostPlayedSongs]);
 
   const fetchArtists = useCallback(async (force = false) => {
     if (!force && cachedArtists.length > 0) return;
@@ -387,13 +436,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           };
         }
 
-        setSettings(prev => ({ ...prev, ...savedSettings, theme: { ...prev.theme, ...savedSettings.theme }, shortcuts: { ...prev.shortcuts, ...savedSettings.shortcuts } }));
+        if (savedSettings.magicCrossfade === undefined && (savedSettings.crossfadeSeconds || 0) > 0) {
+          savedSettings.magicCrossfade = true;
+        }
+
+        setSettings(prev => ({
+          ...prev,
+          ...savedSettings,
+          theme: { ...prev.theme, ...savedSettings.theme },
+          sidebar: { ...prev.sidebar, ...savedSettings.sidebar },
+          shortcuts: { ...prev.shortcuts, ...savedSettings.shortcuts },
+        }));
       }
       try {
         const storedStats = localStorage.getItem('nebula_play_history');
         if (storedStats) setPlayHistory(JSON.parse(storedStats));
         const storedList = localStorage.getItem('nebula_history');
         if (storedList) setHistory(JSON.parse(storedList));
+        const storedStations = localStorage.getItem('nebula_radio_stations');
+        if (storedStations) {
+          const parsedStations = JSON.parse(storedStations);
+          if (Array.isArray(parsedStations)) setRadioStations(parsedStations);
+        }
       } catch (e) { }
       // Mark initialization as complete
       setIsInitialized(true);
@@ -455,6 +519,237 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) { console.warn("Audio Context init error:", e); }
   }, []);
 
+  const applyPlaybackAttributes = useCallback((audio: HTMLAudioElement) => {
+    const { playbackRate, pitch, pitchCorrection } = stateRef.current;
+    const pitchMultiplier = Math.pow(2, pitch / 12);
+    audio.playbackRate = playbackRate * pitchMultiplier;
+
+    const a = audio as any;
+    if (a.preservesPitch !== undefined) a.preservesPitch = pitchCorrection;
+    else if (a.mozPreservesPitch !== undefined) a.mozPreservesPitch = pitchCorrection;
+    else if (a.webkitPreservesPitch !== undefined) a.webkitPreservesPitch = pitchCorrection;
+  }, []);
+
+  const stopCrossfadeAudio = useCallback(() => {
+    const nextAudio = crossfadeAudioRef.current;
+    if (nextAudio) {
+      nextAudio.pause();
+      nextAudio.removeAttribute('src');
+      delete nextAudio.dataset.nebulaSongId;
+      nextAudio.load();
+      nextAudio.volume = 0;
+    }
+  }, []);
+
+  const cancelCrossfade = useCallback(() => {
+    if (crossfadeAnimationRef.current !== null) {
+      window.cancelAnimationFrame(crossfadeAnimationRef.current);
+      crossfadeAnimationRef.current = null;
+    }
+    isCrossfadingRef.current = false;
+    isCrossfadeStartingRef.current = false;
+    crossfadeHandoffRef.current = null;
+    stopCrossfadeAudio();
+    if (audioRef.current) audioRef.current.volume = stateRef.current.volume;
+  }, [stopCrossfadeAudio]);
+
+  const getNextPlaybackIndex = useCallback((songIndex: number, songQueue: ISong[], mode: RepeatMode) => {
+    if (songQueue.length === 0) return -1;
+    if (songIndex < songQueue.length - 1) return songIndex + 1;
+    if (mode === 'ALL') return 0;
+    return -1;
+  }, []);
+
+  const getMagicFadeSeconds = useCallback((duration: number) => {
+    if (!Number.isFinite(duration) || duration <= 0) return 3;
+    return Math.min(5, Math.max(2.25, duration * 0.025));
+  }, []);
+
+  const prepareCrossfadeTrack = useCallback((nextIndex: number) => {
+    const nextAudio = crossfadeAudioRef.current;
+    const { queue, magicCrossfade } = stateRef.current;
+    const nextSong = queue[nextIndex];
+
+    if (!nextAudio || !nextSong || !magicCrossfade) return;
+    if (nextAudio.dataset.nebulaSongId === nextSong.id && nextAudio.src) {
+      applyPlaybackAttributes(nextAudio);
+      return;
+    }
+
+    nextAudio.pause();
+    nextAudio.volume = 0;
+    nextAudio.src = service.getStreamUrl(nextSong.id, nextSong.suffix);
+    nextAudio.dataset.nebulaSongId = nextSong.id;
+    applyPlaybackAttributes(nextAudio);
+    nextAudio.load();
+  }, [applyPlaybackAttributes, service]);
+
+  const startCrossfade = useCallback((nextIndex: number) => {
+    const audio = audioRef.current;
+    const nextAudio = crossfadeAudioRef.current;
+    const { queue, volume, magicCrossfade } = stateRef.current;
+    const nextSong = queue[nextIndex];
+
+    if (!audio || !nextAudio || !nextSong || isCrossfadingRef.current || isCrossfadeStartingRef.current || !magicCrossfade) return;
+
+    prepareCrossfadeTrack(nextIndex);
+    isCrossfadeStartingRef.current = true;
+    const remaining = Math.max(0.5, (audio.duration || 0) - audio.currentTime);
+    const fadeMs = Math.min(getMagicFadeSeconds(audio.duration || 0), remaining) * 1000;
+    let startedAt = 0;
+    const startingVolume = audio.volume;
+    nextAudio.volume = 0;
+    applyPlaybackAttributes(nextAudio);
+
+    const step = (now: number) => {
+      if (!isCrossfadingRef.current) return;
+
+      const progress = Math.min(1, (now - startedAt) / fadeMs);
+      audio.volume = startingVolume * (1 - progress);
+      nextAudio.volume = volume * progress;
+
+      if (progress < 1) {
+        crossfadeAnimationRef.current = window.requestAnimationFrame(step);
+        return;
+      }
+
+      crossfadeAnimationRef.current = null;
+      crossfadeHandoffRef.current = { songId: nextSong.id, currentTime: nextAudio.currentTime };
+      setCurrentSongIndex(nextIndex);
+      setIsPlaying(true);
+    };
+
+    const beginFade = () => {
+      if (!isCrossfadeStartingRef.current) return;
+      isCrossfadeStartingRef.current = false;
+      isCrossfadingRef.current = true;
+      startedAt = performance.now();
+      crossfadeAnimationRef.current = window.requestAnimationFrame(step);
+    };
+
+    const playPromise = nextAudio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(beginFade)
+        .catch(e => {
+          if (e.name !== 'AbortError') console.warn("Crossfade start failed", e);
+          cancelCrossfade();
+        });
+    } else {
+      beginFade();
+    }
+  }, [applyPlaybackAttributes, cancelCrossfade, getMagicFadeSeconds, prepareCrossfadeTrack]);
+
+  const playInstantMix = useCallback(async () => {
+    cancelCrossfade();
+    const RECENT_MIX_KEY = 'nebula_instant_mix_recent';
+
+    const shuffle = <T,>(items: T[]) => {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    };
+
+    const uniqueSongs = (songs: ISong[], excludeIds = new Set<string>()) => {
+      const seen = new Set<string>();
+      return songs.filter(song => {
+        if (!song || song.isVideo || seen.has(song.id) || excludeIds.has(song.id)) return false;
+        seen.add(song.id);
+        return true;
+      });
+    };
+
+    const sample = <T,>(items: T[], count: number) => shuffle(items).slice(0, Math.min(count, items.length));
+    const sampleWeightedByRank = (songs: ISong[], count: number) => {
+      const pool = songs.map((song, index) => ({ song, weight: 1 / Math.pow(index + 4, 0.35) }));
+      const selected: ISong[] = [];
+
+      while (pool.length > 0 && selected.length < count) {
+        const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+        let cursor = Math.random() * totalWeight;
+        const index = pool.findIndex(item => {
+          cursor -= item.weight;
+          return cursor <= 0;
+        });
+        const [picked] = pool.splice(index >= 0 ? index : pool.length - 1, 1);
+        selected.push(picked.song);
+      }
+
+      return selected;
+    };
+    const getRecentMixIds = () => {
+      try {
+        const raw = localStorage.getItem(RECENT_MIX_KEY);
+        const ids = raw ? JSON.parse(raw) : [];
+        return new Set<string>(Array.isArray(ids) ? ids : []);
+      } catch (e) {
+        return new Set<string>();
+      }
+    };
+    const rememberMixIds = (songs: ISong[]) => {
+      try {
+        const previous = Array.from(getRecentMixIds());
+        const next = [...songs.map(song => song.id), ...previous].slice(0, 120);
+        localStorage.setItem(RECENT_MIX_KEY, JSON.stringify(next));
+      } catch (e) { }
+    };
+
+    const seeds = mostPlayed.length > 0 ? mostPlayed.slice(0, 100) : await loadMostPlayedSongs(100);
+    if (seeds.length === 0) return [];
+    if (mostPlayed.length === 0) setMostPlayed(seeds);
+
+    const recentIds = getRecentMixIds();
+    const seedPool = sampleWeightedByRank(shuffle(seeds), Math.min(10, Math.max(4, Math.floor(seeds.length / 6))));
+    const similarGroups = await Promise.all(
+      seedPool.map(song => service.getSimilarSongs(song.id, 6 + Math.floor(Math.random() * 7)).catch(() => []))
+    );
+
+    const genreCounts: Record<string, number> = {};
+    seeds.forEach(song => {
+      if (song.genre) genreCounts[song.genre] = (genreCounts[song.genre] || 0) + (song.playCount || 1);
+    });
+    const topGenres = sample(Object.keys(genreCounts).sort((a, b) => genreCounts[b] - genreCounts[a]).slice(0, 6), 2);
+    const genreGroups = await Promise.all(
+      topGenres.map(genre => service.getRandomSongs(10 + Math.floor(Math.random() * 11), { genre }).catch(() => []))
+    );
+    const serverRandom = await service.getRandomSongs(25).catch(() => []);
+    const playedSample = sampleWeightedByRank(seeds, 12);
+
+    let mix = uniqueSongs([
+      ...shuffle(playedSample),
+      ...shuffle(similarGroups.flat()),
+      ...shuffle(genreGroups.flat()),
+      ...shuffle(homeData.recommendedTracks),
+      ...shuffle(homeData.randomSongs),
+      ...serverRandom,
+    ], recentIds).slice(0, 50);
+
+    if (mix.length < 20) {
+      mix = uniqueSongs([
+        ...mix,
+        ...shuffle(playedSample),
+        ...shuffle(similarGroups.flat()),
+        ...shuffle(genreGroups.flat()),
+        ...serverRandom,
+      ]).slice(0, 50);
+    }
+
+    if (mix.length < 20) {
+      const fallback = await service.getRandomSongs(50 - mix.length);
+      mix = uniqueSongs([...mix, ...fallback]).slice(0, 50);
+    }
+
+    mix = shuffle(mix);
+    rememberMixIds(mix);
+    setQueue(mix);
+    setCurrentSongIndex(0);
+    setIsPlaying(mix.length > 0);
+    return mix;
+  }, [cancelCrossfade, homeData.randomSongs, homeData.recommendedTracks, loadMostPlayedSongs, mostPlayed, service]);
+
   // Scrobbling Logic
   useEffect(() => {
     const audio = audioRef.current;
@@ -503,7 +798,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!audio) return;
 
     const handleTimeUpdate = () => {
-      const { queue, currentSongIndex, isPlaying } = stateRef.current;
+      const { queue, currentSongIndex, isPlaying, repeatMode, magicCrossfade } = stateRef.current;
       const cTime = audio.currentTime;
       const dur = audio.duration || 0;
 
@@ -519,9 +814,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           hasScrobbledRef.current = true;
         }
       }
+
+      if (
+        isPlaying &&
+        magicCrossfade &&
+        repeatMode !== 'ONE' &&
+        Number.isFinite(dur) &&
+        dur > 3 &&
+        dur - cTime <= getMagicFadeSeconds(dur) &&
+        cTime > 0
+      ) {
+        const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
+        if (nextIndex >= 0) startCrossfade(nextIndex);
+      }
     };
 
     const onEnded = () => {
+      if (isCrossfadingRef.current) {
+        const nextAudio = crossfadeAudioRef.current;
+        if (nextAudio && !nextAudio.paused && nextAudio.currentTime > 0) return;
+      }
+      if (isCrossfadeStartingRef.current) cancelCrossfade();
+
       const { repeatMode, queue, currentSongIndex } = stateRef.current;
       if (repeatMode === 'ONE') {
         if (audioRef.current) {
@@ -567,7 +881,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audio.removeEventListener('error', onError);
       audio.removeEventListener('play', onPlayEvent);
     };
-  }, [initAudioContext]);
+  }, [cancelCrossfade, getMagicFadeSeconds, getNextPlaybackIndex, initAudioContext, startCrossfade]);
 
   useEffect(() => {
     const hexToRgb = (hex: string) => {
@@ -586,28 +900,190 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Apply pitch shifting via playbackRate
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    // Convert pitch semitones to playbackRate multiplier: rate = 2^(semitones/12)
-    const pitchMultiplier = Math.pow(2, pitch / 12);
-
-    // Combine base playback rate with pitch adjustment
-    const finalRate = playbackRate * pitchMultiplier;
-
-    audio.playbackRate = finalRate;
-  }, [pitch, playbackRate]);
+    if (audioRef.current) applyPlaybackAttributes(audioRef.current);
+    if (crossfadeAudioRef.current) applyPlaybackAttributes(crossfadeAudioRef.current);
+  }, [pitch, playbackRate, applyPlaybackAttributes]);
 
   // Ensure volume and pitch preservation are synced
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-      const audio = audioRef.current as any;
-      if (audio.preservesPitch !== undefined) audio.preservesPitch = pitchCorrection;
-      else if (audio.mozPreservesPitch !== undefined) audio.mozPreservesPitch = pitchCorrection;
-      else if (audio.webkitPreservesPitch !== undefined) audio.webkitPreservesPitch = pitchCorrection;
+    const audio = audioRef.current;
+    if (audio && !isCrossfadingRef.current) audio.volume = volume;
+    if (audio) applyPlaybackAttributes(audio);
+    if (crossfadeAudioRef.current) applyPlaybackAttributes(crossfadeAudioRef.current);
+    if (radioAudioRef.current) radioAudioRef.current.volume = volume;
+  }, [volume, pitchCorrection, applyPlaybackAttributes]);
+
+  useEffect(() => {
+    const audio = radioAudioRef.current;
+    if (!audio) return;
+
+    if (currentRadioStation) {
+      if (audio.src !== currentRadioStation.streamUrl) {
+        audio.src = currentRadioStation.streamUrl;
+        audio.load();
+      }
+
+      audio.volume = volume;
+      if (isRadioPlaying) {
+        audio.play().catch(e => {
+          if (e.name !== 'AbortError') console.warn("Radio play failed", e);
+          audio.pause();
+          audio.load();
+          setIsRadioPlaying(false);
+        });
+      } else {
+        audio.pause();
+      }
+    } else {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
     }
-  }, [volume, pitchCorrection]);
+  }, [currentRadioStation, isRadioPlaying, volume]);
+
+  useEffect(() => {
+    if (!currentRadioStation) {
+      setRadioMetadata(null);
+      setIsRadioMetadataLoading(false);
+      return;
+    }
+
+    if (!isRadioPlaying) {
+      setIsRadioMetadataLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    let activeController: AbortController | null = null;
+    setRadioMetadata(null);
+
+    const readStreamMetadata = async () => {
+      activeController?.abort();
+      const controller = new AbortController();
+      activeController = controller;
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+      setIsRadioMetadataLoading(true);
+
+      try {
+        const response = await fetch(currentRadioStation.streamUrl, {
+          headers: { 'Icy-MetaData': '1' },
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+
+        const metaInterval = Number(response.headers.get('icy-metaint'));
+        if (!response.body || !Number.isFinite(metaInterval) || metaInterval <= 0) {
+          if (!cancelled) setIsRadioMetadataLoading(false);
+          return;
+        }
+
+        const reader = response.body.getReader();
+        let audioBytesRemaining = metaInterval;
+        let metadataBytesRemaining = 0;
+        let metadataBytes: number[] = [];
+        let hasMetadataLengthByte = false;
+
+        while (!cancelled) {
+          const { done, value } = await reader.read();
+          if (done || !value) break;
+
+          let offset = 0;
+          while (!cancelled && offset < value.length) {
+            if (audioBytesRemaining > 0) {
+              const skipped = Math.min(audioBytesRemaining, value.length - offset);
+              audioBytesRemaining -= skipped;
+              offset += skipped;
+              continue;
+            }
+
+            if (!hasMetadataLengthByte) {
+              metadataBytesRemaining = value[offset] * 16;
+              hasMetadataLengthByte = true;
+              offset += 1;
+
+              if (metadataBytesRemaining === 0) {
+                audioBytesRemaining = metaInterval;
+                hasMetadataLengthByte = false;
+              }
+              continue;
+            }
+
+            const take = Math.min(metadataBytesRemaining, value.length - offset);
+            metadataBytes.push(...value.slice(offset, offset + take));
+            metadataBytesRemaining -= take;
+            offset += take;
+
+            if (metadataBytesRemaining === 0) {
+              const parsed = parseIcyMetadata(new Uint8Array(metadataBytes));
+              metadataBytes = [];
+              audioBytesRemaining = metaInterval;
+              hasMetadataLengthByte = false;
+
+              if (parsed) {
+                const nextMetadata: IRadioMetadata = { ...parsed, updatedAt: Date.now() };
+                if (!cancelled) setRadioMetadata(nextMetadata);
+
+                await reader.cancel().catch(() => undefined);
+                const artworkUrl = await fetchRadioArtwork(nextMetadata, controller.signal);
+                if (!cancelled) {
+                  setRadioMetadata(prev => prev ? { ...prev, artworkUrl } : { ...nextMetadata, artworkUrl });
+                }
+                return;
+              }
+            }
+          }
+        }
+      } catch (error: any) {
+        if (error?.name !== 'AbortError') console.warn('Radio metadata unavailable', error);
+      } finally {
+        window.clearTimeout(timeoutId);
+        if (!cancelled) setIsRadioMetadataLoading(false);
+      }
+    };
+
+    readStreamMetadata();
+    const intervalId = window.setInterval(readStreamMetadata, 30000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      activeController?.abort();
+    };
+  }, [currentRadioStation, isRadioPlaying]);
+
+  useEffect(() => {
+    const audio = radioAudioRef.current;
+    if (!audio) return;
+
+    const onEnded = () => setIsRadioPlaying(false);
+    const onError = () => {
+      console.warn("Internet radio stream error", audio.error);
+      setIsRadioPlaying(false);
+    };
+
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
+    return () => {
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!settings.magicCrossfade) cancelCrossfade();
+  }, [cancelCrossfade, settings.magicCrossfade]);
+
+  useEffect(() => {
+    if (isCrossfadingRef.current || isCrossfadeStartingRef.current) return;
+
+    if (!isPlaying || !settings.magicCrossfade || repeatMode === 'ONE') {
+      stopCrossfadeAudio();
+      return;
+    }
+
+    const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
+    if (nextIndex >= 0) prepareCrossfadeTrack(nextIndex);
+  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, settings.magicCrossfade, stopCrossfadeAudio]);
 
   // Handle Playback State
   useEffect(() => {
@@ -620,25 +1096,57 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const url = service.getStreamUrl(song.id, song.suffix);
 
       if (audio.src !== url) {
+        const handoff = crossfadeHandoffRef.current?.songId === song.id
+          ? crossfadeHandoffRef.current
+          : null;
+
         audio.src = url;
+        audio.volume = volume;
         audio.load();
 
-        const pitchMultiplier = Math.pow(2, pitch / 12);
-        const finalRate = playbackRate * pitchMultiplier;
-        audio.playbackRate = finalRate;
-        const a = audio as any;
-        if (a.preservesPitch !== undefined) a.preservesPitch = pitchCorrection;
-        else if (a.mozPreservesPitch !== undefined) a.mozPreservesPitch = pitchCorrection;
-        else if (a.webkitPreservesPitch !== undefined) a.webkitPreservesPitch = pitchCorrection;
+        applyPlaybackAttributes(audio);
 
         if (isPlaying) {
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(e => {
-              if (e.name !== 'AbortError') console.warn("Play failed", e);
-            });
+          const finishCrossfadeHandoff = () => {
+            stopCrossfadeAudio();
+            crossfadeHandoffRef.current = null;
+            isCrossfadingRef.current = false;
+
+            const nextIndex = getNextPlaybackIndex(currentSongIndex, stateRef.current.queue, stateRef.current.repeatMode);
+            if (stateRef.current.isPlaying && stateRef.current.magicCrossfade && nextIndex >= 0) {
+              prepareCrossfadeTrack(nextIndex);
+            }
+          };
+
+          const startPlayback = () => {
+            if (handoff && Number.isFinite(handoff.currentTime) && handoff.currentTime > 0) {
+              try {
+                audio.currentTime = handoff.currentTime;
+              } catch (e) { }
+            }
+
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              playPromise
+                .then(() => {
+                  if (handoff) {
+                    window.setTimeout(finishCrossfadeHandoff, 120);
+                  }
+                })
+                .catch(e => {
+                  if (e.name !== 'AbortError') console.warn("Play failed", e);
+                });
+            } else if (handoff) {
+              window.setTimeout(finishCrossfadeHandoff, 120);
+            }
+            initAudioContext(); // Ensure context is ready
+          };
+
+          if (handoff && audio.readyState < 1) {
+            audio.addEventListener('loadedmetadata', startPlayback, { once: true });
+          } else {
+            startPlayback();
           }
-          initAudioContext(); // Ensure context is ready
         }
       } else {
         if (isPlaying && audio.paused) {
@@ -648,13 +1156,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
     } else {
+      cancelCrossfade();
       audio.pause();
       audio.removeAttribute('src');
       audio.load();
     }
-  }, [currentSongIndex, queue, service, isPlaying, initAudioContext]);
+  }, [applyPlaybackAttributes, cancelCrossfade, currentSongIndex, getNextPlaybackIndex, initAudioContext, isPlaying, pitch, pitchCorrection, playbackRate, prepareCrossfadeTrack, queue, service, stopCrossfadeAudio, volume]);
 
   const playSong = (song: ISong, contextQueue?: ISong[]) => {
+    cancelCrossfade();
+    if (radioAudioRef.current) radioAudioRef.current.pause();
+    setIsRadioPlaying(false);
+    setCurrentRadioStation(null);
     if (contextQueue) {
       setQueue(contextQueue);
       const idx = contextQueue.findIndex(s => s.id === song.id);
@@ -668,10 +1181,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const togglePlay = () => {
+    if (currentRadioStation) {
+      setIsRadioPlaying(!isRadioPlaying);
+      return;
+    }
     setIsPlaying(!isPlaying);
   };
 
   const nextSong = () => {
+    cancelCrossfade();
     if (queue.length === 0) return;
     if (currentSongIndex < queue.length - 1) {
       setCurrentSongIndex(currentSongIndex + 1);
@@ -688,6 +1206,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const prevSong = () => {
+    cancelCrossfade();
     if (audioRef.current && audioRef.current.currentTime > 3) {
       audioRef.current.currentTime = 0;
       return;
@@ -843,8 +1362,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setQueue([]);
       setCurrentSongIndex(-1);
       setIsPlaying(false);
+      setCurrentRadioStation(null);
+      setIsRadioPlaying(false);
       setHomeData({ randomSongs: [], recentAlbums: [], newestAlbums: [], exploreAlbums: [], recommendedTracks: [], lastFetched: 0 });
       setCachedArtists([]);
+      setMostPlayed([]);
       // Fetch real playlists from server
       db.saveCredentials(creds);
       service.getPlaylists().then(setPlaylists);
@@ -855,15 +1377,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const disconnect = async () => {
+    cancelCrossfade();
     service.setCredentials(null as any); setCredentialsState(null);
     await db.clear('settings'); await db.clear('api_cache');
     setQueue([]); setPlaylists([]); setCurrentSongIndex(-1); setIsPlaying(false); setIsDemoMode(false);
+    setCurrentRadioStation(null); setIsRadioPlaying(false);
     navigationStackRef.current = [];
     setNavigationStack([]);
     setCurrentView('HOME');
     setViewData(undefined);
     setHomeData({ randomSongs: [], recentAlbums: [], newestAlbums: [], exploreAlbums: [], recommendedTracks: [], lastFetched: 0 });
     setCachedArtists([]);
+    setMostPlayed([]);
   };
 
   const enableDemoMode = () => { setIsDemoMode(true); setPlaylists(MOCK_PLAYLISTS); };
@@ -901,7 +1426,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     refreshMostPlayed();
-  }, [credentials]);
+  }, [credentials, refreshMostPlayed]);
 
   // Reset scrobble status when song changes
   useEffect(() => {
@@ -980,6 +1505,50 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return pl;
     }));
   };
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    localStorage.setItem('nebula_radio_stations', JSON.stringify(radioStations));
+  }, [radioStations, isInitialized]);
+
+  const playRadioStation = (station: IRadioStation) => {
+    cancelCrossfade();
+    if (audioRef.current) audioRef.current.pause();
+    setIsPlaying(false);
+    setCurrentRadioStation({ ...station, lastPlayed: new Date().toISOString() });
+    setIsRadioPlaying(true);
+    setRadioStations(prev => prev.map(s => s.id === station.id ? { ...s, lastPlayed: new Date().toISOString() } : s));
+  };
+
+  const toggleRadioPlay = () => {
+    if (!currentRadioStation) return;
+    setIsRadioPlaying(prev => !prev);
+  };
+
+  const stopRadio = () => {
+    setIsRadioPlaying(false);
+    setCurrentRadioStation(null);
+  };
+
+  const addRadioStation = (station: Omit<IRadioStation, 'id' | 'created'>) => {
+    const newStation: IRadioStation = {
+      ...station,
+      id: `radio-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      created: new Date().toISOString(),
+    };
+    setRadioStations(prev => [newStation, ...prev]);
+  };
+
+  const updateRadioStation = (station: IRadioStation) => {
+    setRadioStations(prev => prev.map(s => s.id === station.id ? station : s));
+    setCurrentRadioStation(prev => prev?.id === station.id ? station : prev);
+  };
+
+  const deleteRadioStation = (id: string) => {
+    setRadioStations(prev => prev.filter(s => s.id !== id));
+    if (currentRadioStation?.id === id) stopRadio();
+  };
+
   const reorderPlaylist = (playlistId: string, fromIndex: number, toIndex: number) => {
     setPlaylists(prev => prev.map(pl => {
       if (pl.id === playlistId && pl.songs) {
@@ -991,13 +1560,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <StoreContext.Provider value={{
-      currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
+      currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
       credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
-      playSong, togglePlay, nextSong, prevSong, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
+      playSong, playRadioStation, toggleRadioPlay, stopRadio, togglePlay, nextSong, prevSong, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
       connectToSubsonic, disconnect, enableDemoMode, addToQueue, updateSettings,
-      openPlaylistModal, closePlaylistModal, createPlaylist, savePlaylist, addSongToPlaylist, deletePlaylist, reorderPlaylist,
+      openPlaylistModal, closePlaylistModal, createPlaylist, savePlaylist, addSongToPlaylist, deletePlaylist, reorderPlaylist, addRadioStation, updateRadioStation, deleteRadioStation,
       performSearch, searchResults, isSearching, lastSearchQuery, isSearchModalOpen, openSearchModal, closeSearchModal,
-      getMostPlayedSongs: () => mostPlayed, refreshMostPlayed, history: [], service, audioRef, analyser, isZenMode, setZenMode,
+      getMostPlayedSongs: () => mostPlayed, refreshMostPlayed, playInstantMix, history: [], service, audioRef, radioAudioRef, analyser, isZenMode, setZenMode,
       homeData, cachedArtists, refreshHomeData, refreshQuickPicks, refreshDiscovery, fetchArtists
     }}>
       {children}
@@ -1005,6 +1574,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ref={audioRef}
         crossOrigin="anonymous"
         preload="auto"
+      />
+      <audio
+        ref={crossfadeAudioRef}
+        crossOrigin="anonymous"
+        preload="auto"
+      />
+      <audio
+        ref={radioAudioRef}
+        preload="none"
       />
     </StoreContext.Provider>
   );

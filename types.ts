@@ -66,6 +66,26 @@ export interface IPlaylist {
   songs?: ISong[];
 }
 
+export interface IRadioStation {
+  id: string;
+  name: string;
+  streamUrl: string;
+  homepageUrl?: string;
+  genre?: string;
+  imageUrl?: string;
+  created: string;
+  lastPlayed?: string;
+}
+
+export interface IRadioMetadata {
+  title?: string;
+  artist?: string;
+  album?: string;
+  artworkUrl?: string;
+  rawTitle?: string;
+  updatedAt: number;
+}
+
 export interface HomeData {
   randomSongs: ISong[];
   recentAlbums: IAlbum[];
@@ -100,6 +120,7 @@ export interface AppSettings {
   sidebar: {
     showHome: boolean;
     showBrowse: boolean;
+    showRadio: boolean;
     showArtists: boolean;
     showAlbums: boolean;
     showSongs: boolean;
@@ -124,12 +145,13 @@ export interface AppSettings {
   };
   miniPlayerMode: 'floating' | 'sidebar'; // which mini-player style to show
   progressVisualization: 'bar' | 'waveform';
+  magicCrossfade: boolean;
 }
 
 export type PlaybackMode = 'normal' | 'shuffle';
 export type RepeatMode = 'OFF' | 'ALL' | 'ONE';
 export type VisualizerMode = 'BARS' | 'WAVE' | 'CIRCLE' | 'MIRROR' | 'SPECTRUM' | 'PARTICLES' | 'HEXAGON' | 'CUBE' | 'GRID';
-export type View = 'HOME' | 'BROWSE' | 'ARTISTS' | 'ALBUMS' | 'SONGS' | 'PLAYLISTS' | 'SETTINGS' | 'PLAYLIST_DETAIL' | 'ARTIST_DETAIL' | 'ALBUM_DETAIL' | 'SEARCH' | 'LIKED_SONGS' | 'LIKED_ALBUMS';
+export type View = 'HOME' | 'BROWSE' | 'RADIO' | 'ARTISTS' | 'ALBUMS' | 'SONGS' | 'PLAYLISTS' | 'SETTINGS' | 'PLAYLIST_DETAIL' | 'ARTIST_DETAIL' | 'ALBUM_DETAIL' | 'SEARCH' | 'LIKED_SONGS' | 'LIKED_ALBUMS';
 export interface NavigationTarget {
   view: View;
   data?: any;
@@ -141,6 +163,11 @@ export interface AppState {
   queue: ISong[];
   currentSongIndex: number;
   isPlaying: boolean;
+  radioStations: IRadioStation[];
+  currentRadioStation: IRadioStation | null;
+  isRadioPlaying: boolean;
+  radioMetadata: IRadioMetadata | null;
+  isRadioMetadataLoading: boolean;
   volume: number;
   playbackRate: number;
   pitch: number; // Semitones adjustment for audio pitch

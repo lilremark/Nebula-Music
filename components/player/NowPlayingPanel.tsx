@@ -15,6 +15,32 @@ interface NowPlayingPanelProps {
     onCollapse: () => void;
 }
 
+const withAlpha = (color: string, alpha: number) => {
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+        const normalized = hex.length === 3
+            ? hex.split('').map(char => char + char).join('')
+            : hex;
+
+        if (normalized.length === 6) {
+            const r = parseInt(normalized.slice(0, 2), 16);
+            const g = parseInt(normalized.slice(2, 4), 16);
+            const b = parseInt(normalized.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+    }
+
+    if (color.startsWith('rgb(')) {
+        return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+    }
+
+    if (color.startsWith('rgba(')) {
+        return color.replace(/rgba\((.+),\s*[\d.]+\)/, `rgba($1, ${alpha})`);
+    }
+
+    return color;
+};
+
 export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCollapse }) => {
     const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection, repeatMode, toggleRepeat, toggleLike, settings, updateSettings } = useStore();
 
@@ -165,14 +191,18 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         progress={displayProgress}
                         mode={progressMode}
                         accentColor={colors.primary}
-                        baseColor={colors.primaryMuted}
+                        baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
                         markerColor={colors.secondary || colors.primary}
                         waveform={waveform}
                         onScrub={handleScrub}
-                        showHandle={progressMode === 'bar'}
+                        trackStyle={{
+                            boxShadow: progressMode === 'bar'
+                                ? `0 0 18px ${withAlpha(colors.primary, 0.16)}`
+                                : undefined,
+                        }}
                         trackClassName={`cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
-                            ? 'h-24 bg-transparent rounded-none'
-                            : 'h-1.5 bg-neutral-300 dark:bg-white/10 rounded-full'
+                            ? 'h-16 bg-transparent rounded-none'
+                            : 'h-2 bg-neutral-300 dark:bg-white/10 rounded'
                             }`}
                     />
                     <div className="flex justify-between mt-1.5 text-[10px] text-neutral-600 dark:text-white/60 font-mono tabular-nums">

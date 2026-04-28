@@ -10,6 +10,32 @@ interface FloatingMiniPlayerProps {
     onRestoreSidebar: () => void;
 }
 
+const withAlpha = (color: string, alpha: number) => {
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+        const normalized = hex.length === 3
+            ? hex.split('').map(char => char + char).join('')
+            : hex;
+
+        if (normalized.length === 6) {
+            const r = parseInt(normalized.slice(0, 2), 16);
+            const g = parseInt(normalized.slice(2, 4), 16);
+            const b = parseInt(normalized.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+    }
+
+    if (color.startsWith('rgb(')) {
+        return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+    }
+
+    if (color.startsWith('rgba(')) {
+        return color.replace(/rgba\((.+),\s*[\d.]+\)/, `rgba($1, ${alpha})`);
+    }
+
+    return color;
+};
+
 export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand, onRestoreSidebar }) => {
     const {
         queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, service, audioRef, toggleLike, volume, setVolume, settings, updateSettings
@@ -42,7 +68,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
 
     if (!currentSong) return null;
 
-    const coverArt = service.getCoverArtUrl(currentSong.id, 200);
+    const coverArt = service.getCoverArtUrl(currentSong.coverArt || currentSong.id, 200);
     const streamUrl = service.getStreamUrl(currentSong.id, currentSong.suffix);
     const waveform = useTrackWaveform(currentSong.id, streamUrl);
     const progressMode = settings.progressVisualization;
@@ -85,10 +111,15 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                     progress={displayProgress}
                     mode={progressMode}
                     accentColor={colors.primary}
-                    baseColor={colors.primaryMuted}
+                    baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
                     markerColor={colors.secondary || colors.primary}
                     waveform={waveform}
                     onScrub={handleScrub}
+                    trackStyle={{
+                        boxShadow: progressMode === 'bar'
+                            ? `0 0 18px ${withAlpha(colors.primary, 0.16)}`
+                            : undefined,
+                    }}
                     trackClassName={`${progressMode === 'waveform'
                         ? 'h-16 bg-transparent transition-all duration-300'
                         : `group transition-all duration-200 ${isHoverProgress ? 'h-3' : 'h-1.5'} bg-neutral-300 dark:bg-white/10`
@@ -109,12 +140,21 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
 
                 {/* Song Info */}
                 <div className="min-w-0 w-32 shrink-0">
-                    <p className="font-semibold text-neutral-900 dark:text-white text-sm truncate">{currentSong.title}</p>
+                    <div className="relative overflow-hidden">
+                        {currentSong.title.length > 22 ? (
+                            <div className="mini-title-marquee font-semibold text-neutral-900 dark:text-white text-sm whitespace-nowrap">
+                                <span>{currentSong.title}</span>
+                                <span aria-hidden="true">{currentSong.title}</span>
+                            </div>
+                        ) : (
+                            <p className="font-semibold text-neutral-900 dark:text-white text-sm truncate">{currentSong.title}</p>
+                        )}
+                    </div>
                     <p className="text-xs text-neutral-700 dark:text-white/50 truncate">{currentSong.artist}</p>
                 </div>
 
                 {/* Time display */}
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-600 dark:text-white/60 shrink-0">
+                <div className="flex items-center justify-center gap-2 text-xs font-mono text-neutral-700 dark:text-white/70 shrink-0 min-w-[86px]">
                     <span className="tabular-nums">{formatTime(currentTime)}</span>
                     <span className="text-neutral-400 dark:text-white/50">/</span>
                     <span className="tabular-nums">{formatTime(duration)}</span>

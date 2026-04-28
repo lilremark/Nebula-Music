@@ -4,10 +4,12 @@ import { SplitLayout, TopBar } from './components/layout';
 import { NavDrawer } from './components/navigation';
 import { NowPlayingPanel } from './components/player/NowPlayingPanel';
 import { FloatingMiniPlayer } from './components/player/FloatingMiniPlayer';
+import { RadioFloatingMiniPlayer, RadioFullPlayer, RadioMobileBar, RadioSidebarPanel } from './components/radio/RadioPlayers';
 import { Player } from './components/Player';
 import { HomeView } from './views/Home';
 import { LibraryView } from './views/Library';
 import { BrowseView } from './views/Browse';
+import { InternetRadioView } from './views/InternetRadio';
 import { SettingsView } from './views/Settings';
 import { ArtistDetailView } from './views/ArtistDetailView';
 import { AlbumDetailView } from './views/AlbumDetail';
@@ -23,6 +25,7 @@ import { VisualizerMode } from './types';
 const AppContent: React.FC = () => {
   const {
     currentView, setView, credentials, isDemoMode, queue, currentSongIndex,
+    currentRadioStation,
     togglePlay, nextSong, prevSong, toggleRepeat, isPlaying,
     visualizerMode, setVisualizerMode, isZenMode, setZenMode,
     settings, volume, setVolume, getMostPlayedSongs, refreshMostPlayed
@@ -95,6 +98,7 @@ const AppContent: React.FC = () => {
   switch (currentView) {
     case 'HOME': ViewComponent = HomeView; break;
     case 'BROWSE': ViewComponent = BrowseView; break;
+    case 'RADIO': ViewComponent = InternetRadioView; break;
     case 'SETTINGS': ViewComponent = SettingsView; break;
     case 'ARTISTS':
     case 'ALBUMS':
@@ -109,7 +113,9 @@ const AppContent: React.FC = () => {
     default: ViewComponent = HomeView;
   }
 
-  const isPlayerVisible = queue.length > 0 && currentSongIndex >= 0;
+  const isMusicPlayerVisible = queue.length > 0 && currentSongIndex >= 0;
+  const isRadioPlayerVisible = !!currentRadioStation;
+  const isPlayerVisible = isMusicPlayerVisible || isRadioPlayerVisible;
 
   // Determine player display mode based on settings
   const useSidebarPlayer = settings.miniPlayerMode === 'sidebar';
@@ -131,20 +137,36 @@ const AppContent: React.FC = () => {
         isCollapsed={isSidebarCollapsed || useFloatingPlayer}
         rightPanel={
           useSidebarPlayer ? (
-            <NowPlayingPanel
-              onExpand={() => setIsExpanded(true)}
-              onCollapse={() => setIsSidebarCollapsed(true)}
-            />
+            isRadioPlayerVisible ? (
+              <RadioSidebarPanel
+                onExpand={() => setIsExpanded(true)}
+                onCollapse={() => setIsSidebarCollapsed(true)}
+              />
+            ) : (
+              <NowPlayingPanel
+                onExpand={() => setIsExpanded(true)}
+                onCollapse={() => setIsSidebarCollapsed(true)}
+              />
+            )
           ) : null
         }
         floatingPlayer={
           (useFloatingPlayer || isSidebarCollapsed) ? (
-            <FloatingMiniPlayer
-              onExpand={() => setIsExpanded(true)}
-              onRestoreSidebar={() => {
-                if (useSidebarPlayer) setIsSidebarCollapsed(false);
-              }}
-            />
+            isRadioPlayerVisible ? (
+              <RadioFloatingMiniPlayer
+                onExpand={() => setIsExpanded(true)}
+                onRestoreSidebar={() => {
+                  if (useSidebarPlayer) setIsSidebarCollapsed(false);
+                }}
+              />
+            ) : (
+              <FloatingMiniPlayer
+                onExpand={() => setIsExpanded(true)}
+                onRestoreSidebar={() => {
+                  if (useSidebarPlayer) setIsSidebarCollapsed(false);
+                }}
+              />
+            )
           ) : null
         }
       >
@@ -164,18 +186,30 @@ const AppContent: React.FC = () => {
         </main>
 
         {/* Mobile Player Bar (shows on mobile when something is playing) */}
-        <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
+        {isRadioPlayerVisible ? (
+          <RadioMobileBar onExpand={() => setIsExpanded(true)} />
+        ) : (
+          <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
+        )}
       </SplitLayout>
 
       {/* Mini Player */}
       <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${isNavOpen ? 'translate-y-full' : 'translate-y-0'} md:hidden`}>
-        <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
+        {isRadioPlayerVisible ? (
+          <RadioMobileBar onExpand={() => setIsExpanded(true)} />
+        ) : (
+          <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
+        )}
       </div>
 
 
 
       {/* Full Screen Player (expanded mode) */}
-      <Player isExpanded={isExpanded} onClose={() => setIsExpanded(false)} />
+      {isRadioPlayerVisible ? (
+        <RadioFullPlayer isExpanded={isExpanded} onClose={() => setIsExpanded(false)} />
+      ) : (
+        <Player isExpanded={isExpanded} onClose={() => setIsExpanded(false)} />
+      )}
 
       {/* Modals */}
       <PlaylistModal />
