@@ -267,10 +267,50 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return sorted.map(item => item.song);
   }, [playHistory]);
 
+  const shuffleSongs = <T,>(items: T[]) => {
+    const copy = [...items];
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  };
+
+  const uniquePlayableSongs = (songs: ISong[]) => {
+    const seen = new Set<string>();
+    return songs.filter(song => {
+      if (!song || song.isVideo || seen.has(song.id)) return false;
+      seen.add(song.id);
+      return true;
+    });
+  };
+
+  const getTopGenreFromSongs = (songs: ISong[]) => {
+    const genreCounts: Record<string, number> = {};
+    songs.forEach(song => {
+      if (song.genre) genreCounts[song.genre] = (genreCounts[song.genre] || 0) + (song.playCount || 1);
+    });
+    return Object.keys(genreCounts).sort((a, b) => genreCounts[b] - genreCounts[a])[0] || '';
+  };
+
   const refreshQuickPicks = useCallback(async () => {
-    const random = await service.getRandomSongs(20);
+    const topSongs = getMostPlayedSongs();
+    const topGenre = getTopGenreFromSongs(topSongs);
+    const randomGenre = shuffleSongs(topSongs.map(song => song.genre).filter(Boolean) as string[])[0] || '';
+    const [randomA, randomB, topGenreSongs, randomGenreSongs] = await Promise.all([
+      service.getRandomSongs(24),
+      service.getRandomSongs(24),
+      service.getRandomSongs(18, topGenre ? { genre: topGenre } : {}),
+      service.getRandomSongs(18, randomGenre && randomGenre !== topGenre ? { genre: randomGenre } : {}),
+    ]);
+    const random = shuffleSongs(uniquePlayableSongs([
+      ...randomA,
+      ...shuffleSongs(topGenreSongs).slice(0, 10),
+      ...shuffleSongs(randomGenreSongs).slice(0, 8),
+      ...randomB,
+    ])).slice(0, 24);
     setHomeData(prev => ({ ...prev, randomSongs: random }));
-  }, [service]);
+  }, [getMostPlayedSongs, service]);
 
   const refreshDiscovery = useCallback(async () => {
     let strategy = 'random';
@@ -352,19 +392,34 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const loadRecommended = async () => {
       const topSongs = getMostPlayedSongs();
-      let topGenre = '';
-      if (topSongs.length > 0) {
-        const genreCounts: Record<string, number> = {};
-        topSongs.forEach(s => {
-          if (s.genre) genreCounts[s.genre] = (genreCounts[s.genre] || 0) + 1;
-        });
-        topGenre = Object.keys(genreCounts).sort((a, b) => genreCounts[b] - genreCounts[a])[0];
-      }
-      return await service.getRandomSongs(50, topGenre ? { genre: topGenre } : {});
+      const topGenre = getTopGenreFromSongs(topSongs);
+      const seedSongs = shuffleSongs(topSongs).slice(0, 4);
+      const similarGroups = await Promise.all(seedSongs.map(song => service.getSimilarSongs(song.id, 10).catch(() => [])));
+      const [randomA, randomB, genreSongs] = await Promise.all([
+        service.getRandomSongs(30),
+        service.getRandomSongs(30),
+        service.getRandomSongs(30, topGenre ? { genre: topGenre } : {}),
+      ]);
+      return shuffleSongs(uniquePlayableSongs([
+        ...shuffleSongs(similarGroups.flat()).slice(0, 25),
+        ...shuffleSongs(genreSongs).slice(0, 20),
+        ...shuffleSongs(topSongs).slice(0, 12),
+        ...randomA,
+        ...randomB,
+      ])).slice(0, 50);
     };
 
     const [random, recent, newest, explore, recs] = await Promise.all([
-      service.getRandomSongs(20),
+      (async () => {
+        const topSongs = getMostPlayedSongs();
+        const topGenre = getTopGenreFromSongs(topSongs);
+        const [randomA, randomB, genreSongs] = await Promise.all([
+          service.getRandomSongs(24),
+          service.getRandomSongs(24),
+          service.getRandomSongs(18, topGenre ? { genre: topGenre } : {}),
+        ]);
+        return shuffleSongs(uniquePlayableSongs([...randomA, ...shuffleSongs(genreSongs).slice(0, 10), ...randomB])).slice(0, 24);
+      })(),
       service.getAlbumList('recent', 24),
       service.getAlbumList('newest', 24),
       loadExplore(),

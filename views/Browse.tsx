@@ -116,6 +116,59 @@ const SectionHeader: React.FC<{
     </div>
 );
 
+const shuffle = <T,>(items: T[]) => {
+    const copy = [...items];
+    for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+};
+
+const uniqueSongs = (songs: ISong[]) => {
+    const seen = new Set<string>();
+    return songs.filter(song => {
+        if (!song || song.isVideo || seen.has(song.id)) return false;
+        seen.add(song.id);
+        return true;
+    });
+};
+
+const uniqueAlbums = (albums: IAlbum[]) => {
+    const seen = new Set<string>();
+    return albums.filter(album => {
+        if (!album || seen.has(album.id)) return false;
+        seen.add(album.id);
+        return true;
+    });
+};
+
+const weightedSongSample = (songs: ISong[], count: number, scoreSong: (song: ISong) => number) => {
+    const pool = uniqueSongs(songs).map(song => ({
+        song,
+        weight: Math.max(0.05, scoreSong(song)) * (0.75 + Math.random() * 0.7),
+    }));
+    const selected: ISong[] = [];
+
+    while (pool.length > 0 && selected.length < count) {
+        const total = pool.reduce((sum, item) => sum + item.weight, 0);
+        let cursor = Math.random() * total;
+        const index = pool.findIndex(item => {
+            cursor -= item.weight;
+            return cursor <= 0;
+        });
+        const [picked] = pool.splice(index >= 0 ? index : pool.length - 1, 1);
+        selected.push(picked.song);
+    }
+
+    return selected;
+};
+
+const pickRandomGenre = (songs: ISong[]) => {
+    const genres = songs.map(song => song.genre).filter(Boolean) as string[];
+    return genres.length > 0 ? shuffle(genres)[0] : '';
+};
+
 export const BrowseView: React.FC = () => {
     const { service, playSong, setView, getMostPlayedSongs, playInstantMix } = useStore();
     const [generatedMixes, setGeneratedMixes] = useState<(IPlaylist & { icon: any; desc: string })[]>([]);
@@ -128,8 +181,8 @@ export const BrowseView: React.FC = () => {
 
     const loadData = useCallback(async (force = false) => {
         setIsLoading(true);
-        const CACHE_KEY = 'nebula_browse_cache_v2';
-        const TS_KEY = 'nebula_browse_ts_v2';
+        const CACHE_KEY = 'nebula_browse_cache_v3';
+        const TS_KEY = 'nebula_browse_ts_v3';
         const ONE_DAY = 24 * 60 * 60 * 1000;
         const cached = localStorage.getItem(CACHE_KEY);
         const ts = localStorage.getItem(TS_KEY);
@@ -165,11 +218,62 @@ export const BrowseView: React.FC = () => {
             topGenre = Object.keys(genreCounts).sort((a, b) => genreCounts[b] - genreCounts[a])[0];
         }
 
-        const [oldiesSongs, flowSongs, dailySongs] = await Promise.all([
-            service.getRandomSongs(20, { toYear: new Date().getFullYear() - 10 }),
-            service.getRandomSongs(20, topGenre ? { genre: topGenre } : {}),
-            service.getRandomSongs(20)
+        const currentYear = new Date().getFullYear();
+        const seedSongs = shuffle(mostPlayed).slice(0, 8);
+        const randomGenre = pickRandomGenre(mostPlayed);
+        const similarGroups = await Promise.all(
+            seedSongs.slice(0, 4).map(song => service.getSimilarSongs(song.id, 12).catch(() => []))
+        );
+        const [randomA, randomB, oldiesRandom, topGenreRandom, randomGenreSongs, freshRandom] = await Promise.all([
+            service.getRandomSongs(35),
+            service.getRandomSongs(35),
+            service.getRandomSongs(45, { toYear: currentYear - 8 }),
+            service.getRandomSongs(35, topGenre ? { genre: topGenre } : {}),
+            service.getRandomSongs(30, randomGenre ? { genre: randomGenre } : {}),
+            service.getRandomSongs(35, { fromYear: currentYear - 5 }),
         ]);
+
+        const similarSongs = similarGroups.flat();
+        const libraryPool = uniqueSongs([
+            ...shuffle(randomA),
+            ...shuffle(randomB),
+            ...shuffle(similarSongs),
+            ...shuffle(mostPlayed),
+            ...shuffle(topGenreRandom),
+            ...shuffle(randomGenreSongs),
+        ]);
+
+        const flowSongs = weightedSongSample(
+            [...topGenreRandom, ...similarSongs, ...randomA, ...mostPlayed],
+            24,
+            song => {
+                const genreFit = topGenre && song.genre === topGenre ? 3.2 : 1;
+                const familiarity = song.playCount ? Math.min(2.4, 1 + song.playCount / 20) : 0.9;
+                const durationFit = song.duration >= 120 && song.duration <= 480 ? 1.25 : 0.75;
+                return genreFit * familiarity * durationFit;
+            },
+        );
+
+        const oldiesSongs = weightedSongSample(
+            [...oldiesRandom, ...mostPlayed, ...randomB],
+            24,
+            song => {
+                const year = song.year || currentYear;
+                const ageFit = year <= currentYear - 8 ? 3 : year <= currentYear - 5 ? 1.5 : 0.45;
+                const favoriteFit = song.playCount ? Math.min(2.2, 1 + song.playCount / 25) : 1;
+                return ageFit * favoriteFit;
+            },
+        );
+
+        const dailySongs = weightedSongSample(
+            [...freshRandom, ...libraryPool, ...shuffle(randomA)],
+            24,
+            song => {
+                const discoveryFit = song.playCount ? 0.75 : 1.35;
+                const genreFit = topGenre && song.genre === topGenre ? 1.4 : 1;
+                return discoveryFit * genreFit;
+            },
+        );
 
         const createMix = (idSuffix: string, title: string, desc: string, icon: any, songs: ISong[]) => ({
             id: `generated-${idSuffix}-${Date.now()}`,
@@ -189,24 +293,28 @@ export const BrowseView: React.FC = () => {
             createMix('daily', 'Daily Mix', 'Fresh tracks to start your day', Music, dailySongs),
         ];
 
-        let dailyStrategy = 'random';
-        let dailyParams = {};
-        if (topGenre && Math.random() > 0.3) {
-            dailyStrategy = 'byGenre';
-            dailyParams = { genre: topGenre };
-        }
-
-        let daily = await service.getAlbumList(dailyStrategy, 5, Math.floor(Math.random() * 20), dailyParams);
-        if (daily.length < 5) {
-            const fill = await service.getAlbumList('random', 5 - daily.length);
-            daily = [...daily, ...fill];
-        }
-        daily = daily.sort(() => 0.5 - Math.random());
-
-        const [newRes, recRes] = await Promise.all([
+        const albumOffset = () => Math.floor(Math.random() * 35);
+        const [dailyRandom, dailyGenre, dailyFresh, recGenre, recFrequent, recRandom, newRes] = await Promise.all([
+            service.getAlbumList('random', 8, albumOffset()),
+            topGenre ? service.getAlbumList('byGenre', 8, albumOffset(), { genre: topGenre }) : Promise.resolve([]),
+            service.getAlbumList('newest', 6, albumOffset()),
+            topGenre ? service.getAlbumList('byGenre', 10, albumOffset(), { genre: topGenre }) : Promise.resolve([]),
+            service.getAlbumList('frequent', 10, albumOffset()),
+            service.getAlbumList('random', 10, albumOffset()),
             service.getAlbumList('newest', 10),
-            topGenre ? service.getAlbumList('byGenre', 10, 0, { genre: topGenre }) : service.getAlbumList('frequent', 10)
         ]);
+
+        const daily = shuffle(uniqueAlbums([
+            ...dailyRandom,
+            ...shuffle(dailyGenre).slice(0, 4),
+            ...shuffle(dailyFresh).slice(0, 3),
+        ])).slice(0, 5);
+
+        const recRes = shuffle(uniqueAlbums([
+            ...shuffle(recGenre).slice(0, 6),
+            ...shuffle(recFrequent).slice(0, 5),
+            ...shuffle(recRandom).slice(0, 6),
+        ])).slice(0, 10);
 
         setGeneratedMixes(mixes);
         setDailyAlbums(daily);
