@@ -25,10 +25,18 @@ export const InternetRadioView: React.FC = () => {
 
     const [form, setForm] = useState(emptyForm);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [isStationModalOpen, setIsStationModalOpen] = useState(false);
 
     const resetForm = () => {
         setForm(emptyForm);
         setEditingId(null);
+        setIsStationModalOpen(false);
+    };
+
+    const openNewStationModal = () => {
+        setForm(emptyForm);
+        setEditingId(null);
+        setIsStationModalOpen(true);
     };
 
     const submitStation = (e: React.FormEvent) => {
@@ -62,6 +70,7 @@ export const InternetRadioView: React.FC = () => {
             genre: station.genre || '',
             imageUrl: station.imageUrl || '',
         });
+        setIsStationModalOpen(true);
     };
 
     return (
@@ -77,72 +86,27 @@ export const InternetRadioView: React.FC = () => {
                         Add direct MP3, AAC, OGG, or playlist stream URLs from internet radio stations.
                     </p>
                 </div>
+                <button
+                    onClick={openNewStationModal}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
+                >
+                    <Plus className="h-4 w-4" />
+                    New Station
+                </button>
             </div>
-
-            <form
-                onSubmit={submitStation}
-                className="mb-8 rounded-lg border border-neutral-200 bg-white/80 p-4 dark:border-white/10 dark:bg-neutral-900/70"
-            >
-                <div className="grid gap-3 lg:grid-cols-[1fr_1.5fr_1fr_1fr]">
-                    <input
-                        value={form.name}
-                        onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="Station name"
-                        className="rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
-                    />
-                    <input
-                        value={form.streamUrl}
-                        onChange={(e) => setForm(prev => ({ ...prev, streamUrl: e.target.value }))}
-                        placeholder="Stream URL"
-                        className="rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
-                    />
-                    <input
-                        value={form.genre}
-                        onChange={(e) => setForm(prev => ({ ...prev, genre: e.target.value }))}
-                        placeholder="Genre"
-                        className="rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
-                    />
-                    <input
-                        value={form.imageUrl}
-                        onChange={(e) => setForm(prev => ({ ...prev, imageUrl: e.target.value }))}
-                        placeholder="Logo URL"
-                        className="rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
-                    />
-                </div>
-                <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                    <input
-                        value={form.homepageUrl}
-                        onChange={(e) => setForm(prev => ({ ...prev, homepageUrl: e.target.value }))}
-                        placeholder="Homepage URL"
-                        className="min-w-0 flex-1 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-950 dark:text-white"
-                    />
-                    <div className="flex gap-2">
-                        {editingId && (
-                            <button
-                                type="button"
-                                onClick={resetForm}
-                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-200 px-4 py-2 text-sm font-bold text-neutral-900 transition hover:bg-neutral-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
-                            >
-                                <X className="h-4 w-4" />
-                                Cancel
-                            </button>
-                        )}
-                        <button
-                            type="submit"
-                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
-                        >
-                            {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                            {editingId ? 'Save Station' : 'Add Station'}
-                        </button>
-                    </div>
-                </div>
-            </form>
 
             {radioStations.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-neutral-300 p-12 text-center dark:border-white/15">
                     <Radio className="mx-auto mb-4 h-12 w-12 text-neutral-400 dark:text-white/30" />
                     <h2 className="text-lg font-bold text-neutral-900 dark:text-white">No stations yet</h2>
                     <p className="mt-2 text-sm text-neutral-600 dark:text-white/60">Add a station stream URL to start listening.</p>
+                    <button
+                        onClick={openNewStationModal}
+                        className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-black transition hover:brightness-110"
+                    >
+                        <Plus className="h-4 w-4" />
+                        New Station
+                    </button>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -211,6 +175,96 @@ export const InternetRadioView: React.FC = () => {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {isStationModalOpen && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm dark:bg-neutral-950/80" onClick={resetForm} />
+                    <form
+                        onSubmit={submitStation}
+                        className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-950"
+                    >
+                        <div className="flex items-center justify-between border-b border-neutral-200 p-5 dark:border-white/10">
+                            <div>
+                                <h2 className="text-lg font-bold text-neutral-900 dark:text-white">{editingId ? 'Edit Station' : 'New Station'}</h2>
+                                <p className="mt-1 text-sm text-neutral-600 dark:text-white/55">Add a direct stream or playlist URL.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={resetForm}
+                                className="rounded-lg p-2 text-neutral-500 transition hover:bg-neutral-200 hover:text-neutral-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
+                                aria-label="Close station modal"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="grid gap-4 p-5 md:grid-cols-2">
+                            <label className="block">
+                                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-white/50">Station Name</span>
+                                <input
+                                    value={form.name}
+                                    onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+                                    placeholder="Station name"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-white/50">Genre</span>
+                                <input
+                                    value={form.genre}
+                                    onChange={(e) => setForm(prev => ({ ...prev, genre: e.target.value }))}
+                                    placeholder="Genre"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                />
+                            </label>
+                            <label className="block md:col-span-2">
+                                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-white/50">Stream URL</span>
+                                <input
+                                    value={form.streamUrl}
+                                    onChange={(e) => setForm(prev => ({ ...prev, streamUrl: e.target.value }))}
+                                    placeholder="https://example.com/stream.mp3"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-white/50">Logo URL</span>
+                                <input
+                                    value={form.imageUrl}
+                                    onChange={(e) => setForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                                    placeholder="https://example.com/logo.jpg"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                />
+                            </label>
+                            <label className="block">
+                                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-white/50">Homepage URL</span>
+                                <input
+                                    value={form.homepageUrl}
+                                    onChange={(e) => setForm(prev => ({ ...prev, homepageUrl: e.target.value }))}
+                                    placeholder="https://example.com"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                />
+                            </label>
+                        </div>
+
+                        <div className="flex justify-end gap-2 border-t border-neutral-200 p-5 dark:border-white/10">
+                            <button
+                                type="button"
+                                onClick={resetForm}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-200 px-4 py-2 text-sm font-bold text-neutral-900 transition hover:bg-neutral-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
+                            >
+                                {editingId ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                                {editingId ? 'Save Station' : 'Add Station'}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
         </div>
