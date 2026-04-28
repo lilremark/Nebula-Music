@@ -159,6 +159,20 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         );
     };
 
+    useEffect(() => {
+        if (!isZenMode) {
+            setShowZenControls(false);
+            return;
+        }
+
+        const handleMouseMove = (event: MouseEvent) => {
+            setShowZenControls(window.innerHeight - event.clientY < 190);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, [isZenMode]);
+
     if (!currentSong) return null;
 
     const progress = duration ? (currentTime / duration) * 100 : 0;
@@ -183,20 +197,6 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const toggleProgressMode = () => {
         updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' });
     };
-
-    useEffect(() => {
-        if (!isZenMode) {
-            setShowZenControls(false);
-            return;
-        }
-
-        const handleMouseMove = (event: MouseEvent) => {
-            setShowZenControls(window.innerHeight - event.clientY < 190);
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, [isZenMode]);
 
     return (
         <div className={`fixed inset-0 z-[60] flex flex-col bg-neutral-200 dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded || isZenMode ? 'translate-y-0' : 'translate-y-full'}`}
