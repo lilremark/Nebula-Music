@@ -1,6 +1,6 @@
 # Nebula Music
 
-A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, Airsonic, etc.). Version 2.0 introduces a full UI refresh with light-first surfaces, improved contrast, and a cleaner, more consistent player experience across the app.
+A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, Airsonic, etc.). Version 2.1 adds Internet Radio to the app, improves stream compatibility, brings the regular full-screen visualizers to radio playback, and tightens playback stability around crossfade and waveform loading.
 
 ## Table of Contents
 
@@ -24,6 +24,7 @@ A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, 
 - Theme System: System preference on first launch, explicit Light/Dark selection in Settings, and CSS-variable driven theming.
 - Audio Engine: Playback speed control, per-song pitch persistence, and pitch correction (vinyl mode support).
 - Visualizers: Web Audio API visualizer modes (Bars, Wave, Circle, Mirror, Spectrum, Particles, Hexagon).
+- Internet Radio: Save stations, play live streams, and use dedicated mini/full-screen radio player surfaces.
 - Player Experience: Expandable full-screen player, sidebar or floating mini-player, and mobile bottom player bar.
 - Search: Spotlight-style modal search with real-time results across artists, albums, and songs.
 - Library Management: Artists, albums, songs, playlists, likes, and queue management.
@@ -32,6 +33,14 @@ A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, 
 - Accessibility Improvements: Stronger contrast for secondary text, larger touch targets, and semantic heading fixes.
 
 ## Changelog
+
+### v2.1 (2026-04-28)
+- Internet Radio is now available in Nebula, with saved stations, live playback controls, and dedicated mini/full-screen player surfaces.
+- Internet Radio supports direct streams and HLS .m3u8 streams with a lazy-loaded browser fallback for Chrome, Edge, and Firefox.
+- Full-screen Internet Radio now uses the same Web Audio canvas visualizers as the regular full-screen player.
+- Magic Crossfade is safer around pause, manual track changes, and track handoffs so secondary audio cannot keep playing unexpectedly.
+- Waveform loading is more reliable because failed decodes no longer get cached as permanent fallback waveforms.
+- Live radio playback is protected from speed and pitch mutations that can break stream buffering or drift away from the live edge.
 
 ### v2.0 (2026-03-16)
 - Full UI refresh with light-first surfaces and refined panels.

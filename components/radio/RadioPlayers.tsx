@@ -2,6 +2,8 @@ import React from 'react';
 import { Activity, ChevronDown, ExternalLink, Maximize2, Music2, PanelRight, PanelRightClose, Pause, Play, Radio, Square, Volume1, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
+import { Visualizer } from '../Visualizer';
+import { VisualizerMode } from '../../types';
 
 const withAlpha = (color: string, alpha: number) => {
     if (color.startsWith('#')) {
@@ -224,10 +226,23 @@ export const RadioMobileBar: React.FC<{ onExpand: () => void }> = ({ onExpand })
 };
 
 export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => void }> = ({ isExpanded, onClose }) => {
-    const { currentRadioStation, isRadioPlaying, toggleRadioPlay, stopRadio } = useStore();
+    const {
+        currentRadioStation,
+        isRadioPlaying,
+        toggleRadioPlay,
+        stopRadio,
+        visualizerMode,
+        setVisualizerMode,
+    } = useStore();
     const { artworkUrl, title, artist, album, subtitle, radioMetadata, isRadioMetadataLoading } = useRadioDisplay();
     const { colors } = useAdaptiveColors(artworkUrl);
     if (!currentRadioStation) return null;
+
+    const cycleVisualizerMode = () => {
+        const modes: VisualizerMode[] = ['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM', 'PARTICLES', 'HEXAGON', 'CUBE', 'GRID'];
+        const nextIndex = (modes.indexOf(visualizerMode) + 1) % modes.length;
+        setVisualizerMode(modes[nextIndex]);
+    };
 
     return (
         <div
@@ -244,9 +259,11 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                     backgroundSize: '24px 24px',
                 }}
             />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 opacity-25 blur-md">
-                <LiveRadioVisualizer isPlaying={isRadioPlaying} primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} className="h-full" />
-            </div>
+            {isRadioPlaying && (
+                <div className="pointer-events-none absolute inset-0 z-0 opacity-25" style={{ filter: 'blur(8px)' }}>
+                    <Visualizer className="h-full w-full" primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
+                </div>
+            )}
 
             <header className="relative z-20 flex items-center justify-between p-4 md:p-6">
                 <button
@@ -260,6 +277,14 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                     <span className="rounded-md bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-black">Internet Radio</span>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={cycleVisualizerMode}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white transition-all hover:bg-white/20 active:scale-95"
+                        title={`Visualizer: ${visualizerMode}`}
+                        aria-label={`Change visualizer mode (current: ${visualizerMode})`}
+                    >
+                        <Activity className="h-5 w-5" />
+                    </button>
                     <RadioBadge />
                 </div>
             </header>

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
-const STORAGE_PREFIX = 'nebula_waveform_v3:';
+const STORAGE_PREFIX = 'nebula_waveform_v4:';
 const WAVEFORM_SAMPLES = 180;
 
 interface WaveformCacheEntry {
-    version: 3;
+    version: 4;
     peaks: number[];
     updatedAt: number;
 }
@@ -40,7 +40,7 @@ const readCachedWaveform = (cacheKey: string): number[] | null => {
         const raw = localStorage.getItem(`${STORAGE_PREFIX}${cacheKey}`);
         if (!raw) return null;
         const parsed = JSON.parse(raw) as WaveformCacheEntry;
-        if (parsed?.version !== 3 || !Array.isArray(parsed.peaks)) return null;
+        if (parsed?.version !== 4 || !Array.isArray(parsed.peaks)) return null;
         const peaks = normalizePeaks(parsed.peaks);
         memoryCache.set(cacheKey, peaks);
         return peaks;
@@ -54,7 +54,7 @@ const writeCachedWaveform = (cacheKey: string, peaks: number[]) => {
     memoryCache.set(cacheKey, normalized);
     try {
         const payload: WaveformCacheEntry = {
-            version: 3,
+            version: 4,
             peaks: normalized,
             updatedAt: Date.now(),
         };
@@ -131,10 +131,13 @@ const getOrCreateWaveform = async (cacheKey: string, streamUrl: string) => {
     if (inFlight.has(cacheKey)) return inFlight.get(cacheKey)!;
 
     const promise = decodeWaveform(streamUrl)
-        .catch(() => [...FALLBACK_WAVEFORM]) // only if decode genuinely fails
         .then((peaks) => {
             writeCachedWaveform(cacheKey, peaks);
             return peaks;
+        })
+        .catch((error) => {
+            console.warn('Waveform unavailable, using fallback for this session', error);
+            return [...FALLBACK_WAVEFORM];
         })
         .finally(() => {
             inFlight.delete(cacheKey);

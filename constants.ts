@@ -1,9 +1,22 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.0';
+export const APP_VERSION = '2.1';
 
 export const CHANGELOG = [
+  {
+    version: '2.1',
+    date: '2026-04-28',
+    title: 'Radio, Playback, and Waveform Stability',
+    changes: [
+      'Internet Radio is now available in Nebula, with saved stations, live playback controls, and dedicated mini/full-screen player surfaces.',
+      'Internet Radio supports direct streams and HLS .m3u8 streams with a lazy-loaded browser fallback for Chrome, Edge, and Firefox.',
+      'Full-screen Internet Radio now uses the same Web Audio canvas visualizers as the regular full-screen player.',
+      'Magic Crossfade is safer around pause, manual track changes, and track handoffs so secondary audio cannot keep playing unexpectedly.',
+      'Waveform loading is more reliable because failed decodes no longer get cached as permanent fallback waveforms.',
+      'Live radio playback is protected from speed and pitch mutations that can break stream buffering or drift away from the live edge.'
+    ]
+  },
   {
     version: '2.0',
     date: '2026-03-16',

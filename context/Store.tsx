@@ -148,6 +148,14 @@ const fetchRadioArtwork = async (metadata: Pick<IRadioMetadata, 'title' | 'artis
   }
 };
 
+const isHlsStreamUrl = (streamUrl: string) => {
+  try {
+    return new URL(streamUrl).pathname.toLowerCase().endsWith('.m3u8');
+  } catch {
+    return streamUrl.toLowerCase().split('?')[0].endsWith('.m3u8');
+  }
+};
+
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [service] = useState(() => new SubsonicService(null));
@@ -206,6 +214,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const crossfadeAudioRef = useRef<HTMLAudioElement>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const radioAudioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const radioHlsRef = useRef<import('hls.js').default | null>(null);
   const navigationStackRef = useRef<NavigationTarget[]>([]);
   const crossfadeAnimationRef = useRef<number | null>(null);
   const isCrossfadingRef = useRef(false);
@@ -488,34 +500,42 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [currentSongIndex, isPlaying, queue]);
 
   // Audio Context Initialization (Lazy)
-  const initAudioContext = useCallback(() => {
-    // If context exists, ensure it's running
-    if (audioContextRef.current) {
-      if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume().catch(e => console.warn("Context resume failed", e));
-      }
-      return;
-    }
-
-    const audio = audioRef.current;
-    if (!audio) return;
-
+  const initAudioContext = useCallback((target: 'music' | 'radio' = 'music') => {
     try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioContext();
-      const ana = ctx.createAnalyser();
-      ana.fftSize = 2048;
-      ana.smoothingTimeConstant = 0.85;
+      let ctx = audioContextRef.current;
+      let ana = analyserRef.current;
 
-      // Connect to source
-      // Note: this can fail if called multiple times on same element in some browsers/versions
-      // but react refs + useRef guard usually prevents it.
-      const source = ctx.createMediaElementSource(audio);
-      source.connect(ana);
-      ana.connect(ctx.destination);
+      if (!ctx) {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        ctx = new AudioContext();
+        ana = ctx.createAnalyser();
+        ana.fftSize = 2048;
+        ana.smoothingTimeConstant = 0.85;
+        ana.connect(ctx.destination);
+        audioContextRef.current = ctx;
+        analyserRef.current = ana;
+        setAnalyser(ana);
+      }
 
-      audioContextRef.current = ctx;
-      setAnalyser(ana);
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(e => console.warn("Context resume failed", e));
+      }
+
+      if (!ana) return;
+
+      if (target === 'radio') {
+        const radioAudio = radioAudioRef.current;
+        if (radioAudio && !radioAudioSourceRef.current) {
+          radioAudioSourceRef.current = ctx.createMediaElementSource(radioAudio);
+          radioAudioSourceRef.current.connect(ana);
+        }
+      } else {
+        const audio = audioRef.current;
+        if (audio && !audioSourceRef.current) {
+          audioSourceRef.current = ctx.createMediaElementSource(audio);
+          audioSourceRef.current.connect(ana);
+        }
+      }
     } catch (e) { console.warn("Audio Context init error:", e); }
   }, []);
 
@@ -587,7 +607,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const startCrossfade = useCallback((nextIndex: number) => {
     const audio = audioRef.current;
     const nextAudio = crossfadeAudioRef.current;
-    const { queue, volume, magicCrossfade } = stateRef.current;
+    const { queue, currentSongIndex, volume, magicCrossfade } = stateRef.current;
     const nextSong = queue[nextIndex];
 
     if (!audio || !nextAudio || !nextSong || isCrossfadingRef.current || isCrossfadeStartingRef.current || !magicCrossfade) return;
@@ -602,7 +622,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     applyPlaybackAttributes(nextAudio);
 
     const step = (now: number) => {
-      if (!isCrossfadingRef.current) return;
+      if (
+        !isCrossfadingRef.current ||
+        !stateRef.current.isPlaying ||
+        stateRef.current.currentSongIndex !== currentSongIndex
+      ) {
+        cancelCrossfade();
+        return;
+      }
 
       const progress = Math.min(1, (now - startedAt) / fadeMs);
       audio.volume = startingVolume * (1 - progress);
@@ -620,7 +647,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     const beginFade = () => {
-      if (!isCrossfadeStartingRef.current) return;
+      if (
+        !isCrossfadeStartingRef.current ||
+        !stateRef.current.isPlaying ||
+        stateRef.current.currentSongIndex !== currentSongIndex
+      ) {
+        cancelCrossfade();
+        return;
+      }
       isCrossfadeStartingRef.current = false;
       isCrossfadingRef.current = true;
       startedAt = performance.now();
@@ -910,21 +944,96 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (audio && !isCrossfadingRef.current) audio.volume = volume;
     if (audio) applyPlaybackAttributes(audio);
     if (crossfadeAudioRef.current) applyPlaybackAttributes(crossfadeAudioRef.current);
-    if (radioAudioRef.current) radioAudioRef.current.volume = volume;
+    if (radioAudioRef.current) {
+      radioAudioRef.current.volume = volume;
+    }
   }, [volume, pitchCorrection, applyPlaybackAttributes]);
 
   useEffect(() => {
     const audio = radioAudioRef.current;
     if (!audio) return;
+    let cancelled = false;
 
-    if (currentRadioStation) {
-      if (audio.src !== currentRadioStation.streamUrl) {
-        audio.src = currentRadioStation.streamUrl;
+    const destroyRadioHls = () => {
+      radioHlsRef.current?.destroy();
+      radioHlsRef.current = null;
+    };
+
+    const syncRadioPlayback = async () => {
+      if (!currentRadioStation) {
+        destroyRadioHls();
+        audio.pause();
+        audio.removeAttribute('src');
+        delete audio.dataset.nebulaRadioUrl;
         audio.load();
+        return;
+      }
+
+      const streamUrl = currentRadioStation.streamUrl;
+      const isHls = isHlsStreamUrl(streamUrl);
+
+      if (isHls) {
+        const canPlayNativeHls = audio.canPlayType('application/vnd.apple.mpegurl') || audio.canPlayType('application/x-mpegURL');
+
+        if (canPlayNativeHls) {
+          destroyRadioHls();
+          if (audio.src !== streamUrl) {
+            audio.src = streamUrl;
+            audio.load();
+          }
+        } else {
+          const { default: Hls } = await import('hls.js');
+          if (cancelled) return;
+
+          if (!Hls.isSupported()) {
+            console.warn('This browser does not support HLS radio streams.');
+            setIsRadioPlaying(false);
+            return;
+          }
+
+          if (!radioHlsRef.current || audio.dataset.nebulaRadioUrl !== streamUrl) {
+            destroyRadioHls();
+            audio.pause();
+            audio.removeAttribute('src');
+            audio.load();
+
+            const hls = new Hls({
+              enableWorker: true,
+              lowLatencyMode: true,
+              backBufferLength: 30,
+            });
+
+            hls.on(Hls.Events.ERROR, (_event, data) => {
+              console.warn('HLS radio stream error', data);
+              if (data.fatal) {
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+                else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+                else {
+                  destroyRadioHls();
+                  setIsRadioPlaying(false);
+                }
+              }
+            });
+
+            hls.loadSource(streamUrl);
+            hls.attachMedia(audio);
+            radioHlsRef.current = hls;
+            audio.dataset.nebulaRadioUrl = streamUrl;
+          }
+        }
+      } else {
+        destroyRadioHls();
+        if (audio.src !== streamUrl) {
+          audio.src = streamUrl;
+          audio.load();
+        }
+        audio.dataset.nebulaRadioUrl = streamUrl;
       }
 
       audio.volume = volume;
+      audio.playbackRate = 1;
       if (isRadioPlaying) {
+        initAudioContext('radio');
         audio.play().catch(e => {
           if (e.name !== 'AbortError') console.warn("Radio play failed", e);
           audio.pause();
@@ -934,15 +1043,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         audio.pause();
       }
-    } else {
-      audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
-    }
-  }, [currentRadioStation, isRadioPlaying, volume]);
+    };
+
+    syncRadioPlayback();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentRadioStation, initAudioContext, isRadioPlaying, volume]);
 
   useEffect(() => {
     if (!currentRadioStation) {
+      setRadioMetadata(null);
+      setIsRadioMetadataLoading(false);
+      return;
+    }
+
+    if (isHlsStreamUrl(currentRadioStation.streamUrl)) {
       setRadioMetadata(null);
       setIsRadioMetadataLoading(false);
       return;
@@ -1072,6 +1189,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (!settings.magicCrossfade) cancelCrossfade();
   }, [cancelCrossfade, settings.magicCrossfade]);
+
+  useEffect(() => {
+    if (!isPlaying) cancelCrossfade();
+  }, [cancelCrossfade, isPlaying]);
 
   useEffect(() => {
     if (isCrossfadingRef.current || isCrossfadeStartingRef.current) return;
@@ -1582,6 +1703,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       />
       <audio
         ref={radioAudioRef}
+        crossOrigin="anonymous"
         preload="none"
       />
     </StoreContext.Provider>
