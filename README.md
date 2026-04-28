@@ -1,6 +1,6 @@
 # Nebula Music
 
-A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, Airsonic, etc.). Version 2.1 adds Internet Radio to the app, improves stream compatibility, brings the regular full-screen visualizers to radio playback, and tightens playback stability around crossfade and waveform loading.
+A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, Airsonic, etc.). Version 2.1.1 refines Internet Radio station management, adds radio pitch/DSP playback controls, improves generated music variety, and tightens player stability.
 
 ## Table of Contents
 
@@ -33,6 +33,12 @@ A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, 
 - Accessibility Improvements: Stronger contrast for secondary text, larger touch targets, and semantic heading fixes.
 
 ## Changelog
+
+### v2.1.1 (2026-04-28)
+- Added a focused modal for creating Internet Radio stations, with cleaner form handling and a smoother station setup flow.
+- Internet Radio now supports pitch shifting through dedicated DSP controls and playback UI integration.
+- Generated music selections are more varied, with stronger shuffling and uniqueness checks for songs and albums.
+- Cleaned up a duplicate full-player effect and refreshed the production script reference for more stable builds.
 
 ### v2.1 (2026-04-28)
 - Internet Radio is now available in Nebula, with saved stations, live playback controls, and dedicated mini/full-screen player surfaces.

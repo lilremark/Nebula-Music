@@ -1,9 +1,20 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.1';
+export const APP_VERSION = '2.1.1';
 
 export const CHANGELOG = [
+  {
+    version: '2.1.1',
+    date: '2026-04-28',
+    title: 'Radio Controls and Smarter Variety',
+    changes: [
+      'Added a focused modal for creating Internet Radio stations, with cleaner form handling and a smoother station setup flow.',
+      'Internet Radio now supports pitch shifting through dedicated DSP controls and playback UI integration.',
+      'Generated music selections are more varied, with stronger shuffling and uniqueness checks for songs and albums.',
+      'Cleaned up a duplicate full-player effect and refreshed the production script reference for more stable builds.'
+    ]
+  },
   {
     version: '2.1',
     date: '2026-04-28',
