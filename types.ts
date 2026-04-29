@@ -111,6 +111,14 @@ export interface ShortcutBindings {
   zen: string;
 }
 
+export interface AutoEqProfileSelection {
+  name: string;
+  source: string;
+  path: string;
+  preamp?: number;
+  appliedAt: number;
+}
+
 export interface AppSettings {
   theme: {
     primaryColor: string; // hex
@@ -130,6 +138,8 @@ export interface AppSettings {
   eq: {
     enabled: boolean;
     preset: 'flat' | 'rock' | 'pop' | 'jazz' | 'classical' | 'electronic' | 'bass-boost' | 'treble-boost' | 'vocal' | 'custom';
+    autoEq?: AutoEqProfileSelection | null;
+    autoEqIndexFetchedAt?: number | null;
     bands: {
       '32': number;
       '64': number;

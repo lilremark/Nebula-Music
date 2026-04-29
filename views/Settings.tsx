@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Activity, AlertCircle, CheckCircle, Keyboard, Layout, LogOut, Monitor,
-    Moon, Palette, Server, ShieldAlert, Sliders, Sun
+    Activity, AlertCircle, CheckCircle, Headphones, Keyboard, Layout, Loader2, LogOut, Monitor,
+    Moon, Palette, RefreshCw, Search, Server, ShieldAlert, Sliders, Sun, X
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
 import { VisualizerMode } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { CustomDropdown } from '../components/CustomDropdown';
+import {
+    AutoEqIndexEntry,
+    fetchAutoEqIndex,
+    fetchAutoEqProfile,
+    getCachedAutoEqIndexInfo,
+    searchAutoEqProfiles,
+} from '../services/autoEqService';
 
 const rowClass = 'flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-neutral-100 dark:hover:bg-white/5';
 const inputClass = 'w-full rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900 placeholder-neutral-500 transition-all hover:bg-neutral-50 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-neutral-950/70 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-900';
@@ -137,6 +144,11 @@ export const SettingsView: React.FC = () => {
     const [connStatus, setConnStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [isInsecure, setIsInsecure] = useState(false);
     const [editingKey, setEditingKey] = useState<string | null>(null);
+    const [autoEqQuery, setAutoEqQuery] = useState('');
+    const [autoEqResults, setAutoEqResults] = useState<AutoEqIndexEntry[]>([]);
+    const [autoEqStatus, setAutoEqStatus] = useState<'idle' | 'loading' | 'applying' | 'error'>('idle');
+    const [autoEqError, setAutoEqError] = useState('');
+    const [autoEqLastFetchedAt, setAutoEqLastFetchedAt] = useState<number | null>(() => settings.eq.autoEqIndexFetchedAt || getCachedAutoEqIndexInfo()?.fetchedAt || null);
 
     useEffect(() => {
         setIsInsecure(Boolean(url && !url.startsWith('https://') && url.length > 7));
@@ -170,6 +182,108 @@ export const SettingsView: React.FC = () => {
             }
         });
     };
+
+    const syncAutoEqFetchedAt = () => {
+        const fetchedAt = getCachedAutoEqIndexInfo()?.fetchedAt || Date.now();
+        setAutoEqLastFetchedAt(fetchedAt);
+        if (settings.eq.autoEqIndexFetchedAt !== fetchedAt) {
+            updateSettings({
+                eq: { autoEqIndexFetchedAt: fetchedAt } as typeof settings.eq,
+            });
+        }
+    };
+
+    useEffect(() => {
+        const query = autoEqQuery.trim();
+        if (query.length < 2) {
+            setAutoEqResults([]);
+            setAutoEqError('');
+            if (autoEqStatus === 'loading') setAutoEqStatus('idle');
+            return;
+        }
+
+        let cancelled = false;
+        setAutoEqStatus('loading');
+        const handler = window.setTimeout(async () => {
+            try {
+                const results = await searchAutoEqProfiles(query);
+                if (cancelled) return;
+                setAutoEqResults(results);
+                setAutoEqError(results.length === 0 ? 'No AutoEq profiles matched that search.' : '');
+                setAutoEqStatus('idle');
+                syncAutoEqFetchedAt();
+            } catch (error) {
+                if (cancelled) return;
+                setAutoEqResults([]);
+                setAutoEqError(error instanceof Error ? error.message : 'AutoEq search failed.');
+                setAutoEqStatus('error');
+            }
+        }, 250);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(handler);
+        };
+    }, [autoEqQuery]);
+
+    const refreshAutoEqIndex = async () => {
+        setAutoEqStatus('loading');
+        setAutoEqError('');
+        try {
+            await fetchAutoEqIndex(true);
+            syncAutoEqFetchedAt();
+            const results = await searchAutoEqProfiles(autoEqQuery);
+            setAutoEqResults(results);
+            setAutoEqStatus('idle');
+        } catch (error) {
+            setAutoEqError(error instanceof Error ? error.message : 'AutoEq refresh failed.');
+            setAutoEqStatus('error');
+        }
+    };
+
+    const applyAutoEqProfile = async (entry: AutoEqIndexEntry) => {
+        setAutoEqStatus('applying');
+        setAutoEqError('');
+        try {
+            const profile = await fetchAutoEqProfile(entry);
+            updateSettings({
+                eq: {
+                    ...settings.eq,
+                    enabled: true,
+                    preset: 'custom',
+                    autoEq: {
+                        name: entry.name,
+                        source: entry.source,
+                        path: entry.path,
+                        preamp: profile.preamp,
+                        appliedAt: Date.now(),
+                    },
+                    bands: {
+                        ...settings.eq.bands,
+                        ...profile.bands,
+                    },
+                },
+            });
+            setAutoEqStatus('idle');
+        } catch (error) {
+            setAutoEqError(error instanceof Error ? error.message : 'Unable to apply AutoEq profile.');
+            setAutoEqStatus('error');
+        }
+    };
+
+    const clearAutoEqProfile = () => {
+        updateSettings({
+            eq: {
+                ...settings.eq,
+                preset: 'custom',
+                autoEq: null,
+            },
+        });
+    };
+
+    const autoEqLastFetchedLabel = autoEqLastFetchedAt
+        ? new Date(autoEqLastFetchedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        : 'Not cached';
 
     return (
         <div className="h-full overflow-y-auto bg-neutral-50 text-neutral-900 custom-scrollbar dark:bg-neutral-950 dark:text-white">
@@ -369,6 +483,98 @@ export const SettingsView: React.FC = () => {
                                             })}
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="mt-5 rounded-lg border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-2 text-sm font-bold text-neutral-900 dark:text-white">
+                                                <Headphones className="h-4 w-4 text-primary" />
+                                                AutoEq Headphone Calibration
+                                            </div>
+                                            <p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+                                                Search AutoEq fixed-band profiles and apply them to Nebula's 10-band EQ.
+                                            </p>
+                                            {settings.eq.autoEq && (
+                                                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-xs text-primary">
+                                                    <span className="font-bold">Based on AutoEq:</span>
+                                                    <span className="min-w-0 truncate">{settings.eq.autoEq.name}</span>
+                                                    <span className="text-neutral-600 dark:text-white/45">{settings.eq.autoEq.source}</span>
+                                                    {typeof settings.eq.autoEq.preamp === 'number' && (
+                                                        <span className="text-neutral-600 dark:text-white/45">Preamp {settings.eq.autoEq.preamp.toFixed(1)} dB</span>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={clearAutoEqProfile}
+                                                        className="ml-auto inline-flex items-center gap-1 rounded px-2 py-1 font-bold text-neutral-700 transition hover:bg-neutral-200 dark:text-white/70 dark:hover:bg-white/10"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                        Clear
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={refreshAutoEqIndex}
+                                            disabled={autoEqStatus === 'loading' || autoEqStatus === 'applying'}
+                                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-bold text-neutral-800 transition hover:bg-neutral-200 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                                        >
+                                            <RefreshCw className={`h-3.5 w-3.5 ${autoEqStatus === 'loading' ? 'animate-spin' : ''}`} />
+                                            Refresh
+                                        </button>
+                                    </div>
+
+                                    <div className="mt-4">
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Headphone or Earbud Model</label>
+                                        <div className="relative">
+                                            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                                            <input
+                                                type="search"
+                                                value={autoEqQuery}
+                                                onChange={(e) => setAutoEqQuery(e.target.value)}
+                                                placeholder="Search Sony WH-1000XM5, HD 650, AirPods Pro..."
+                                                className={`${inputClass} pl-10 pr-10`}
+                                            />
+                                            {(autoEqStatus === 'loading' || autoEqStatus === 'applying') && (
+                                                <Loader2 className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />
+                                            )}
+                                        </div>
+                                        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-neutral-500 dark:text-white/35">
+                                            <span>Index cache: {autoEqLastFetchedLabel}</span>
+                                            <span>AutoEq preamp is stored for display and not applied yet.</span>
+                                        </div>
+                                    </div>
+
+                                    {autoEqError && (
+                                        <div className="mt-3 flex items-center gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs font-medium text-yellow-700 dark:text-yellow-300">
+                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                            {autoEqError}
+                                        </div>
+                                    )}
+
+                                    {autoEqResults.length > 0 && (
+                                        <div className="mt-4 max-h-72 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50 dark:border-white/10 dark:bg-black/20">
+                                            {autoEqResults.map(entry => (
+                                                <div key={entry.id} className="flex flex-col gap-3 border-b border-neutral-200 px-3 py-3 last:border-b-0 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="min-w-0">
+                                                        <div className="truncate text-sm font-bold text-neutral-900 dark:text-white">{entry.name}</div>
+                                                        <div className="mt-1 truncate text-xs text-neutral-600 dark:text-white/45">{entry.source}</div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => applyAutoEqProfile(entry)}
+                                                        disabled={autoEqStatus === 'applying'}
+                                                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-black transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+                                                    >
+                                                        {autoEqStatus === 'applying' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Headphones className="h-3.5 w-3.5" />}
+                                                        Apply AutoEq
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </SettingPanel>

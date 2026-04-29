@@ -95,6 +95,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   eq: {
     enabled: false,
     preset: 'flat',
+    autoEq: null,
+    autoEqIndexFetchedAt: null,
     bands: {
       '32': 0,
       '64': 0,
@@ -537,6 +539,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           theme: { ...prev.theme, ...savedSettings.theme },
           sidebar: { ...prev.sidebar, ...savedSettings.sidebar },
           shortcuts: { ...prev.shortcuts, ...savedSettings.shortcuts },
+          eq: {
+            ...prev.eq,
+            ...(savedSettings.eq || {}),
+            bands: {
+              ...prev.eq.bands,
+              ...(savedSettings.eq?.bands || {}),
+            },
+          },
         }));
       }
       try {
