@@ -775,10 +775,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const prepareCrossfadeTrack = useCallback((nextIndex: number) => {
     const nextAudio = crossfadeAudioRef.current;
-    const { queue, magicCrossfade } = stateRef.current;
+    const { queue } = stateRef.current;
     const nextSong = queue[nextIndex];
 
-    if (!nextAudio || !nextSong || !magicCrossfade) return;
+    if (!nextAudio || !nextSong) return;
     if (nextAudio.dataset.nebulaSongId === nextSong.id && nextAudio.src) {
       applyPlaybackAttributes(nextAudio);
       return;
@@ -788,9 +788,52 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     nextAudio.volume = 0;
     nextAudio.src = service.getStreamUrl(nextSong.id, nextSong.suffix);
     nextAudio.dataset.nebulaSongId = nextSong.id;
+    nextAudio.dataset.nebulaQueueIndex = nextIndex.toString();
     applyPlaybackAttributes(nextAudio);
     nextAudio.load();
   }, [applyPlaybackAttributes, service]);
+
+  const activatePreparedTrack = useCallback((nextIndex: number) => {
+    const nextAudio = crossfadeAudioRef.current;
+    const { queue, volume } = stateRef.current;
+    const nextSong = queue[nextIndex];
+
+    if (!nextAudio || !nextSong || nextAudio.dataset.nebulaSongId !== nextSong.id || !nextAudio.src) {
+      return false;
+    }
+
+    if (crossfadeAnimationRef.current !== null) {
+      window.cancelAnimationFrame(crossfadeAnimationRef.current);
+      crossfadeAnimationRef.current = null;
+    }
+
+    isCrossfadeStartingRef.current = false;
+    isCrossfadingRef.current = true;
+    nextAudio.volume = volume;
+    applyPlaybackAttributes(nextAudio);
+    initAudioContext('crossfade');
+
+    const commitHandoff = () => {
+      crossfadeHandoffRef.current = {
+        songId: nextSong.id,
+        currentTime: Number.isFinite(nextAudio.currentTime) ? nextAudio.currentTime : 0,
+      };
+      setCurrentSongIndex(nextIndex);
+      setIsPlaying(true);
+    };
+
+    if (nextAudio.paused) {
+      const playPromise = nextAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(e => {
+          if (e.name !== 'AbortError') console.warn("Prepared track start failed", e);
+        });
+      }
+    }
+
+    commitHandoff();
+    return true;
+  }, [applyPlaybackAttributes, initAudioContext]);
 
   const startCrossfade = useCallback((nextIndex: number) => {
     const audio = audioRef.current;
@@ -830,9 +873,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       crossfadeAnimationRef.current = null;
-      crossfadeHandoffRef.current = { songId: nextSong.id, currentTime: nextAudio.currentTime };
-      setCurrentSongIndex(nextIndex);
-      setIsPlaying(true);
+      activatePreparedTrack(nextIndex);
     };
 
     const beginFade = () => {
@@ -861,7 +902,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       beginFade();
     }
-  }, [applyPlaybackAttributes, cancelCrossfade, getMagicFadeSeconds, initAudioContext, prepareCrossfadeTrack]);
+  }, [activatePreparedTrack, applyPlaybackAttributes, cancelCrossfade, getMagicFadeSeconds, initAudioContext, prepareCrossfadeTrack]);
 
   const playInstantMix = useCallback(async () => {
     cancelCrossfade();
@@ -1053,31 +1094,25 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     const onEnded = () => {
-      if (isCrossfadingRef.current) {
-        const nextAudio = crossfadeAudioRef.current;
-        if (nextAudio && !nextAudio.paused && nextAudio.currentTime > 0) return;
-      }
-      if (isCrossfadeStartingRef.current) cancelCrossfade();
-
       const { repeatMode, queue, currentSongIndex } = stateRef.current;
       if (repeatMode === 'ONE') {
+        if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
         if (audioRef.current) {
           audioRef.current.currentTime = 0;
           audioRef.current.play().catch(e => console.warn("Loop play failed", e));
         }
       } else {
         if (queue.length === 0) return;
-        if (currentSongIndex < queue.length - 1) {
-          setCurrentSongIndex(currentSongIndex + 1);
+        const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
+        if (nextIndex >= 0) {
+          if (activatePreparedTrack(nextIndex)) return;
+          if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
+          setCurrentSongIndex(nextIndex);
           setIsPlaying(true);
         } else {
-          if (repeatMode === 'ALL') {
-            setCurrentSongIndex(0);
-            setIsPlaying(true);
-          } else {
-            setIsPlaying(false);
-            setCurrentSongIndex(0);
-          }
+          if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
+          setIsPlaying(false);
+          setCurrentSongIndex(0);
         }
       }
     };
@@ -1104,7 +1139,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audio.removeEventListener('error', onError);
       audio.removeEventListener('play', onPlayEvent);
     };
-  }, [cancelCrossfade, getMagicFadeSeconds, getNextPlaybackIndex, initAudioContext, startCrossfade]);
+  }, [activatePreparedTrack, cancelCrossfade, getMagicFadeSeconds, getNextPlaybackIndex, initAudioContext, startCrossfade]);
 
   useEffect(() => {
     const hexToRgb = (hex: string) => {
@@ -1380,7 +1415,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   useEffect(() => {
-    if (!settings.magicCrossfade) cancelCrossfade();
+    if (!settings.magicCrossfade && (isCrossfadingRef.current || isCrossfadeStartingRef.current)) cancelCrossfade();
   }, [cancelCrossfade, settings.magicCrossfade]);
 
   useEffect(() => {
@@ -1390,14 +1425,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (isCrossfadingRef.current || isCrossfadeStartingRef.current) return;
 
-    if (!isPlaying || !settings.magicCrossfade || repeatMode === 'ONE') {
+    if (!isPlaying || repeatMode === 'ONE') {
       stopCrossfadeAudio();
       return;
     }
 
     const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
     if (nextIndex >= 0) prepareCrossfadeTrack(nextIndex);
-  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, settings.magicCrossfade, stopCrossfadeAudio]);
+    else stopCrossfadeAudio();
+  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, stopCrossfadeAudio]);
 
   // Handle Playback State
   useEffect(() => {
@@ -1427,15 +1463,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             isCrossfadingRef.current = false;
 
             const nextIndex = getNextPlaybackIndex(currentSongIndex, stateRef.current.queue, stateRef.current.repeatMode);
-            if (stateRef.current.isPlaying && stateRef.current.magicCrossfade && nextIndex >= 0) {
+            if (stateRef.current.isPlaying && nextIndex >= 0) {
               prepareCrossfadeTrack(nextIndex);
             }
           };
 
           const startPlayback = () => {
-            if (handoff && Number.isFinite(handoff.currentTime) && handoff.currentTime > 0) {
+            if (handoff && Number.isFinite(handoff.currentTime)) {
               try {
-                audio.currentTime = handoff.currentTime;
+                const handoffAudio = crossfadeAudioRef.current;
+                const liveHandoffTime = handoffAudio?.dataset.nebulaSongId === song.id && !handoffAudio.paused
+                  ? handoffAudio.currentTime
+                  : handoff.currentTime;
+                if (Number.isFinite(liveHandoffTime) && liveHandoffTime > 0) audio.currentTime = liveHandoffTime;
               } catch (e) { }
             }
 
@@ -1444,14 +1484,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               playPromise
                 .then(() => {
                   if (handoff) {
-                    window.setTimeout(finishCrossfadeHandoff, 120);
+                    window.setTimeout(finishCrossfadeHandoff, 180);
                   }
                 })
                 .catch(e => {
                   if (e.name !== 'AbortError') console.warn("Play failed", e);
                 });
             } else if (handoff) {
-              window.setTimeout(finishCrossfadeHandoff, 120);
+              window.setTimeout(finishCrossfadeHandoff, 180);
             }
             initAudioContext(); // Ensure context is ready
           };

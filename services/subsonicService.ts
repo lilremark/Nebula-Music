@@ -7,15 +7,19 @@ import md5 from 'blueimp-md5';
 export class SubsonicService {
   private creds: SubsonicCredentials | null = null;
   private isDemo: boolean = true;
+  private streamUrlCache = new Map<string, string>();
+  private coverArtUrlCache = new Map<string, string>();
 
   constructor(creds: SubsonicCredentials | null) {
     this.creds = creds;
     this.isDemo = !creds;
   }
 
-  public setCredentials(creds: SubsonicCredentials) {
+  public setCredentials(creds: SubsonicCredentials | null) {
     this.creds = creds;
-    this.isDemo = false;
+    this.isDemo = !creds;
+    this.streamUrlCache.clear();
+    this.coverArtUrlCache.clear();
   }
 
   public getCredentials(): SubsonicCredentials | null {
@@ -560,6 +564,10 @@ export class SubsonicService {
   }
 
   getStreamUrl(songId: string, suffix?: string): string {
+    const cacheKey = `${songId}:${suffix || ''}:${this.creds?.serverUrl || 'demo'}`;
+    const cached = this.streamUrlCache.get(cacheKey);
+    if (cached) return cached;
+
     if (this.isDemo) {
       const samples = [
         'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3',
@@ -567,7 +575,9 @@ export class SubsonicService {
         'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3',
       ];
       const index = songId.charCodeAt(songId.length - 1) % samples.length;
-      return samples[index];
+      const sampleUrl = samples[index];
+      this.streamUrlCache.set(cacheKey, sampleUrl);
+      return sampleUrl;
     }
 
     // estimateContentLength is critical for browsers to handle duration and seeking on streams
@@ -592,20 +602,29 @@ export class SubsonicService {
       }
     }
 
-    return this.buildUrl('stream.view', params);
+    const streamUrl = this.buildUrl('stream.view', params);
+    this.streamUrlCache.set(cacheKey, streamUrl);
+    return streamUrl;
   }
 
   getCoverArtUrl(id: string, size: number = 300): string {
     if (!id) return 'https://picsum.photos/300/300?grayscale';
     if (id.startsWith('http') || id.startsWith('/')) return id;
+    const cacheKey = `${id}:${size}:${this.creds?.serverUrl || 'demo'}`;
+    const cached = this.coverArtUrlCache.get(cacheKey);
+    if (cached) return cached;
+
     if (this.isDemo) {
       const song = MOCK_SONGS.find(s => s.id === id);
       const album = MOCK_ALBUMS.find(a => a.id === id);
       const artist = MOCK_ARTISTS.find(a => a.id === id);
       const url = song?.coverArt || album?.coverArt || artist?.coverArt;
-      if (url && url.startsWith('http')) return url;
-      return 'https://picsum.photos/300/300';
+      const coverUrl = url && url.startsWith('http') ? url : 'https://picsum.photos/300/300';
+      this.coverArtUrlCache.set(cacheKey, coverUrl);
+      return coverUrl;
     }
-    return this.buildUrl('getCoverArt.view', { id, size: size.toString() });
+    const coverUrl = this.buildUrl('getCoverArt.view', { id, size: size.toString() });
+    this.coverArtUrlCache.set(cacheKey, coverUrl);
+    return coverUrl;
   }
 }
