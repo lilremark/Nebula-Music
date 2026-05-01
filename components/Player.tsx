@@ -168,13 +168,18 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             return;
         }
 
+        if (settings.alwaysShowZenControls) {
+            setShowZenControls(true);
+            return;
+        }
+
         const handleMouseMove = (event: MouseEvent) => {
             setShowZenControls(window.innerHeight - event.clientY < 190);
         };
 
         window.addEventListener('mousemove', handleMouseMove);
         return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, [isZenMode]);
+    }, [isZenMode, settings.alwaysShowZenControls]);
 
     if (!currentSong) return null;
 

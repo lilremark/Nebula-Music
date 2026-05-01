@@ -113,6 +113,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   miniPlayerMode: 'sidebar',
   progressVisualization: 'bar',
   magicCrossfade: false,
+  alwaysShowZenControls: false,
 };
 
 const parseIcyMetadata = (bytes: Uint8Array): Pick<IRadioMetadata, 'title' | 'artist' | 'album' | 'rawTitle'> | null => {
