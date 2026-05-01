@@ -451,14 +451,12 @@ body {
   }
 
   @keyframes zen-title-marquee {
-    0%,
-    14% {
+    from {
       transform: translateX(0);
     }
 
-    86%,
-    100% {
-      transform: translateX(calc(-50% - 1.5rem));
+    to {
+      transform: translateX(-50%);
     }
   }
 
@@ -467,7 +465,7 @@ body {
     width: max-content;
     gap: 3rem;
     padding-right: 3rem;
-    animation: zen-title-marquee 16s ease-in-out infinite alternate;
+    animation: zen-title-marquee 16s linear infinite;
     will-change: transform;
   }
 
