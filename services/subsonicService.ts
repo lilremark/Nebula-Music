@@ -9,6 +9,7 @@ export class SubsonicService {
   private isDemo: boolean = true;
   private streamUrlCache = new Map<string, string>();
   private coverArtUrlCache = new Map<string, string>();
+  private readonly maxUrlCacheEntries = 500;
 
   constructor(creds: SubsonicCredentials | null) {
     this.creds = creds;
@@ -71,6 +72,14 @@ export class SubsonicService {
     text = text.replace(/<[^>]*>?/gm, '');
     text = text.replace(/\s*Read more on Last\.fm.*/i, '');
     return text.trim();
+  }
+
+  private setCachedUrl(cache: Map<string, string>, key: string, value: string) {
+    cache.set(key, value);
+    if (cache.size <= this.maxUrlCacheEntries) return;
+
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
   }
 
   async scrobble(id: string, submission: boolean = true): Promise<void> {
@@ -576,7 +585,7 @@ export class SubsonicService {
       ];
       const index = songId.charCodeAt(songId.length - 1) % samples.length;
       const sampleUrl = samples[index];
-      this.streamUrlCache.set(cacheKey, sampleUrl);
+      this.setCachedUrl(this.streamUrlCache, cacheKey, sampleUrl);
       return sampleUrl;
     }
 
@@ -603,7 +612,7 @@ export class SubsonicService {
     }
 
     const streamUrl = this.buildUrl('stream.view', params);
-    this.streamUrlCache.set(cacheKey, streamUrl);
+    this.setCachedUrl(this.streamUrlCache, cacheKey, streamUrl);
     return streamUrl;
   }
 
@@ -620,11 +629,11 @@ export class SubsonicService {
       const artist = MOCK_ARTISTS.find(a => a.id === id);
       const url = song?.coverArt || album?.coverArt || artist?.coverArt;
       const coverUrl = url && url.startsWith('http') ? url : 'https://picsum.photos/300/300';
-      this.coverArtUrlCache.set(cacheKey, coverUrl);
+      this.setCachedUrl(this.coverArtUrlCache, cacheKey, coverUrl);
       return coverUrl;
     }
     const coverUrl = this.buildUrl('getCoverArt.view', { id, size: size.toString() });
-    this.coverArtUrlCache.set(cacheKey, coverUrl);
+    this.setCachedUrl(this.coverArtUrlCache, cacheKey, coverUrl);
     return coverUrl;
   }
 }

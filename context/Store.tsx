@@ -250,6 +250,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const isCrossfadingRef = useRef(false);
   const isCrossfadeStartingRef = useRef(false);
   const crossfadeHandoffRef = useRef<{ songId: string; currentTime: number } | null>(null);
+  const endAdvanceTimerRef = useRef<number | null>(null);
+  const playbackProgressRef = useRef<{ songId: string | null; time: number; changedAt: number }>({ songId: null, time: 0, changedAt: 0 });
 
   // Use refs for state accessed inside event listeners to avoid constant re-binding
   const stateRef = useRef({ queue, currentSongIndex, isPlaying, repeatMode, volume, playbackRate, pitch, pitchCorrection, magicCrossfade: settings.magicCrossfade });
@@ -1062,10 +1064,101 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const audio = audioRef.current;
     if (!audio) return;
 
+    const clearEndAdvanceTimer = () => {
+      if (endAdvanceTimerRef.current !== null) {
+        window.clearTimeout(endAdvanceTimerRef.current);
+        endAdvanceTimerRef.current = null;
+      }
+    };
+
+    const getExpectedDuration = () => {
+      const { queue, currentSongIndex } = stateRef.current;
+      const songDuration = queue[currentSongIndex]?.duration;
+      const catalogDuration = Number.isFinite(songDuration) && songDuration > 0 ? songDuration : 0;
+      const mediaDuration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+
+      if (catalogDuration && mediaDuration) {
+        return Math.abs(catalogDuration - mediaDuration) <= 8
+          ? Math.max(catalogDuration, mediaDuration)
+          : Math.min(catalogDuration, mediaDuration);
+      }
+
+      return mediaDuration || catalogDuration;
+    };
+
+    const isNearTrackEnd = () => {
+      const duration = getExpectedDuration();
+      if (!duration || audio.currentTime <= 0) return false;
+      const endWindow = Math.max(4, getMagicFadeSeconds(duration) + 1);
+      return duration - audio.currentTime <= endWindow;
+    };
+
+    const rememberProgress = () => {
+      const songId = stateRef.current.queue[stateRef.current.currentSongIndex]?.id ?? null;
+      const now = performance.now();
+      const previous = playbackProgressRef.current;
+
+      if (previous.songId !== songId || Math.abs(audio.currentTime - previous.time) > 0.25) {
+        playbackProgressRef.current = { songId, time: audio.currentTime, changedAt: now };
+      }
+    };
+
+    const advanceAfterTrackEnd = (reason: string) => {
+      clearEndAdvanceTimer();
+      const { repeatMode, queue, currentSongIndex } = stateRef.current;
+
+      if (repeatMode === 'ONE') {
+        if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
+        audio.currentTime = 0;
+        audio.play().catch(e => console.warn("Loop play failed", e));
+        return;
+      }
+
+      if (queue.length === 0) return;
+      const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
+      if (nextIndex >= 0) {
+        if (activatePreparedTrack(nextIndex)) return;
+        if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
+        if (reason !== 'ended') console.warn(`Advancing after ${reason} near track end.`);
+        setCurrentSongIndex(nextIndex);
+        setIsPlaying(true);
+      } else {
+        if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
+        setIsPlaying(false);
+        setCurrentSongIndex(0);
+      }
+    };
+
+    const scheduleEndAdvanceCheck = (reason: string, delay = 2500) => {
+      const { isPlaying, repeatMode, queue, currentSongIndex } = stateRef.current;
+      const songId = queue[currentSongIndex]?.id;
+      if (!isPlaying || repeatMode === 'ONE' || !songId || !isNearTrackEnd() || endAdvanceTimerRef.current !== null) return;
+
+      endAdvanceTimerRef.current = window.setTimeout(() => {
+        endAdvanceTimerRef.current = null;
+
+        const latest = stateRef.current;
+        if (!latest.isPlaying || latest.repeatMode === 'ONE' || latest.queue[latest.currentSongIndex]?.id !== songId) return;
+        if (!isNearTrackEnd()) return;
+
+        const duration = getExpectedDuration();
+        const remaining = duration ? duration - audio.currentTime : Number.POSITIVE_INFINITY;
+        const stalledFor = performance.now() - playbackProgressRef.current.changedAt;
+        const hasStoppedProgressing = audio.ended || audio.paused || audio.readyState < 3 || stalledFor >= 2200;
+
+        if (remaining <= Math.max(2.5, getMagicFadeSeconds(duration)) && hasStoppedProgressing) {
+          advanceAfterTrackEnd(reason);
+        } else if (isNearTrackEnd()) {
+          scheduleEndAdvanceCheck(reason, 1500);
+        }
+      }, delay);
+    };
+
     const handleTimeUpdate = () => {
       const { queue, currentSongIndex, isPlaying, repeatMode, magicCrossfade } = stateRef.current;
       const cTime = audio.currentTime;
       const dur = audio.duration || 0;
+      rememberProgress();
 
       if ('mediaSession' in navigator && !isNaN(dur) && dur > 0) {
         try {
@@ -1092,30 +1185,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
         if (nextIndex >= 0) startCrossfade(nextIndex);
       }
+
+      scheduleEndAdvanceCheck('stalled stream');
     };
 
     const onEnded = () => {
-      const { repeatMode, queue, currentSongIndex } = stateRef.current;
-      if (repeatMode === 'ONE') {
-        if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
-        if (audioRef.current) {
-          audioRef.current.currentTime = 0;
-          audioRef.current.play().catch(e => console.warn("Loop play failed", e));
-        }
-      } else {
-        if (queue.length === 0) return;
-        const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
-        if (nextIndex >= 0) {
-          if (activatePreparedTrack(nextIndex)) return;
-          if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
-          setCurrentSongIndex(nextIndex);
-          setIsPlaying(true);
-        } else {
-          if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
-          setIsPlaying(false);
-          setCurrentSongIndex(0);
-        }
-      }
+      advanceAfterTrackEnd('ended');
     };
 
     const onError = (e: any) => {
@@ -1123,22 +1198,50 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (audio.error?.code === 4) {
         console.warn("Media resource not suitable. Likely codec mismatch or CORS block on the stream.");
       }
+      if (stateRef.current.isPlaying) {
+        scheduleEndAdvanceCheck('playback error', 800);
+      }
     };
 
     const onPlayEvent = () => {
+      rememberProgress();
       initAudioContext();
+    };
+
+    const onLoadingTrouble = () => {
+      scheduleEndAdvanceCheck('stalled stream', 1200);
+    };
+
+    const onRecovered = () => {
+      rememberProgress();
+      if (!isNearTrackEnd()) clearEndAdvanceTimer();
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('error', onError);
     audio.addEventListener('play', onPlayEvent);
+    audio.addEventListener('playing', onRecovered);
+    audio.addEventListener('canplay', onRecovered);
+    audio.addEventListener('loadedmetadata', onRecovered);
+    audio.addEventListener('seeked', onRecovered);
+    audio.addEventListener('waiting', onLoadingTrouble);
+    audio.addEventListener('stalled', onLoadingTrouble);
+    audio.addEventListener('suspend', onLoadingTrouble);
 
     return () => {
+      clearEndAdvanceTimer();
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('error', onError);
       audio.removeEventListener('play', onPlayEvent);
+      audio.removeEventListener('playing', onRecovered);
+      audio.removeEventListener('canplay', onRecovered);
+      audio.removeEventListener('loadedmetadata', onRecovered);
+      audio.removeEventListener('seeked', onRecovered);
+      audio.removeEventListener('waiting', onLoadingTrouble);
+      audio.removeEventListener('stalled', onLoadingTrouble);
+      audio.removeEventListener('suspend', onLoadingTrouble);
     };
   }, [activatePreparedTrack, cancelCrossfade, getMagicFadeSeconds, getNextPlaybackIndex, initAudioContext, startCrossfade]);
 
