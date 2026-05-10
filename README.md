@@ -15,6 +15,7 @@ A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, 
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Available Scripts](#available-scripts)
 - [Deployment](#deployment)
+- [Docker Deployment](#docker-deployment)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
@@ -200,6 +201,50 @@ Shortcuts are configurable in Settings.
 ### Static Hosting
 
 You can host the dist/ folder on any static host (Netlify, S3, Cloudflare Pages). Build locally using npm run build and upload dist/.
+
+## Docker Deployment
+
+Nebula Music includes a self-contained Docker deployment bundle in docker/. The image builds the Vite app with Node.js, then serves the static dist/ output with Nginx.
+
+### Docker Compose
+
+From the repository root:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+Open the app:
+
+```text
+http://localhost:8080
+```
+
+Stop the app:
+
+```bash
+docker compose -f docker/docker-compose.yml down
+```
+
+### Docker CLI
+
+Build the image:
+
+```bash
+docker build -f docker/Dockerfile -t nebula-music:latest .
+```
+
+Run the container:
+
+```bash
+docker run --rm -p 8080:80 nebula-music:latest
+```
+
+### Hosting Notes
+
+- Change the Compose port mapping from `8080:80` if another service already uses port 8080.
+- Nebula is served as a static browser app. Subsonic credentials are entered in the UI and stored in the browser.
+- Your Subsonic-compatible server must be reachable from the user's browser. If connection fails, check the server URL, HTTPS, and CORS settings.
 
 ## Troubleshooting
 

@@ -1,0 +1,10 @@
+services:
+  nebula-music:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: nebula-music:latest
+    container_name: nebula-music
+    restart: unless-stopped
+    ports:
+      - "8080:80"
