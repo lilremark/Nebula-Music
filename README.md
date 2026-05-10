@@ -1,6 +1,6 @@
 # Nebula Music
 
-A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, Airsonic, etc.). Version 2.1.1 refines Internet Radio station management, adds radio pitch/DSP playback controls, improves generated music variety, and tightens player stability.
+A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, Airsonic, etc.). Version 2.1.2 adds AutoEq headphone calibration, Docker deployment support, safer long-session Subsonic playback, and polish for visualizer controls and Settings.
 
 ## Table of Contents
 
@@ -24,6 +24,7 @@ A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, 
 - UI Refresh (v2.0): Light-first surfaces, refined panels, and consistent styling across Home, Browse, Library, Player, and Modals.
 - Theme System: System preference on first launch, explicit Light/Dark selection in Settings, and CSS-variable driven theming.
 - Audio Engine: Playback speed control, per-song pitch persistence, and pitch correction (vinyl mode support).
+- AutoEq Calibration: Search and apply headphone correction profiles from Settings.
 - Visualizers: Web Audio API visualizer modes (Bars, Wave, Circle, Mirror, Spectrum, Particles, Hexagon).
 - Internet Radio: Save stations, play live streams, and use dedicated mini/full-screen radio player surfaces.
 - Player Experience: Expandable full-screen player, sidebar or floating mini-player, and mobile bottom player bar.
@@ -34,6 +35,13 @@ A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, 
 - Accessibility Improvements: Stronger contrast for secondary text, larger touch targets, and semantic heading fixes.
 
 ## Changelog
+
+### v2.1.2 (2026-05-10)
+- Added AutoEq headphone calibration search and profile application in Settings.
+- Added Docker deployment support with a production Dockerfile, Compose file, and Nginx configuration.
+- Improved Subsonic playback resilience with bounded stream URL caching and safer near-end recovery when streams stall.
+- Added an Always Show Visualizer Controls setting and smoothed Zen title marquee animation.
+- Refined Settings layout and fixed a Subsonic library-fetch crash.
 
 ### v2.1.1 (2026-04-28)
 - Added a focused modal for creating Internet Radio stations, with cleaner form handling and a smoother station setup flow.

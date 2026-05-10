@@ -1,9 +1,21 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.1.1';
+export const APP_VERSION = '2.1.2';
 
 export const CHANGELOG = [
+  {
+    version: '2.1.2',
+    date: '2026-05-10',
+    title: 'AutoEq, Docker, and Playback Resilience',
+    changes: [
+      'Added AutoEq headphone calibration search and profile application in Settings.',
+      'Added Docker deployment support with a production Dockerfile, Compose file, and Nginx configuration.',
+      'Improved Subsonic playback resilience with bounded stream URL caching and safer near-end recovery when streams stall.',
+      'Added an Always Show Visualizer Controls setting and smoothed Zen title marquee animation.',
+      'Refined Settings layout and fixed a Subsonic library-fetch crash.'
+    ]
+  },
   {
     version: '2.1.1',
     date: '2026-04-28',
