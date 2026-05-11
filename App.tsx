@@ -20,7 +20,7 @@ import { SearchModal } from './components/SearchModal';
 import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { MobilePlayerBar } from './components/MobilePlayerBar';
-import { VisualizerMode } from './types';
+import { VISUALIZER_MODES } from './types';
 
 const AppContent: React.FC = () => {
   const {
@@ -67,9 +67,8 @@ const AppContent: React.FC = () => {
     } else if (key === shortcuts.zen) {
       setZenMode(!isZenMode);
     } else if (key === shortcuts.visualizer) {
-      const modes: VisualizerMode[] = ['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM', 'PARTICLES', 'HEXAGON'];
-      const nextIndex = (modes.indexOf(visualizerMode) + 1) % modes.length;
-      setVisualizerMode(modes[nextIndex]);
+      const nextIndex = (VISUALIZER_MODES.indexOf(visualizerMode) + 1) % VISUALIZER_MODES.length;
+      setVisualizerMode(VISUALIZER_MODES[nextIndex]);
     } else if (key === 'ArrowUp') {
       e.preventDefault();
       setVolume(Math.min(1, volume + 0.05));

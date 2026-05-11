@@ -18,7 +18,8 @@ function rotateY(point: Point3D, angle: number): Point3D {
 }
 
 function project(point: Point3D, width: number, height: number, fov: number = 300) {
-    const scale = fov / (fov + point.z);
+    const depth = Math.max(1, fov + point.z);
+    const scale = fov / depth;
     const x = point.x * scale + width / 2;
     const y = point.y * scale + height / 2;
     return { x, y, scale };
@@ -50,6 +51,57 @@ const withAlpha = (color: string, alpha: number) => {
   return color;
 };
 
+const createSafeGradient = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  primaryColor: string,
+  secondaryColor: string,
+): CanvasGradient | string => {
+  const gradient = ctx.createLinearGradient(0, height, width, 0);
+
+  try {
+    gradient.addColorStop(0, primaryColor);
+    gradient.addColorStop(1, secondaryColor);
+    return gradient;
+  } catch {
+    return '#06b6d4';
+  }
+};
+
+const fillRoundedRect = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) => {
+  const safeWidth = Math.max(1, width);
+  const safeHeight = Math.max(1, height);
+  const safeRadius = Math.max(0, Math.min(radius, safeWidth / 2, safeHeight / 2));
+
+  if ('roundRect' in ctx) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, safeWidth, safeHeight, safeRadius);
+    ctx.fill();
+    return;
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(x + safeRadius, y);
+  ctx.lineTo(x + safeWidth - safeRadius, y);
+  ctx.quadraticCurveTo(x + safeWidth, y, x + safeWidth, y + safeRadius);
+  ctx.lineTo(x + safeWidth, y + safeHeight - safeRadius);
+  ctx.quadraticCurveTo(x + safeWidth, y + safeHeight, x + safeWidth - safeRadius, y + safeHeight);
+  ctx.lineTo(x + safeRadius, y + safeHeight);
+  ctx.quadraticCurveTo(x, y + safeHeight, x, y + safeHeight - safeRadius);
+  ctx.lineTo(x, y + safeRadius);
+  ctx.quadraticCurveTo(x, y, x + safeRadius, y);
+  ctx.closePath();
+  ctx.fill();
+};
+
 export const Visualizer: React.FC<{ className?: string; primaryColor?: string; secondaryColor?: string }> = ({
   className,
   primaryColor = '#06b6d4',
@@ -58,6 +110,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
   const { analyser, visualizerMode } = useStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number>(0);
+  const warnedFrameErrorsRef = useRef<Set<string>>(new Set());
 
   // Persistent state for visualizers
   const stateRef = useRef({
@@ -79,13 +132,44 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
     const dataArray = new Uint8Array(bufferLength);
     const timeDataArray = new Uint8Array(bufferLength);
 
+    const drawSpectrum = (width: number, height: number) => {
+      if (width <= 0 || height <= 0) return;
+
+      const bars = 100;
+      const barWidth = width / bars;
+
+      for(let i=0; i<bars; i++) {
+          const value = dataArray[Math.floor((i / bars) * bufferLength)] || 0;
+          const h = (value / 255) * height;
+          const barGradient = ctx.createLinearGradient(0, height, 0, Math.max(0, height - h));
+          try {
+            barGradient.addColorStop(0, primaryColor);
+            barGradient.addColorStop(1, secondaryColor);
+            ctx.fillStyle = barGradient;
+          } catch {
+            ctx.fillStyle = '#06b6d4';
+          }
+          ctx.fillRect(i * barWidth, height - h, Math.max(1, barWidth), h);
+      }
+    };
+
+    const warnFrameError = (error: unknown) => {
+      const key = `${visualizerMode}:${error instanceof Error ? error.message : String(error)}`;
+      if (warnedFrameErrorsRef.current.has(key)) return;
+      warnedFrameErrorsRef.current.add(key);
+      console.warn(`Visualizer ${visualizerMode} frame failed; using fallback renderer.`, error);
+    };
+
     const renderFrame = () => {
       animationIdRef.current = requestAnimationFrame(renderFrame);
+
+      try {
       
       // Handle Resize
       const displayWidth = canvas.clientWidth;
       const displayHeight = canvas.clientHeight;
       const dpr = window.devicePixelRatio || 1;
+      if (displayWidth <= 0 || displayHeight <= 0) return;
       
       if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
           canvas.width = displayWidth * dpr;
@@ -100,9 +184,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
       ctx.clearRect(0, 0, width, height);
 
       // Gradient Setup
-      const gradient = ctx.createLinearGradient(0, height, width, 0);
-      gradient.addColorStop(0, primaryColor);
-      gradient.addColorStop(1, secondaryColor);
+      const gradient = createSafeGradient(ctx, width, height, primaryColor, secondaryColor);
 
       // Global Config
       ctx.lineWidth = 2 * dpr;
@@ -138,13 +220,11 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
              const w = barWidth - (2 * dpr);
              
              ctx.fillStyle = gradient;
-             ctx.beginPath();
-             ctx.roundRect(x, y, w, barHeight, 4 * dpr);
-             ctx.fill();
+             fillRoundedRect(ctx, x, y, w, barHeight, 4 * dpr);
 
              // Reflection
              ctx.globalAlpha = 0.2;
-             ctx.fillRect(x, height, w, barHeight * 0.3);
+             ctx.fillRect(x, height, Math.max(1, w), barHeight * 0.3);
              ctx.globalAlpha = 1;
           }
       }
@@ -167,11 +247,11 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           const cy = height / 2;
           const radius = Math.min(width, height) / 3.5;
           const bars = 80;
-          const step = Math.floor((bufferLength * 0.6) / bars);
+          const step = Math.floor((bufferLength * 0.6) / bars) || 1;
 
           // Double mirrored circle
           for (let i = 0; i < bars; i++) {
-              const val = dataArray[i * step] / 255;
+              const val = (dataArray[i * step] || 0) / 255;
               const h = val * (radius * 0.8);
               const angle = (Math.PI * 2 * i) / bars;
               
@@ -195,11 +275,11 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
       }
       else if (visualizerMode === 'MIRROR') {
           const bars = 50;
-          const step = Math.floor(bufferLength / 2 / bars);
+          const step = Math.floor(bufferLength / 2 / bars) || 1;
           const barWidth = (width / 2) / bars;
           
           for(let i=0; i<bars; i++) {
-             const value = dataArray[i * step];
+             const value = dataArray[i * step] || 0;
              const percent = value / 255;
              const h = Math.max(2, percent * height * 0.6);
              
@@ -341,7 +421,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           const horizonY = height * 0.4; // Horizon line height
           
           // Audio modulation on X axis (cols)
-          const freqStep = Math.floor(bufferLength / cols);
+          const freqStep = Math.floor(bufferLength / cols) || 1;
 
           ctx.strokeStyle = withAlpha(secondaryColor, 0.9);
           ctx.lineWidth = 1 * dpr;
@@ -401,17 +481,15 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           ctx.fillRect(0, horizonY, width, height - horizonY);
       }
       else {
-          // Spectrum fallback using the adaptive album palette
-          const bars = 100;
-          const barWidth = width / bars;
-          for(let i=0; i<bars; i++) {
-              const h = (dataArray[i] / 255) * height;
-              const barGradient = ctx.createLinearGradient(0, height, 0, height - h);
-              barGradient.addColorStop(0, primaryColor);
-              barGradient.addColorStop(1, secondaryColor);
-              ctx.fillStyle = barGradient;
-              ctx.fillRect(i * barWidth, height - h, barWidth, h);
-          }
+          drawSpectrum(width, height);
+      }
+      } catch (error) {
+        warnFrameError(error);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawSpectrum(canvas.width, canvas.height);
       }
     };
 

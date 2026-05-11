@@ -3,7 +3,7 @@ import { Activity, ChevronDown, ExternalLink, Gauge, Maximize2, Minus, Music2, P
 import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { Visualizer } from '../Visualizer';
-import { VisualizerMode } from '../../types';
+import { VISUALIZER_MODES } from '../../types';
 
 const withAlpha = (color: string, alpha: number) => {
     if (color.startsWith('#')) {
@@ -242,9 +242,8 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
     if (!currentRadioStation) return null;
 
     const cycleVisualizerMode = () => {
-        const modes: VisualizerMode[] = ['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM', 'PARTICLES', 'HEXAGON', 'CUBE', 'GRID'];
-        const nextIndex = (modes.indexOf(visualizerMode) + 1) % modes.length;
-        setVisualizerMode(modes[nextIndex]);
+        const nextIndex = (VISUALIZER_MODES.indexOf(visualizerMode) + 1) % VISUALIZER_MODES.length;
+        setVisualizerMode(VISUALIZER_MODES[nextIndex]);
     };
 
     return (

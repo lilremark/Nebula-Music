@@ -10,7 +10,7 @@ import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { useArtistImage } from '../hooks/useArtistImage';
 import { useTrackWaveform } from '../hooks/useTrackWaveform';
 import { PlaybackProgress } from './player/PlaybackProgress';
-import { VisualizerMode } from '../types';
+import { VISUALIZER_MODES } from '../types';
 import { useTheme } from '../context/ThemeContext';
 
 interface SyncedLine {
@@ -145,9 +145,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     }, [activeLineIndex, activeTab]);
 
     const cycleVisualizerMode = useCallback(() => {
-        const modes: VisualizerMode[] = ['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM', 'PARTICLES', 'HEXAGON', 'CUBE', 'GRID'];
-        const nextIndex = (modes.indexOf(visualizerMode) + 1) % modes.length;
-        setVisualizerMode(modes[nextIndex]);
+        const nextIndex = (VISUALIZER_MODES.indexOf(visualizerMode) + 1) % VISUALIZER_MODES.length;
+        setVisualizerMode(VISUALIZER_MODES[nextIndex]);
     }, [visualizerMode, setVisualizerMode]);
 
     const renderQualityBadge = (suffix?: string, bitrate?: number) => {

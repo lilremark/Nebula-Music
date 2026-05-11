@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
-import { VisualizerMode } from '../types';
+import { VISUALIZER_MODES } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { CustomDropdown } from '../components/CustomDropdown';
 import {
@@ -632,7 +632,7 @@ export const SettingsView: React.FC = () => {
 
                         <SettingPanel icon={Activity} title="Visualizer Style">
                             <div className="grid grid-cols-3 gap-2 px-5 py-4">
-                                {(['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM', 'PARTICLES', 'HEXAGON', 'CUBE', 'GRID'] as VisualizerMode[]).map((mode) => (
+                                {VISUALIZER_MODES.map((mode) => (
                                     <button
                                         type="button"
                                         key={mode}
