@@ -176,6 +176,95 @@ const EQ_BAND_FREQUENCIES: Record<EqBandKey, number> = {
 };
 
 const EQ_BAND_KEYS = Object.keys(EQ_BAND_FREQUENCIES) as EqBandKey[];
+const PLAY_HISTORY_KEY = 'nebula_play_history';
+const RECENT_HISTORY_KEY = 'nebula_history';
+const RADIO_STATIONS_KEY = 'nebula_radio_stations';
+const WAVEFORM_CACHE_PREFIX = 'nebula_waveform_v4:';
+const MAX_PLAY_HISTORY_ENTRIES = 200;
+const MAX_RECENT_HISTORY_ENTRIES = 50;
+
+type PlayHistoryEntry = { count: number, song: ISong };
+type PlayHistoryMap = Record<string, PlayHistoryEntry>;
+
+const isQuotaExceededError = (error: unknown) => {
+  if (!(error instanceof DOMException)) return false;
+  return (
+    error.name === 'QuotaExceededError' ||
+    error.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+    error.code === 22 ||
+    error.code === 1014
+  );
+};
+
+const clearWaveformCache = () => {
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key?.startsWith(WAVEFORM_CACHE_PREFIX)) keysToRemove.push(key);
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  return keysToRemove.length;
+};
+
+const safeLocalStorageSetItem = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    if (!isQuotaExceededError(error)) {
+      console.warn(`Failed to persist ${key}`, error);
+      return false;
+    }
+
+    const removedWaveforms = clearWaveformCache();
+    try {
+      localStorage.setItem(key, value);
+      if (removedWaveforms > 0) {
+        console.warn(`Cleared ${removedWaveforms} waveform cache entries after localStorage quota was reached.`);
+      }
+      return true;
+    } catch (retryError) {
+      console.warn(`Failed to persist ${key} after clearing waveform cache`, retryError);
+      return false;
+    }
+  }
+};
+
+const compactSongForStorage = (song: ISong): ISong => ({
+  id: song.id,
+  parent: song.parent,
+  title: song.title,
+  album: song.album,
+  artist: song.artist,
+  coverArt: song.coverArt,
+  duration: song.duration,
+  track: song.track,
+  discNumber: song.discNumber,
+  year: song.year,
+  genre: song.genre,
+  suffix: song.suffix,
+  contentType: song.contentType,
+  isVideo: song.isVideo,
+  albumId: song.albumId,
+  artistId: song.artistId,
+  starred: song.starred,
+  playCount: song.playCount,
+});
+
+const trimPlayHistory = (history: PlayHistoryMap, limit = MAX_PLAY_HISTORY_ENTRIES): PlayHistoryMap => {
+  const entries = Object.entries(history)
+    .map(([id, entry]) => [id, { count: entry.count || 0, song: compactSongForStorage(entry.song) }] as const)
+    .sort(([, a], [, b]) => b.count - a.count)
+    .slice(0, limit);
+  return Object.fromEntries(entries);
+};
+
+const parsePlayHistory = (raw: string | null): PlayHistoryMap => {
+  if (!raw) return {};
+  const parsed = JSON.parse(raw);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  return trimPlayHistory(parsed as PlayHistoryMap);
+};
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [service] = useState(() => new SubsonicService(null));
@@ -389,8 +478,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       if (!force) {
-        localStorage.setItem('nebula_explore_date', today);
-        localStorage.setItem('nebula_explore_data', JSON.stringify(results));
+        safeLocalStorageSetItem('nebula_explore_date', today);
+        safeLocalStorageSetItem('nebula_explore_data', JSON.stringify(results));
       }
       return results;
     };
@@ -491,7 +580,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Clear any cached demo data from localStorage
         localStorage.removeItem('nebula_explore_data');
         localStorage.removeItem('nebula_explore_date');
-        localStorage.removeItem('nebula_play_history'); // Clear play history to prevent demo songs in Most Played
+        localStorage.removeItem(PLAY_HISTORY_KEY); // Clear play history to prevent demo songs in Most Played
 
         // Reset homeData and playHistory to empty to prevent demo content from showing
         setHomeData({
@@ -553,11 +642,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }));
       }
       try {
-        const storedStats = localStorage.getItem('nebula_play_history');
-        if (storedStats) setPlayHistory(JSON.parse(storedStats));
-        const storedList = localStorage.getItem('nebula_history');
-        if (storedList) setHistory(JSON.parse(storedList));
-        const storedStations = localStorage.getItem('nebula_radio_stations');
+        const storedStats = localStorage.getItem(PLAY_HISTORY_KEY);
+        if (storedStats) {
+          const parsedStats = parsePlayHistory(storedStats);
+          setPlayHistory(parsedStats);
+          safeLocalStorageSetItem(PLAY_HISTORY_KEY, JSON.stringify(parsedStats));
+        }
+        const storedList = localStorage.getItem(RECENT_HISTORY_KEY);
+        if (storedList) {
+          const parsedList = JSON.parse(storedList);
+          if (Array.isArray(parsedList)) {
+            const compactHistory = parsedList.slice(0, MAX_RECENT_HISTORY_ENTRIES).map(compactSongForStorage);
+            setHistory(compactHistory);
+            safeLocalStorageSetItem(RECENT_HISTORY_KEY, JSON.stringify(compactHistory));
+          }
+        }
+        const storedStations = localStorage.getItem(RADIO_STATIONS_KEY);
         if (storedStations) {
           const parsedStations = JSON.parse(storedStations);
           if (Array.isArray(parsedStations)) setRadioStations(parsedStations);
@@ -576,14 +676,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         hasScrobbledRef.current = false;
         setPlayHistory(prev => {
           const currentCount = prev[song.id]?.count || 0;
-          const updated = { ...prev, [song.id]: { count: currentCount + 1, song } };
-          localStorage.setItem('nebula_play_history', JSON.stringify(updated));
+          const updated = trimPlayHistory({ ...prev, [song.id]: { count: currentCount + 1, song } });
+          safeLocalStorageSetItem(PLAY_HISTORY_KEY, JSON.stringify(updated));
           return updated;
         });
         setHistory(prev => {
           const withoutCurrent = prev.filter(s => s.id !== song.id);
-          const newHistory = [song, ...withoutCurrent].slice(0, 50);
-          localStorage.setItem('nebula_history', JSON.stringify(newHistory));
+          const newHistory = [compactSongForStorage(song), ...withoutCurrent.map(compactSongForStorage)].slice(0, MAX_RECENT_HISTORY_ENTRIES);
+          safeLocalStorageSetItem(RECENT_HISTORY_KEY, JSON.stringify(newHistory));
           return newHistory;
         });
         lastPlayedSongIdRef.current = song.id;
@@ -1966,7 +2066,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     if (!isInitialized) return;
-    localStorage.setItem('nebula_radio_stations', JSON.stringify(radioStations));
+    safeLocalStorageSetItem(RADIO_STATIONS_KEY, JSON.stringify(radioStations));
   }, [radioStations, isInitialized]);
 
   const playRadioStation = (station: IRadioStation) => {

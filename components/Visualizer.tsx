@@ -113,32 +113,41 @@ const fillRoundedRect = (
   ctx.fill();
 };
 
-const averageRange = (data: Uint8Array, startRatio: number, endRatio: number) => {
-  const start = Math.max(0, Math.floor(data.length * startRatio));
-  const end = Math.min(data.length, Math.max(start + 1, Math.floor(data.length * endRatio)));
+const getFrequencyBin = (frequency: number, sampleRate: number, binCount: number) => {
+  const nyquist = sampleRate / 2;
+  return Math.min(binCount - 1, Math.max(0, Math.floor((frequency / nyquist) * binCount)));
+};
+
+const averageFrequencyRange = (data: Uint8Array, sampleRate: number, startHz: number, endHz: number) => {
+  const start = getFrequencyBin(startHz, sampleRate, data.length);
+  const end = Math.min(data.length, Math.max(start + 1, getFrequencyBin(endHz, sampleRate, data.length) + 1));
   let sum = 0;
 
   for (let i = start; i < end; i++) sum += data[i];
   return sum / (end - start) / 255;
 };
 
-const getLogBands = (data: Uint8Array, count: number, previous: number[]) => {
+const getFrequencyBands = (data: Uint8Array, count: number, previous: number[], sampleRate: number) => {
   const bands = new Array(count);
-  const usableBins = Math.max(1, Math.floor(data.length * 0.88));
+  const minHz = 28;
+  const maxHz = Math.min(20000, sampleRate * 0.48);
+  const minLog = Math.log(minHz);
+  const maxLog = Math.log(maxHz);
 
   for (let i = 0; i < count; i++) {
-    const startRatio = Math.pow(i / count, 2.15);
-    const endRatio = Math.pow((i + 1) / count, 2.15);
-    const start = Math.min(usableBins - 1, Math.floor(startRatio * usableBins));
-    const end = Math.min(usableBins, Math.max(start + 1, Math.floor(endRatio * usableBins)));
+    const startHz = Math.exp(minLog + (i / count) * (maxLog - minLog));
+    const endHz = Math.exp(minLog + ((i + 1) / count) * (maxLog - minLog));
+    const start = getFrequencyBin(startHz, sampleRate, data.length);
+    const end = Math.min(data.length, Math.max(start + 1, getFrequencyBin(endHz, sampleRate, data.length) + 1));
     let sum = 0;
 
     for (let bin = start; bin < end; bin++) sum += data[bin];
 
     const raw = sum / (end - start) / 255;
-    const boosted = Math.pow(raw, 0.68);
+    const highFrequencyLift = 1 + (i / Math.max(1, count - 1)) * 0.5;
+    const boosted = clamp(Math.pow(raw, 0.58) * highFrequencyLift);
     const oldValue = previous[i] ?? 0;
-    const smoothing = boosted > oldValue ? 0.42 : 0.18;
+    const smoothing = boosted > oldValue ? 0.5 : 0.24;
     bands[i] = oldValue + (boosted - oldValue) * smoothing;
   }
 
@@ -170,7 +179,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
     particles: [] as Particle[],
     rotationX: 0,
     rotationY: 0,
-    smoothedBands: [] as number[],
+    smoothedBandSets: {} as Record<number, number[]>,
     lastWidth: 0,
     lastHeight: 0,
     peak: 0,
@@ -183,12 +192,13 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    analyser.fftSize = Math.max(analyser.fftSize, 2048);
-    analyser.smoothingTimeConstant = 0.74;
+    analyser.fftSize = Math.max(analyser.fftSize, 4096);
+    analyser.smoothingTimeConstant = 0.68;
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
     const timeDataArray = new Uint8Array(bufferLength);
+    const sampleRate = analyser.context.sampleRate;
 
     const warnFrameError = (error: unknown) => {
       const key = `${visualizerMode}:${error instanceof Error ? error.message : String(error)}`;
@@ -249,18 +259,27 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
         analyser.getByteFrequencyData(dataArray);
         analyser.getByteTimeDomainData(timeDataArray);
 
-        const bars72 = getLogBands(dataArray, 72, stateRef.current.smoothedBands);
-        stateRef.current.smoothedBands = bars72;
+        const getBands = (count: number) => {
+          const bands = getFrequencyBands(dataArray, count, stateRef.current.smoothedBandSets[count] || [], sampleRate);
+          stateRef.current.smoothedBandSets[count] = bands;
+          return bands;
+        };
 
-        const bass = Math.pow(averageRange(dataArray, 0.0, 0.08), 0.72);
-        const mid = Math.pow(averageRange(dataArray, 0.08, 0.36), 0.72);
-        const treble = Math.pow(averageRange(dataArray, 0.36, 0.86), 0.72);
+        const bars72 = getBands(72);
+
+        const maxFrequency = Math.min(20000, sampleRate * 0.48);
+        const bass = Math.pow(averageFrequencyRange(dataArray, sampleRate, 32, 160), 0.7);
+        const lowMid = Math.pow(averageFrequencyRange(dataArray, sampleRate, 160, 600), 0.7);
+        const mid = Math.pow(averageFrequencyRange(dataArray, sampleRate, 600, 2400), 0.7);
+        const treble = Math.pow(averageFrequencyRange(dataArray, sampleRate, 2400, 8000), 0.64);
+        const air = Math.pow(averageFrequencyRange(dataArray, sampleRate, 8000, maxFrequency), 0.58);
+        const highEnergy = clamp(treble * 0.72 + air * 0.48);
         const waveRms = clamp(getWaveRms(timeDataArray) * 2.4);
-        const energy = clamp((bass * 0.48) + (mid * 0.34) + (treble * 0.18), 0, 1);
+        const energy = clamp((bass * 0.32) + (lowMid * 0.2) + (mid * 0.22) + (treble * 0.16) + (air * 0.1), 0, 1);
         stateRef.current.peak = Math.max(energy, stateRef.current.peak * 0.94);
         const peak = stateRef.current.peak;
 
-        stateRef.current.angle += 0.004 + bass * 0.026 + treble * 0.012;
+        stateRef.current.angle += 0.004 + bass * 0.022 + highEnergy * 0.018;
         stateRef.current.gridOffset = (stateRef.current.gridOffset + 1.4 + energy * 8) % 100;
 
         if (visualizerMode === 'BARS') {
@@ -283,7 +302,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
         }
         else if (visualizerMode === 'WAVE') {
           const centerY = height / 2;
-          const gain = 0.68 + energy * 1.8;
+          const gain = 0.7 + energy * 1.55 + highEnergy * 0.35;
 
           ctx.lineWidth = (2 + energy * 5) * dpr;
           ctx.beginPath();
@@ -302,7 +321,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           for (let i = 0; i < timeDataArray.length; i += 3) {
             const x = (i / (timeDataArray.length - 1)) * width;
             const normalized = (timeDataArray[i] - 128) / 128;
-            const y = centerY - normalized * height * 0.22 * (1 + mid);
+            const y = centerY - normalized * height * 0.22 * (1 + mid + highEnergy * 0.35);
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
           }
@@ -315,7 +334,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           const cy = height / 2;
           const radius = Math.min(width, height) * (0.2 + bass * 0.04);
           const bars = 96;
-          const bands = getLogBands(dataArray, bars, bars72);
+          const bands = getBands(bars);
 
           ctx.lineWidth = (1.5 + peak * 3.5) * dpr;
           for (let i = 0; i < bars; i++) {
@@ -341,7 +360,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
         }
         else if (visualizerMode === 'MIRROR') {
           const bars = 56;
-          const bands = getLogBands(dataArray, bars, bars72);
+          const bands = getBands(bars);
           const barWidth = (width / 2) / bars;
           const centerY = height / 2;
 
@@ -361,7 +380,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           ctx.shadowBlur = 0;
         }
         else if (visualizerMode === 'SPECTRUM') {
-          const bands = getLogBands(dataArray, 120, bars72);
+          const bands = getBands(132);
           drawSpectrum(width, height, bands, gradient, dpr);
 
           ctx.globalAlpha = 0.2 + peak * 0.18;
@@ -409,7 +428,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           const rings = 4;
 
           for(let ring = 0; ring < rings; ring++) {
-            const ringEnergy = ring === 0 ? bass : ring === 1 ? mid : ring === 2 ? treble : energy;
+            const ringEnergy = ring === 0 ? bass : ring === 1 ? lowMid : ring === 2 ? mid : highEnergy;
             const radius = base * (1 + ring * 0.22 + ringEnergy * 0.42);
             ctx.beginPath();
             for (let i = 0; i < 6; i++) {
@@ -440,7 +459,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           ];
 
           stateRef.current.rotationX += 0.006 + mid * 0.018;
-          stateRef.current.rotationY += 0.008 + treble * 0.022;
+          stateRef.current.rotationY += 0.008 + highEnergy * 0.024;
 
           const projectedVertices = vertices.map(v => {
             let rotated = rotateY(v, stateRef.current.rotationY);
@@ -473,7 +492,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           const gridSize = 92 * dpr;
           const cols = 22;
           const rows = 22;
-          const horizonY = height * (0.34 + treble * 0.05);
+          const horizonY = height * (0.34 + highEnergy * 0.05);
 
           ctx.strokeStyle = withAlpha(secondaryColor, 0.72 + energy * 0.2);
           ctx.lineWidth = (0.8 + energy * 1.8) * dpr;
