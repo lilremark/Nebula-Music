@@ -1,9 +1,21 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.1.2';
+export const APP_VERSION = '2.1.3';
 
 export const CHANGELOG = [
+  {
+    version: '2.1.3',
+    date: '2026-06-20',
+    title: 'Modern Stack and OpenSubsonic Support',
+    changes: [
+      'Updated the application stack to React 19, Vite 8, Tailwind CSS 4, and TypeScript 6.',
+      'Added OpenSubsonic extension discovery and API-key authentication.',
+      'Added structured lyrics v2 and ID3-first album and starred endpoints with legacy fallbacks.',
+      'Added Subsonic protocol fallback negotiation from API 1.16.1 through 1.14.0.',
+      'Updated Docker builds to Node.js 24 LTS and Nginx 1.30.'
+    ]
+  },
   {
     version: '2.1.2',
     date: '2026-05-10',

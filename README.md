@@ -1,287 +1,313 @@
-# Nebula Music
+<div align="center">
+  <img src="./logo.svg" alt="Nebula Music logo" width="96" height="96">
 
-A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, Airsonic, etc.). Version 2.1.2 adds AutoEq headphone calibration, Docker deployment support, safer long-session Subsonic playback, and polish for visualizer controls and Settings.
+  # Nebula Music
 
-## Table of Contents
+  **A polished, self-hosted web player for Subsonic and OpenSubsonic music libraries.**
 
-- [Key Features](#key-features)
-- [Changelog](#changelog)
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Configuration and Environment](#configuration-and-environment)
-- [Using Nebula](#using-nebula)
-- [Architecture](#architecture)
-- [Keyboard Shortcuts](#keyboard-shortcuts)
-- [Available Scripts](#available-scripts)
-- [Deployment](#deployment)
-- [Docker Deployment](#docker-deployment)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
+  Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
+  a responsive interface built for desktop and mobile.
 
-## Key Features
+  [![Version](https://img.shields.io/badge/version-2.1.3-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music)
+  [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
+  [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](./docker/README.md)
+  [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](./LICENSE.txt)
 
-- UI Refresh (v2.0): Light-first surfaces, refined panels, and consistent styling across Home, Browse, Library, Player, and Modals.
-- Theme System: System preference on first launch, explicit Light/Dark selection in Settings, and CSS-variable driven theming.
-- Audio Engine: Playback speed control, per-song pitch persistence, and pitch correction (vinyl mode support).
-- AutoEq Calibration: Search and apply headphone correction profiles from Settings.
-- Visualizers: Web Audio API visualizer modes (Bars, Wave, Circle, Mirror, Spectrum, Particles, Hexagon).
-- Internet Radio: Save stations, play live streams, and use dedicated mini/full-screen radio player surfaces.
-- Player Experience: Expandable full-screen player, sidebar or floating mini-player, and mobile bottom player bar.
-- Search: Spotlight-style modal search with real-time results across artists, albums, and songs.
-- Library Management: Artists, albums, songs, playlists, likes, and queue management.
-- Discovery: Featured hero, random mixes, recent/newest albums, and most played tracking.
-- Offline-Ready Caching: IndexedDB caching for API responses, settings, and local play stats.
-- OpenSubsonic Support: Protocol 1.16.1, extension discovery, ID3 album/starred endpoints, structured lyrics v2, and optional API-key authentication.
-- Accessibility Improvements: Stronger contrast for secondary text, larger touch targets, and semantic heading fixes.
+  [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Architecture](#architecture)
+</div>
 
-## Changelog
+---
 
-### Unreleased
-- Updated all npm dependencies, including React 19, Vite 8, Tailwind CSS 4, TypeScript 6, Motion 12, and Lucide React 1.
-- Added OpenSubsonic extension discovery, API-key authentication, structured lyrics v2 support, and ID3-first album/starred endpoints with legacy fallbacks.
-- Added protocol fallback negotiation for compatible servers implementing Subsonic API 1.14.0 through 1.16.1.
-- Updated the Docker build to Node.js 24 LTS and Nginx 1.30.
+## Screenshots
 
-### v2.1.2 (2026-05-10)
-- Added AutoEq headphone calibration search and profile application in Settings.
-- Added Docker deployment support with a production Dockerfile, Compose file, and Nginx configuration.
-- Improved Subsonic playback resilience with bounded stream URL caching and safer near-end recovery when streams stall.
-- Added an Always Show Visualizer Controls setting and smoothed Zen title marquee animation.
-- Refined Settings layout and fixed a Subsonic library-fetch crash.
+<p align="center">
+  <img src="./screenshots/Screenshot%202026-06-08%20225837.png" alt="Nebula Music home dashboard" width="100%">
+</p>
 
-### v2.1.1 (2026-04-28)
-- Added a focused modal for creating Internet Radio stations, with cleaner form handling and a smoother station setup flow.
-- Internet Radio now supports pitch shifting through dedicated DSP controls and playback UI integration.
-- Generated music selections are more varied, with stronger shuffling and uniqueness checks for songs and albums.
-- Cleaned up a duplicate full-player effect and refreshed the production script reference for more stable builds.
+<table>
+  <tr>
+    <td width="50%">
+      <img src="./screenshots/Screenshot%202026-06-08%20225908.png" alt="Nebula Music home view with the now-playing sidebar">
+    </td>
+    <td width="50%">
+      <img src="./screenshots/Screenshot%202026-06-08%20225940.png" alt="Nebula Music full-screen player">
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Now-playing sidebar and queue</strong></td>
+    <td align="center"><strong>Full-screen player</strong></td>
+  </tr>
+</table>
 
-### v2.1 (2026-04-28)
-- Internet Radio is now available in Nebula, with saved stations, live playback controls, and dedicated mini/full-screen player surfaces.
-- Internet Radio supports direct streams and HLS .m3u8 streams with a lazy-loaded browser fallback for Chrome, Edge, and Firefox.
-- Full-screen Internet Radio now uses the same Web Audio canvas visualizers as the regular full-screen player.
-- Magic Crossfade is safer around pause, manual track changes, and track handoffs so secondary audio cannot keep playing unexpectedly.
-- Waveform loading is more reliable because failed decodes no longer get cached as permanent fallback waveforms.
-- Live radio playback is protected from speed and pitch mutations that can break stream buffering or drift away from the live edge.
+## Features
 
-### v2.0 (2026-03-16)
-- Full UI refresh with light-first surfaces and refined panels.
-- Theme system now respects system preference on first launch with explicit Light/Dark selection in Settings.
-- Accessibility polish: higher contrast secondary text, larger touch targets, and semantic heading order fixes.
-- Playback polish with per-song pitch persistence and clearer speed and pitch handling.
-- Visual consistency pass across Home, Browse, Library, Player, and modals.
+### Playback
 
-### v1.4 (2026-01-27)
-- Expanded player layout refinements and larger album art on wide screens.
-- Mini player enhancements with seekable progress bar and time display.
-- Additional metadata in the expanded player (genre, year, quality).
-- Visual spacing and animation improvements.
+- Shared app-wide audio engine with queue, repeat, seek, volume, and Media Session controls
+- Per-track playback speed and pitch controls with pitch-correction support
+- Resilient Subsonic streaming with bounded URL caching and stalled-stream recovery
+- Automatic transcoding rules for browser-sensitive formats such as ALAC and M4A
+- Internet radio playback for direct streams and HLS playlists
 
-### v1.3 (2026-01-23)
-- Smarter transcoding rules for M4A and ALAC playback.
-- Dynamic viewport sizing for better mobile stability.
-- Persistent library filters (sort, genre, year).
-- Hero stability fixes and artist parallax improvements.
+### Listening Experience
 
-## Tech Stack
+- Web Audio visualizers including Bars, Wave, Circle, Mirror, Spectrum, Particles, Hexagon, Cube, and Grid
+- Expandable full-screen player, desktop sidebar player, floating mini-player, and mobile player bar
+- Structured and synchronized lyrics with fallback lyric providers
+- AutoEq headphone calibration profile search and application
+- Configurable keyboard shortcuts and an immersive Zen mode
 
-- Language: TypeScript
-- Framework: React 19
-- Build Tooling: Vite 8
-- Styling: Tailwind CSS 4
-- Audio: HTMLAudioElement + Web Audio API
-- Storage: IndexedDB (custom wrapper in services/db.ts)
-- Icons: Lucide React
+### Library and Discovery
 
-## Prerequisites
+- Browse artists, albums, songs, playlists, favorites, and genres
+- Spotlight-style search across artists, albums, and tracks
+- Featured albums, random mixes, recent releases, and most-played statistics
+- Persistent sorting and filtering by genre, year, and library metadata
+- Demo mode for exploring the interface without connecting a server
 
-- Node.js 20.19+ or 22.12+ (Node.js 24 LTS recommended)
-- npm (package-lock.json is included)
+### Platform
 
-## Getting Started
+- Subsonic API 1.16.1 with fallback negotiation through API 1.14.0
+- OpenSubsonic extension discovery and structured lyrics v2 support
+- ID3-first album and starred endpoints with legacy server fallbacks
+- Password token/salt authentication and optional OpenSubsonic API-key authentication
+- Responsive light and dark themes with system-preference detection
+- IndexedDB caching for API responses, settings, credentials, and local play statistics
+- Docker, Vercel, and static-hosting deployment options
 
-1. Install dependencies:
+## Compatibility
+
+Nebula Music supports servers implementing the Subsonic API or compatible
+OpenSubsonic extensions, including:
+
+- [Navidrome](https://www.navidrome.org/)
+- [Gonic](https://github.com/sentriz/gonic)
+- [Airsonic](https://airsonic.github.io/)
+- Other Subsonic-compatible servers
+
+The music server must be reachable from the browser running Nebula. HTTPS and
+correct CORS configuration are strongly recommended.
+
+## Quick Start
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20.19+ or 22.12+; Node.js 24 LTS is recommended
+- npm
+- A reachable Subsonic-compatible server, unless using demo mode
+
+### Local Development
 
 ```bash
+git clone https://github.com/lilremark/Nebula-Music.git
+cd Nebula-Music
 npm install
-```
-
-2. Start the development server:
-
-```bash
 npm run dev
 ```
 
-3. Open the app:
+Open [http://localhost:3000](http://localhost:3000). No environment variables
+are required.
 
-```text
-http://localhost:3000
+Choose one of the supported authentication methods:
+
+- **Password:** Enter the server URL, username, and password. Nebula stores the
+  generated token and salt instead of the raw password.
+- **API key:** Enter the server URL and OpenSubsonic API key. Nebula omits the
+  username and legacy token parameters as required by the extension.
+
+### Production Build
+
+```bash
+npm run typecheck
+npm run build
+npm run preview
 ```
 
-## Configuration and Environment
+The production bundle is written to `dist/`.
 
-No environment variables are required for local development. Subsonic credentials are entered in the UI and stored locally in IndexedDB.
+## Docker
 
-Local storage details:
-- IndexedDB settings store: theme, EQ, shortcuts, and cached API responses
-- IndexedDB stats store: most played tracking per server
-- localStorage: lightweight play history snapshots and last-seen version for the What's New modal
-
-## Using Nebula
-
-1. Launch the app and connect your Subsonic server.
-1. Choose password authentication or OpenSubsonic API-key authentication.
-1. For password authentication, enter your server URL, username, and password. The app stores a token + salt, not the raw password.
-1. For API-key authentication, enter the server URL and key. The username parameter is intentionally omitted as required by the OpenSubsonic extension.
-1. Explore Home, Browse, Library, and Player screens. Toggle Light/Dark in Settings.
-1. Optional: Click "Try Demo Mode" to explore the UI with mock data.
-
-## Architecture
-
-### Directory Structure
-
-```text
-nebula-music(1)/
-|-- components/           # Reusable UI building blocks
-|   |-- layout/           # App frame and top bar
-|   |-- navigation/       # Nav drawer and mobile nav
-|   |-- player/           # Now playing, mini player, player panels
-|   `-- ui/               # Shared UI primitives
-|-- constants/            # EQ presets and constants
-|-- context/              # ThemeContext and Store state
-|-- hooks/                # UI-focused hooks (adaptive colors, artist images)
-|-- services/             # Subsonic API client and IndexedDB wrapper
-|-- views/                # Route-level screens (Home, Browse, Library, Player, Settings)
-|-- App.tsx               # App shell and routing logic
-|-- index.tsx             # App bootstrap and error boundary
-|-- index.css             # Global styles, custom utilities, theme overrides
-`-- index.html            # Vite entry HTML (fonts, meta tags)
-```
-
-### App State and Data Flow
-
-1. React components call actions from context/Store.tsx.
-1. Store actions delegate to services/subsonicService.ts for network calls.
-1. Responses are cached in IndexedDB (services/db.ts) to reduce network chatter.
-1. Store state updates re-render views and player surfaces.
-
-### Audio Pipeline
-
-1. HTMLAudioElement lives in StoreProvider and is shared app-wide.
-1. Playback rate and pitch are combined into a final playbackRate value.
-1. Web Audio API AnalyserNode is created lazily and drives visualizers.
-1. Media Session API keeps OS-level playback controls and metadata in sync.
-
-### Theme System
-
-- ThemeContext determines light or dark mode based on saved preference.
-- On first launch, the app uses prefers-color-scheme.
-- The html element gets the dark class only in dark mode and a data-theme attribute for future overrides.
-- CSS variables are written to :root for consistent color usage.
-
-### Storage and Caching
-
-- IndexedDB stores settings, cached API responses, and per-server play stats.
-- localStorage stores quick play history lists and the last-seen app version.
-
-## Keyboard Shortcuts
-
-| Action | Default Shortcut |
-| --- | --- |
-| Play/Pause | Space |
-| Previous Track | ArrowLeft |
-| Next Track | ArrowRight |
-| Toggle Repeat | L |
-| Cycle Visualizer | V |
-| Toggle Zen Mode | Z |
-
-Shortcuts are configurable in Settings.
-
-## Available Scripts
-
-| Command | Description |
-| --- | --- |
-| npm run dev | Start the Vite dev server on port 3000 |
-| npm run typecheck | Run the TypeScript compiler without emitting files |
-| npm run build | Build production assets to dist/ |
-| npm run preview | Preview the production build locally |
-
-## Deployment
-
-### Vercel
-
-1. Import the repository into Vercel.
-1. Framework preset: Vite.
-1. Build command: npm run build
-1. Output directory: dist
-1. Deploy. Vercel will serve the static build.
-
-### Static Hosting
-
-You can host the dist/ folder on any static host (Netlify, S3, Cloudflare Pages). Build locally using npm run build and upload dist/.
-
-## Docker Deployment
-
-Nebula Music includes a self-contained Docker deployment bundle in docker/. The image builds the Vite app with Node.js, then serves the static dist/ output with Nginx.
-
-### Docker Compose
-
-From the repository root:
+The included multi-stage image builds Nebula with Node.js 24 LTS and serves the
+static bundle through Nginx.
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
 ```
 
-Open the app:
+Open [http://localhost:8080](http://localhost:8080).
 
-```text
-http://localhost:8080
-```
-
-Stop the app:
+To stop the container:
 
 ```bash
 docker compose -f docker/docker-compose.yml down
 ```
 
-### Docker CLI
-
-Build the image:
+You can also build and run the image directly:
 
 ```bash
 docker build -f docker/Dockerfile -t nebula-music:latest .
-```
-
-Run the container:
-
-```bash
 docker run --rm -p 8080:80 nebula-music:latest
 ```
 
-### Hosting Notes
+See [docker/README.md](./docker/README.md) for additional deployment details.
 
-- Change the Compose port mapping from `8080:80` if another service already uses port 8080.
-- Nebula is served as a static browser app. Subsonic credentials are entered in the UI and stored in the browser.
-- Your Subsonic-compatible server must be reachable from the user's browser. If connection fails, check the server URL, HTTPS, and CORS settings.
+## Configuration and Storage
+
+Nebula is a client-side application. Server details and preferences are entered
+in the UI and stored in the browser.
+
+| Storage | Contents |
+| --- | --- |
+| IndexedDB | Settings, cached API responses, authentication data, and per-server play statistics |
+| `localStorage` | Lightweight play-history snapshots and the last-seen application version |
+
+To reset the application completely, clear the site data for the Nebula origin
+in your browser.
+
+## Keyboard Shortcuts
+
+| Action | Default |
+| --- | --- |
+| Play or pause | `Space` |
+| Previous track | `ArrowLeft` |
+| Next track | `ArrowRight` |
+| Toggle repeat | `L` |
+| Cycle visualizer | `V` |
+| Toggle Zen mode | `Z` |
+
+Shortcuts can be changed in Settings.
+
+## Architecture
+
+```text
+Nebula-Music/
+├── components/          Reusable UI, navigation, radio, and player components
+├── constants/           Equalizer presets and shared constants
+├── context/             Global store and theme state
+├── docker/              Docker, Compose, and Nginx configuration
+├── hooks/               Adaptive color, artist image, and waveform hooks
+├── public/              Static browser assets and audio worklets
+├── services/            Subsonic API, AutoEq, and IndexedDB services
+├── screenshots/         README product screenshots
+├── views/               Home, browse, library, radio, search, and settings views
+├── App.tsx              Application shell and view routing
+├── index.tsx            React bootstrap
+└── index.css            Global styles and theme variables
+```
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    UI["React views and components"] --> Store["Context store"]
+    Store --> API["Subsonic service"]
+    Store --> Audio["HTMLAudioElement and Web Audio API"]
+    API --> Server["Subsonic/OpenSubsonic server"]
+    API <--> Cache["IndexedDB cache"]
+    Audio --> Session["Media Session API"]
+    Audio --> Visualizer["AnalyserNode visualizers"]
+```
+
+The global store coordinates library requests, cached responses, playback
+state, and UI updates. A shared `HTMLAudioElement` handles playback while a
+lazily created Web Audio graph powers analysis, visualizers, pitch processing,
+and equalization.
+
+## Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite development server on port 3000 |
+| `npm run typecheck` | Run TypeScript validation without emitting files |
+| `npm run build` | Create the production bundle |
+| `npm run preview` | Preview the production build locally |
+
+## Deployment
+
+### Vercel
+
+1. Import this repository into Vercel.
+2. Select the **Vite** framework preset.
+3. Use `npm run build` as the build command.
+4. Use `dist` as the output directory.
+
+### Other Static Hosts
+
+Build the project with `npm run build`, then deploy the generated `dist/`
+directory to Netlify, Cloudflare Pages, Amazon S3, or another static host.
+
+Because Nebula connects directly from the browser, the deployed origin must be
+permitted by the music server's CORS policy.
 
 ## Troubleshooting
 
-### Cannot connect to server
+<details>
+<summary><strong>Nebula cannot connect to my server</strong></summary>
 
-- Ensure your server URL is correct and includes https:// when available.
-- Confirm your Subsonic server is reachable from the browser.
-- Check for CORS restrictions on the server.
+- Verify that the URL includes `https://` or `http://`.
+- Confirm the server is reachable from the same browser and network.
+- Check the server's CORS configuration.
+- Avoid mixed content: an HTTPS deployment cannot call an HTTP music server.
+- Confirm the selected password or API-key authentication mode is supported by
+  the server.
 
-### Audio plays but cannot seek
+</details>
 
-- Some formats require transcoding. SubsonicService forces transcoding for problematic formats like ALAC and M4A.
-- If you self-host, confirm your server supports streaming with proper Content-Length headers.
+<details>
+<summary><strong>Audio plays but seeking does not work</strong></summary>
 
-### Theme does not persist
+- Confirm the server supports byte-range requests and returns appropriate
+  `Content-Length` and `Accept-Ranges` headers.
+- Enable server-side transcoding for formats the browser cannot seek reliably.
 
-- Ensure localStorage and IndexedDB are not blocked by the browser.
-- Clear site data if you recently switched between demo and live credentials.
+</details>
+
+<details>
+<summary><strong>Settings or themes do not persist</strong></summary>
+
+- Ensure the browser is not blocking IndexedDB or local storage.
+- Clear the site's stored data after changing between demo and live-server
+  credentials.
+
+</details>
+
+## Changelog
+
+### v2.1.3 — June 20, 2026
+
+- Updated all npm dependencies, including React 19, Vite 8, Tailwind CSS 4,
+  TypeScript 6, Motion 12, and Lucide React 1.
+- Added OpenSubsonic extension discovery and API-key authentication.
+- Added structured lyrics v2 and ID3-first album/starred endpoints with legacy
+  fallbacks.
+- Added Subsonic protocol fallback negotiation from API 1.16.1 through 1.14.0.
+- Centralized Subsonic response and error handling.
+- Updated Docker builds to Node.js 24 LTS and Nginx 1.30.
+- Added refreshed product screenshots and updated project documentation.
+
+### v2.1.2 — May 10, 2026
+
+- Added AutoEq headphone calibration.
+- Added production Docker and Nginx deployment files.
+- Improved long-session Subsonic playback recovery.
+- Refined visualizer controls and Settings layout.
+
+See the [commit history](https://github.com/lilremark/Nebula-Music/commits/main/)
+for the complete development history.
+
+## Contributing
+
+Issues and pull requests are welcome. For substantial changes, open an issue
+first so the proposed behavior can be discussed.
+
+1. Fork the repository.
+2. Create a branch: `git checkout -b feature/my-change`.
+3. Install dependencies: `npm install`.
+4. Verify changes with `npm run typecheck` and `npm run build`.
+5. Commit and open a pull request.
 
 ## License
 
-MIT
+Distributed under the [MIT License](./LICENSE.txt).
