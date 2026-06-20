@@ -13,7 +13,7 @@ export const CHANGELOG = [
       'Added OpenSubsonic extension discovery and API-key authentication.',
       'Added structured lyrics v2 and ID3-first album and starred endpoints with legacy fallbacks.',
       'Added Subsonic protocol fallback negotiation from API 1.16.1 through 1.14.0.',
-      'Updated Docker builds to Node.js 24 LTS and Nginx 1.30.'
+      'Hardened Docker deployment with Node.js 24 LTS, unprivileged Nginx 1.30, a read-only runtime, dropped capabilities, and health checks.'
     ]
   },
   {

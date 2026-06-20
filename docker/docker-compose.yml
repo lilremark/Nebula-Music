@@ -3,8 +3,22 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: nebula-music:latest
-    container_name: nebula-music
+      args:
+        APP_VERSION: ${NEBULA_VERSION:-2.1.3}
+    image: nebula-music:${NEBULA_VERSION:-2.1.3}
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "${NEBULA_PORT:-8080}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3

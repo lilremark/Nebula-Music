@@ -15,7 +15,7 @@
   [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](./docker/README.md)
   [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](./LICENSE.txt)
 
-  [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Architecture](#architecture)
+  [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
 </div>
 
 ---
@@ -130,7 +130,9 @@ The production bundle is written to `dist/`.
 ## Docker
 
 The included multi-stage image builds Nebula with Node.js 24 LTS and serves the
-static bundle through Nginx.
+static bundle through an unprivileged NGINX 1.30.3 container. The Compose setup
+uses a read-only filesystem, drops Linux capabilities, and includes a health
+check.
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
@@ -148,7 +150,7 @@ You can also build and run the image directly:
 
 ```bash
 docker build -f docker/Dockerfile -t nebula-music:latest .
-docker run --rm -p 8080:80 nebula-music:latest
+docker run --rm -p 8080:8080 nebula-music:latest
 ```
 
 See [docker/README.md](./docker/README.md) for additional deployment details.
@@ -284,7 +286,8 @@ permitted by the music server's CORS policy.
   fallbacks.
 - Added Subsonic protocol fallback negotiation from API 1.16.1 through 1.14.0.
 - Centralized Subsonic response and error handling.
-- Updated Docker builds to Node.js 24 LTS and Nginx 1.30.
+- Updated Docker builds to Node.js 24 LTS and unprivileged NGINX 1.30, with a
+  read-only runtime, dropped capabilities, and container health checks.
 - Added refreshed product screenshots and updated project documentation.
 
 ### v2.1.2 — May 10, 2026
@@ -299,14 +302,11 @@ for the complete development history.
 
 ## Contributing
 
-Issues and pull requests are welcome. For substantial changes, open an issue
-first so the proposed behavior can be discussed.
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](./CONTRIBUTING.md)
+for development requirements, validation commands, and pull-request guidance.
 
-1. Fork the repository.
-2. Create a branch: `git checkout -b feature/my-change`.
-3. Install dependencies: `npm install`.
-4. Verify changes with `npm run typecheck` and `npm run build`.
-5. Commit and open a pull request.
+Security vulnerabilities must not be reported publicly. Email
+**remark@remark.rip** and follow [SECURITY.md](./SECURITY.md).
 
 ## License
 
