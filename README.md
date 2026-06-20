@@ -129,13 +129,25 @@ The production bundle is written to `dist/`.
 
 ## Docker
 
-The included multi-stage image builds Nebula with Node.js 24 LTS and serves the
-static bundle through an unprivileged NGINX 1.30.3 container. The Compose setup
-uses a read-only filesystem, drops Linux capabilities, and includes a health
-check.
+The published image is available from Docker Hub as
+[`lilremark/nebula-music`](https://hub.docker.com/r/lilremark/nebula-music).
+It serves Nebula through an unprivileged NGINX 1.30.3 container. The Compose
+setup uses a read-only filesystem, drops Linux capabilities, and includes a
+health check.
+
+Pull and run the latest release:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+docker pull lilremark/nebula-music:latest
+docker run -d \
+  --name nebula-music \
+  --restart unless-stopped \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --security-opt no-new-privileges \
+  --cap-drop ALL \
+  -p 8080:8080 \
+  lilremark/nebula-music:latest
 ```
 
 Open [http://localhost:8080](http://localhost:8080).
@@ -143,17 +155,20 @@ Open [http://localhost:8080](http://localhost:8080).
 To stop the container:
 
 ```bash
+docker stop nebula-music
+docker rm nebula-music
+```
+
+Using the included Compose configuration:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml down
 ```
 
-You can also build and run the image directly:
-
-```bash
-docker build -f docker/Dockerfile -t nebula-music:latest .
-docker run --rm -p 8080:8080 nebula-music:latest
-```
-
-See [docker/README.md](./docker/README.md) for additional deployment details.
+Compose uses `latest` by default. Set `NEBULA_VERSION=2.1.3` to pin the current
+release. See [docker/README.md](./docker/README.md) for local-build commands and
+additional deployment details.
 
 ## Configuration and Storage
 
@@ -288,6 +303,8 @@ permitted by the music server's CORS policy.
 - Centralized Subsonic response and error handling.
 - Updated Docker builds to Node.js 24 LTS and unprivileged NGINX 1.30, with a
   read-only runtime, dropped capabilities, and container health checks.
+- Published multi-platform `2.1.3` and `latest` images to Docker Hub at
+  `lilremark/nebula-music`.
 - Added refreshed product screenshots and updated project documentation.
 
 ### v2.1.2 — May 10, 2026

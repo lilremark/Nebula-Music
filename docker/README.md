@@ -11,10 +11,19 @@ The image uses:
 
 ## Quick Start
 
-From the repository root:
+Pull and run the published Docker Hub image:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+docker pull lilremark/nebula-music:latest
+docker run -d \
+  --name nebula-music \
+  --restart unless-stopped \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --security-opt no-new-privileges \
+  --cap-drop ALL \
+  -p 8080:8080 \
+  lilremark/nebula-music:latest
 ```
 
 Open:
@@ -23,9 +32,31 @@ Open:
 http://localhost:8080
 ```
 
-The first build runs both the TypeScript check and production Vite build.
+The published image supports `linux/amd64` and `linux/arm64`.
 
-## Commands
+## Docker Compose
+
+From the repository root:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d
+```
+
+Compose pulls `lilremark/nebula-music:latest` by default. To pin the 2.1.3
+release:
+
+```powershell
+$env:NEBULA_VERSION = "2.1.3"
+docker compose -f docker/docker-compose.yml up -d
+```
+
+Stop the Compose service:
+
+```bash
+docker compose -f docker/docker-compose.yml down
+```
+
+## Build Locally
 
 Build the image:
 
@@ -48,26 +79,20 @@ docker run --rm \
   nebula-music:2.1.3
 ```
 
-Stop the Compose service:
-
-```bash
-docker compose -f docker/docker-compose.yml down
-```
-
 ## Configuration
 
 Compose supports two optional environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `NEBULA_VERSION` | `2.1.3` | Build label and local image tag |
+| `NEBULA_VERSION` | `latest` | Docker Hub image tag used by Compose |
 | `NEBULA_PORT` | `8080` | Host port mapped to container port 8080 |
 
 PowerShell example:
 
 ```powershell
 $env:NEBULA_PORT = "9090"
-docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 The app is then available at `http://localhost:9090`.
