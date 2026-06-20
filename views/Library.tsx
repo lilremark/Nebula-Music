@@ -62,7 +62,7 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
                 onChange={(e) => onChange(e.target.value)}
                 onFocus={() => setIsOpen(true)}
                 placeholder="Year"
-                className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 pl-10 pr-8 text-sm focus:border-primary/60 focus:bg-white focus:outline-none text-neutral-900 transition-all placeholder-neutral-500 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white"
+                className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 pl-10 pr-8 text-sm focus:border-primary/60 focus:bg-white focus:outline-hidden text-neutral-900 transition-all placeholder-neutral-500 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white"
             />
             <button
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-500 hover:text-neutral-900 z-10 dark:hover:text-white"
@@ -138,7 +138,7 @@ const MobileLibraryTabs = () => {
                     <button
                         key={tab.id}
                         onClick={() => setView(tab.id as any)}
-                        className={`flex items-center px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border transition-all shadow-sm ${currentView === tab.id
+                        className={`flex items-center px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap border transition-all shadow-xs ${currentView === tab.id
                             ? 'bg-white text-black border-white shadow-glow-sm'
                             : 'bg-neutral-800/80 text-neutral-400 border-white/5 backdrop-blur-md'
                             }`}
@@ -175,7 +175,7 @@ const FilterBar: React.FC<{
                 value={filter}
                 onChange={(e) => { setFilter(e.target.value); setPage(0); }}
                 placeholder="Search collection..."
-                className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 pl-10 pr-8 text-sm focus:border-primary/60 focus:bg-white focus:outline-none text-neutral-900 transition-all placeholder-neutral-500 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white"
+                className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 pl-10 pr-8 text-sm focus:border-primary/60 focus:bg-white focus:outline-hidden text-neutral-900 transition-all placeholder-neutral-500 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white"
             />
             {filter && (
                 <button onClick={() => setFilter('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900 p-1 rounded-full hover:bg-neutral-200 transition dark:hover:text-white dark:hover:bg-white/10" aria-label="Clear search">
@@ -222,7 +222,7 @@ const FilterBar: React.FC<{
                 {(selectedGenre || selectedYear) && (
                     <button
                         onClick={resetFilters}
-                        className="p-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 transition shadow-sm border border-neutral-200 dark:bg-white/5 dark:hover:bg-white/20 dark:text-neutral-300 dark:hover:text-white dark:border-white/5"
+                        className="p-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 transition shadow-xs border border-neutral-200 dark:bg-white/5 dark:hover:bg-white/20 dark:text-neutral-300 dark:hover:text-white dark:border-white/5"
                         title="Clear Filters"
                         aria-label="Clear filters"
                     >
@@ -361,7 +361,7 @@ export const LibraryView: React.FC = () => {
                     <div className="flex items-center ml-auto lg:ml-0 pl-2">
                         {isCreating ? (
                             <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-200 dark:border-white/10 animate-fade-in shadow-lg">
-                                <input autoFocus className="bg-transparent px-4 py-2.5 text-sm focus:outline-none text-neutral-900 dark:text-white w-40" placeholder="Playlist Name" value={newPlName} onChange={(e) => setNewPlName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newPlName.trim()) { createPlaylist(newPlName); setNewPlName(''); setIsCreating(false); } else if (e.key === 'Escape') setIsCreating(false); }} />
+                                <input autoFocus className="bg-transparent px-4 py-2.5 text-sm focus:outline-hidden text-neutral-900 dark:text-white w-40" placeholder="Playlist Name" value={newPlName} onChange={(e) => setNewPlName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newPlName.trim()) { createPlaylist(newPlName); setNewPlName(''); setIsCreating(false); } else if (e.key === 'Escape') setIsCreating(false); }} />
                                 <button onClick={() => setIsCreating(false)} className="px-3 text-neutral-500 hover:text-neutral-900 border-l border-neutral-200 dark:border-white/10 h-full transition-colors dark:text-neutral-400 dark:hover:text-white" aria-label="Cancel create playlist"><X className="w-4 h-4" /></button>
                             </div>
                         ) : (

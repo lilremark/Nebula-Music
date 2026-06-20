@@ -245,12 +245,12 @@ const parseFilterGains = (text: string) => {
 
 const nearestGainForBand = (values: Map<number, number>, targetFrequency: number) => {
   let best: { frequency: number; gain: number; distance: number } | null = null;
-  values.forEach((gain, frequency) => {
+  for (const [frequency, gain] of values) {
     const distance = Math.abs(Math.log2(frequency / targetFrequency));
     if (!best || distance < best.distance) {
       best = { frequency, gain, distance };
     }
-  });
+  }
 
   return best && best.distance <= 0.2 ? best.gain : 0;
 };

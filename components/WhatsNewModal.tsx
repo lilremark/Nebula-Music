@@ -25,7 +25,7 @@ export const WhatsNewModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-fade-in">
       <div
-        className="absolute inset-0 bg-neutral-900/40 dark:bg-neutral-950/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-neutral-900/40 dark:bg-neutral-950/80 backdrop-blur-xs"
         onClick={handleClose}
       />
 

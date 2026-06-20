@@ -94,7 +94,7 @@ export const SearchModal: React.FC = () => {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search artists, albums, songs..."
-                        className="flex-1 bg-transparent border-none outline-none text-xl font-medium text-neutral-900 dark:text-white px-4 py-2 placeholder-neutral-500 dark:placeholder-neutral-600"
+                        className="flex-1 bg-transparent border-none outline-hidden text-xl font-medium text-neutral-900 dark:text-white px-4 py-2 placeholder-neutral-500 dark:placeholder-neutral-600"
                     />
 
                     {loading && (
@@ -203,7 +203,7 @@ export const SearchModal: React.FC = () => {
                                           border border-transparent hover:border-primary/30 transition-all duration-300 
                                           cursor-pointer group interactive-lift animate-slide-up stagger-${Math.min(index + 1, 8)}`}
                                     >
-                                        <div className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-neutral-800 overflow-hidden mr-4 relative ring-2 ring-transparent group-hover:ring-primary/30 transition-all shadow-sm">
+                                        <div className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-neutral-800 overflow-hidden mr-4 relative ring-2 ring-transparent group-hover:ring-primary/30 transition-all shadow-xs">
                                             <img src={service.getCoverArtUrl(song.id, 100)} className="w-full h-full object-cover" alt="" />
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Play className="w-4 h-4 text-white fill-current" />

@@ -65,7 +65,7 @@ const SongCard: React.FC<{ song: ISong; songs: ISong[]; index: number }> = ({ so
             {/* Add to playlist */}
             <button
                 onClick={(e) => { e.stopPropagation(); openPlaylistModal(song); }}
-                className="absolute top-3 right-3 p-2 rounded bg-black/50 text-white opacity-0 group-hover:opacity-100 transition hover:bg-white/20 backdrop-blur-sm"
+                className="absolute top-3 right-3 p-2 rounded bg-black/50 text-white opacity-0 group-hover:opacity-100 transition hover:bg-white/20 backdrop-blur-xs"
                 aria-label="Add to playlist"
             >
                 <ListPlus className="w-4 h-4" />

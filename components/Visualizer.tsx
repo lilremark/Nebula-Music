@@ -92,7 +92,7 @@ const fillRoundedRect = (
   const safeHeight = Math.max(1, height);
   const safeRadius = Math.max(0, Math.min(radius, safeWidth / 2, safeHeight / 2));
 
-  if ('roundRect' in ctx) {
+  if (typeof ctx.roundRect === 'function') {
     ctx.beginPath();
     ctx.roundRect(x, y, safeWidth, safeHeight, safeRadius);
     ctx.fill();

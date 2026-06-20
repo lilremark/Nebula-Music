@@ -180,7 +180,7 @@ export const InternetRadioView: React.FC = () => {
 
             {isStationModalOpen && (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm dark:bg-neutral-950/80" onClick={resetForm} />
+                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-xs dark:bg-neutral-950/80" onClick={resetForm} />
                     <form
                         onSubmit={submitStation}
                         className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-950"
@@ -207,7 +207,7 @@ export const InternetRadioView: React.FC = () => {
                                     value={form.name}
                                     onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
                                     placeholder="Station name"
-                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-hidden focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
                                 />
                             </label>
                             <label className="block">
@@ -216,7 +216,7 @@ export const InternetRadioView: React.FC = () => {
                                     value={form.genre}
                                     onChange={(e) => setForm(prev => ({ ...prev, genre: e.target.value }))}
                                     placeholder="Genre"
-                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-hidden focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
                                 />
                             </label>
                             <label className="block md:col-span-2">
@@ -225,7 +225,7 @@ export const InternetRadioView: React.FC = () => {
                                     value={form.streamUrl}
                                     onChange={(e) => setForm(prev => ({ ...prev, streamUrl: e.target.value }))}
                                     placeholder="https://example.com/stream.mp3"
-                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-hidden focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
                                 />
                             </label>
                             <label className="block">
@@ -234,7 +234,7 @@ export const InternetRadioView: React.FC = () => {
                                     value={form.imageUrl}
                                     onChange={(e) => setForm(prev => ({ ...prev, imageUrl: e.target.value }))}
                                     placeholder="https://example.com/logo.jpg"
-                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-hidden focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
                                 />
                             </label>
                             <label className="block">
@@ -243,7 +243,7 @@ export const InternetRadioView: React.FC = () => {
                                     value={form.homepageUrl}
                                     onChange={(e) => setForm(prev => ({ ...prev, homepageUrl: e.target.value }))}
                                     placeholder="https://example.com"
-                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-none focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
+                                    className="w-full rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm text-neutral-900 outline-hidden focus:ring-2 focus:ring-primary/50 dark:border-white/10 dark:bg-neutral-900 dark:text-white"
                                 />
                             </label>
                         </div>

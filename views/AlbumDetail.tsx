@@ -20,6 +20,7 @@ export const AlbumDetailView: React.FC = () => {
             if (viewData) {
                 const data = await service.getAlbum(viewData);
                 setAlbum(data);
+                if (!data) return;
 
                 if (data.artistId) {
                     try {

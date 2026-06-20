@@ -4,11 +4,51 @@ import { MOCK_ALBUMS, MOCK_ARTISTS, MOCK_SONGS, MOCK_PLAYLISTS } from '../consta
 import { db } from './db';
 import md5 from 'blueimp-md5';
 
+const SUBSONIC_API_VERSION = '1.16.1';
+const SUBSONIC_PROTOCOL_FALLBACKS = [SUBSONIC_API_VERSION, '1.15.0', '1.14.0'] as const;
+const SUBSONIC_CLIENT_NAME = 'NebulaMusic';
+
+interface OpenSubsonicExtension {
+  name: string;
+  versions?: number[];
+}
+
+interface SubsonicResponse {
+  status: 'ok' | 'failed';
+  version?: string;
+  type?: string;
+  serverVersion?: string;
+  openSubsonic?: boolean;
+  error?: {
+    code?: number;
+    message?: string;
+    helpUrl?: string;
+  };
+  openSubsonicExtensions?: OpenSubsonicExtension[] | {
+    openSubsonicExtension?: OpenSubsonicExtension[];
+  };
+  [key: string]: any;
+}
+
+class SubsonicApiError extends Error {
+  constructor(
+    message: string,
+    public readonly code?: number,
+    public readonly helpUrl?: string,
+  ) {
+    super(message);
+    this.name = 'SubsonicApiError';
+  }
+}
+
 export class SubsonicService {
   private creds: SubsonicCredentials | null = null;
   private isDemo: boolean = true;
   private streamUrlCache = new Map<string, string>();
   private coverArtUrlCache = new Map<string, string>();
+  private openSubsonicExtensions = new Map<string, number[]>();
+  private serverInfo: Pick<SubsonicResponse, 'version' | 'type' | 'serverVersion' | 'openSubsonic'> = {};
+  private protocolVersion = SUBSONIC_API_VERSION;
   private readonly maxUrlCacheEntries = 500;
 
   constructor(creds: SubsonicCredentials | null) {
@@ -21,6 +61,9 @@ export class SubsonicService {
     this.isDemo = !creds;
     this.streamUrlCache.clear();
     this.coverArtUrlCache.clear();
+    this.openSubsonicExtensions.clear();
+    this.serverInfo = {};
+    this.protocolVersion = SUBSONIC_API_VERSION;
   }
 
   public getCredentials(): SubsonicCredentials | null {
@@ -37,18 +80,22 @@ export class SubsonicService {
 
   private buildUrl(method: string, params: Record<string, string> = {}): string {
     if (!this.creds) return '';
-    const { serverUrl, username, token, salt } = this.creds;
+    const { serverUrl } = this.creds;
 
     try {
       const url = new URL(serverUrl);
       const basePath = url.pathname.replace(/\/$/, '');
       url.pathname = `${basePath}/rest/${method}`;
 
-      url.searchParams.set('u', username);
-      url.searchParams.set('t', token);
-      url.searchParams.set('s', salt);
-      url.searchParams.set('v', '1.16.1');
-      url.searchParams.set('c', 'NebulaMusic');
+      if (this.creds.authType === 'apiKey') {
+        url.searchParams.set('apiKey', this.creds.apiKey);
+      } else {
+        url.searchParams.set('u', this.creds.username);
+        url.searchParams.set('t', this.creds.token);
+        url.searchParams.set('s', this.creds.salt);
+      }
+      url.searchParams.set('v', this.protocolVersion);
+      url.searchParams.set('c', SUBSONIC_CLIENT_NAME);
       url.searchParams.set('f', 'json');
 
       Object.entries(params).forEach(([k, v]) => {
@@ -62,6 +109,61 @@ export class SubsonicService {
       console.error("Failed to build URL:", e);
       return '';
     }
+  }
+
+  private async request(method: string, params: Record<string, string> = {}): Promise<SubsonicResponse> {
+    const url = this.buildUrl(method, params);
+    if (!url) throw new Error('Subsonic credentials are not configured.');
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Subsonic request failed (${res.status} ${res.statusText}).`);
+    }
+
+    const data = await res.json();
+    const response = data?.['subsonic-response'] as SubsonicResponse | undefined;
+    if (!response) throw new Error('Subsonic server returned an invalid response.');
+
+    if (response.status !== 'ok') {
+      const code = response.error?.code;
+      const message = response.error?.message || 'Unknown Subsonic API error.';
+      throw new SubsonicApiError(
+        `Subsonic error${code !== undefined ? ` ${code}` : ''}: ${message}`,
+        code,
+        response.error?.helpUrl,
+      );
+    }
+
+    return response;
+  }
+
+  private async discoverOpenSubsonicExtensions(): Promise<void> {
+    this.openSubsonicExtensions.clear();
+    try {
+      const response = await this.request('getOpenSubsonicExtensions.view');
+      const raw = response.openSubsonicExtensions;
+      const extensions = Array.isArray(raw) ? raw : raw?.openSubsonicExtension || [];
+      extensions.forEach(extension => {
+        if (extension?.name) {
+          this.openSubsonicExtensions.set(extension.name, extension.versions || []);
+        }
+      });
+    } catch {
+      // Legacy Subsonic servers do not expose extension discovery.
+    }
+  }
+
+  private supportsExtension(name: string, minimumVersion = 1): boolean {
+    const versions = this.openSubsonicExtensions.get(name) || [];
+    return versions.some(version => version >= minimumVersion);
+  }
+
+  public getServerInfo() {
+    return {
+      ...this.serverInfo,
+      clientProtocolVersion: this.protocolVersion,
+      extensions: Array.from(this.openSubsonicExtensions, ([name, versions]) => ({ name, versions })),
+    };
   }
 
   private stripHtml(html: string): string {
@@ -85,8 +187,7 @@ export class SubsonicService {
   async scrobble(id: string, submission: boolean = true): Promise<void> {
     if (this.isDemo || !this.creds) return;
     try {
-      const url = this.buildUrl('scrobble.view', { id, submission: submission ? 'true' : 'false' });
-      await fetch(url);
+      await this.request('scrobble.view', { id, submission: submission ? 'true' : 'false' });
     } catch (e) {
       console.error("Scrobble failed", e);
     }
@@ -95,8 +196,7 @@ export class SubsonicService {
   async reportNowPlaying(id: string): Promise<void> {
     if (this.isDemo || !this.creds) return;
     try {
-      const url = this.buildUrl('scrobble.view', { id, submission: 'false', time: '0' }); // time=0 indicates now playing
-      await fetch(url);
+      await this.request('scrobble.view', { id, submission: 'false' });
     } catch (e) {
       console.error("Report Now Playing failed", e);
     }
@@ -104,14 +204,27 @@ export class SubsonicService {
 
   async getPing(): Promise<boolean> {
     if (this.isDemo) return true;
-    try {
-      const res = await fetch(this.buildUrl('ping.view'));
-      const data = await res.json();
-      return data['subsonic-response'].status === 'ok';
-    } catch (e) {
-      console.error("Ping failed", e);
-      return false;
+    for (const version of SUBSONIC_PROTOCOL_FALLBACKS) {
+      this.protocolVersion = version;
+      try {
+        const response = await this.request('ping.view');
+        this.serverInfo = {
+          version: response.version,
+          type: response.type,
+          serverVersion: response.serverVersion,
+          openSubsonic: response.openSubsonic,
+        };
+        await this.discoverOpenSubsonicExtensions();
+        return true;
+      } catch (error) {
+        if (error instanceof SubsonicApiError && error.code === 30 && version !== SUBSONIC_PROTOCOL_FALLBACKS.at(-1)) {
+          continue;
+        }
+        console.error("Ping failed", error);
+        return false;
+      }
     }
+    return false;
   }
 
   private mapSong(s: any): ISong {
@@ -141,6 +254,18 @@ export class SubsonicService {
     };
   }
 
+  private mapAlbum(album: any): IAlbum {
+    return {
+      ...album,
+      name: album.name || album.album || album.title || 'Unknown Album',
+      artist: album.artist || 'Unknown Artist',
+      songCount: album.songCount || 0,
+      duration: album.duration || 0,
+      created: album.created || '',
+      starred: album.starred !== undefined,
+    };
+  }
+
   async toggleStar(id: string, star: boolean, type: 'song' | 'album' | 'artist' = 'song'): Promise<boolean> {
     if (this.isDemo) return true;
     try {
@@ -149,9 +274,8 @@ export class SubsonicService {
       if (type === 'album') params.albumId = id;
       else if (type === 'artist') params.artistId = id;
       else params.id = id;
-      const res = await fetch(this.buildUrl(method, params));
-      const data = await res.json();
-      return data['subsonic-response'].status === 'ok';
+      await this.request(method, params);
+      return true;
     } catch (e) { return false; }
   }
 
@@ -161,17 +285,21 @@ export class SubsonicService {
       const albums = MOCK_ALBUMS.map(a => ({ ...a, starred: true })).slice(0, 3);
       return { songs, albums, artists: [] };
     }
-    try {
-      const res = await fetch(this.buildUrl('getStarred.view'));
-      const data = await res.json();
-      const starred = data['subsonic-response'].starred;
-      if (!starred) return { songs: [], albums: [], artists: [] };
-      return {
-        songs: (starred.song || []).map((s: any) => this.mapSong(s)),
-        albums: starred.album || [],
-        artists: starred.artist || []
-      };
-    } catch (e) { return { songs: [], albums: [], artists: [] }; }
+    for (const [method, responseKey] of [['getStarred2.view', 'starred2'], ['getStarred.view', 'starred']] as const) {
+      try {
+        const response = await this.request(method);
+        const starred = response[responseKey];
+        if (!starred) continue;
+        return {
+          songs: (starred.song || []).map((s: any) => this.mapSong(s)),
+          albums: (starred.album || []).map((album: any) => this.mapAlbum(album)),
+          artists: starred.artist || []
+        };
+      } catch {
+        // Fall back to the legacy file-structure endpoint.
+      }
+    }
+    return { songs: [], albums: [], artists: [] };
   }
 
 
@@ -182,9 +310,8 @@ export class SubsonicService {
     const cached = await db.getCachedResponse(cacheKey, 1440);
     if (cached) return cached;
     try {
-      const res = await fetch(this.buildUrl('getGenres.view'));
-      const data = await res.json();
-      const genres = data['subsonic-response'].genres?.genre || [];
+      const response = await this.request('getGenres.view');
+      const genres = response.genres?.genre || [];
       const genreNames = genres.map((g: any) => g.value || g.name).sort();
       await db.cacheResponse(cacheKey, genreNames);
       return genreNames;
@@ -203,9 +330,8 @@ export class SubsonicService {
       if (params.fromYear) queryParams.fromYear = params.fromYear.toString();
       if (params.toYear) queryParams.toYear = params.toYear.toString();
       if (params.genre) queryParams.genre = params.genre;
-      const res = await fetch(this.buildUrl('getRandomSongs.view', queryParams));
-      const data = await res.json();
-      const songs = data['subsonic-response'].randomSongs?.song || [];
+      const response = await this.request('getRandomSongs.view', queryParams);
+      const songs = response.randomSongs?.song || [];
       return songs.map((s: any) => this.mapSong(s));
     } catch (e) { return []; }
   }
@@ -223,9 +349,7 @@ export class SubsonicService {
 
     for (const method of methods) {
       try {
-        const res = await fetch(this.buildUrl(method, { id, count: count.toString() }));
-        const data = await res.json();
-        const response = data['subsonic-response'];
+        const response = await this.request(method, { id, count: count.toString() });
         const songs = response?.similarSongs2?.song || response?.similarSongs?.song || [];
         if (songs.length > 0) return songs.map((s: any) => this.mapSong(s));
       } catch (e) { }
@@ -256,13 +380,17 @@ export class SubsonicService {
       const cached = await db.getCachedResponse(cacheKey, 30);
       if (cached) return cached;
     }
-    try {
-      const res = await fetch(this.buildUrl('getAlbumList.view', { type, size: size.toString(), offset: offset.toString(), ...params }));
-      const data = await res.json();
-      const result = data['subsonic-response'].albumList?.album || [];
-      if (type !== 'random' && result.length > 0) { await db.cacheResponse(cacheKey, result); }
-      return result;
-    } catch (e) { return []; }
+    for (const [method, responseKey] of [['getAlbumList2.view', 'albumList2'], ['getAlbumList.view', 'albumList']] as const) {
+      try {
+        const response = await this.request(method, { type, size: size.toString(), offset: offset.toString(), ...params });
+        const result = (response[responseKey]?.album || []).map((album: any) => this.mapAlbum(album));
+        if (type !== 'random' && result.length > 0) { await db.cacheResponse(cacheKey, result); }
+        return result;
+      } catch {
+        // Fall back for older servers without the ID3 endpoint.
+      }
+    }
+    return [];
   }
 
   async getAlbum(id: string): Promise<IAlbum | null> {
@@ -277,16 +405,14 @@ export class SubsonicService {
     if (cached) return cached;
 
     try {
-      const res = await fetch(this.buildUrl('getAlbum.view', { id }));
-      const data = await res.json();
-      const albumData = data['subsonic-response'].album;
+      const response = await this.request('getAlbum.view', { id });
+      const albumData = response.album;
       if (!albumData) return null;
       const songs = (albumData.song || []).map((s: any) => this.mapSong(s));
       let info = {};
       try {
-        const infoRes = await fetch(this.buildUrl('getAlbumInfo2.view', { id }));
-        const infoData = await infoRes.json();
-        const ai = infoData['subsonic-response'].albumInfo;
+        const infoResponse = await this.request('getAlbumInfo2.view', { id });
+        const ai = infoResponse.albumInfo;
         if (ai) {
           info = {
             notes: this.stripHtml(ai.notes),
@@ -296,7 +422,7 @@ export class SubsonicService {
         }
       } catch (e) { }
 
-      const result = { ...albumData, songs, info, starred: albumData.starred !== undefined };
+      const result = { ...this.mapAlbum(albumData), songs, info };
       await db.cacheResponse(cacheKey, result);
       return result;
     } catch (e) { return null; }
@@ -308,9 +434,8 @@ export class SubsonicService {
     const cached = await db.getCachedResponse(cacheKey, 1440);
     if (cached) return cached;
     try {
-      const res = await fetch(this.buildUrl('getArtists.view'));
-      const data = await res.json();
-      const index = data['subsonic-response'].artists?.index || [];
+      const response = await this.request('getArtists.view');
+      const index = response.artists?.index || [];
       let allArtists: IArtist[] = [];
       index.forEach((idx: any) => {
         if (idx.artist) allArtists = [...allArtists, ...idx.artist];
@@ -332,12 +457,13 @@ export class SubsonicService {
     if (cached) return cached;
 
     try {
-      const res = await fetch(this.buildUrl('getArtist.view', { id }));
-      const data = await res.json();
-      const artistData = data['subsonic-response'].artist;
+      const response = await this.request('getArtist.view', { id });
+      const artistData = response.artist;
+      if (!artistData) return { artist: { id, name: 'Unknown' }, albums: [] };
       let albums: IAlbum[] = [];
       if (artistData.album) {
-        albums = Array.isArray(artistData.album) ? artistData.album : [artistData.album];
+        const rawAlbums = Array.isArray(artistData.album) ? artistData.album : [artistData.album];
+        albums = rawAlbums.map((album: any) => this.mapAlbum(album));
       }
 
       const result = {
@@ -358,9 +484,8 @@ export class SubsonicService {
 
     let bio, image;
     try {
-      const res = await fetch(this.buildUrl('getArtistInfo2.view', { id }));
-      const data = await res.json();
-      const info = data['subsonic-response'].artistInfo2;
+      const response = await this.request('getArtistInfo2.view', { id });
+      const info = response.artistInfo2;
       if (info) {
         bio = this.stripHtml(info.biography);
         image = info.largeImageUrl || info.mediumImageUrl || info.smallImageUrl;
@@ -368,9 +493,8 @@ export class SubsonicService {
     } catch (e) { }
     if ((!bio || !image) && name) {
       try {
-        const res = await fetch(this.buildUrl('getArtistInfo.view', { artist: name }));
-        const data = await res.json();
-        const info = data['subsonic-response'].artistInfo;
+        const response = await this.request('getArtistInfo.view', { artist: name });
+        const info = response.artistInfo;
         if (info) {
           if (!bio) bio = this.stripHtml(info.biography);
           if (!image) image = info.largeImageUrl || info.mediumImageUrl || info.smallImageUrl;
@@ -391,9 +515,8 @@ export class SubsonicService {
     if (cached) return cached;
 
     try {
-      const res = await fetch(this.buildUrl('getTopSongs.view', { artist: artistName, count: count.toString() }));
-      const data = await res.json();
-      const songs = data['subsonic-response'].topSongs?.song || [];
+      const response = await this.request('getTopSongs.view', { artist: artistName, count: count.toString() });
+      const songs = response.topSongs?.song || [];
       const result = songs.map((s: any) => this.mapSong(s));
       if (result.length > 0) await db.cacheResponse(cacheKey, result);
       return result;
@@ -420,9 +543,8 @@ export class SubsonicService {
     const cached = await db.getCachedResponse(cacheKey, 60);
     if (cached) return cached;
     try {
-      const res = await fetch(this.buildUrl('search3.view', { query, songCount: size.toString(), songOffset: offset.toString() }));
-      const data = await res.json();
-      const songs = data['subsonic-response'].searchResult3?.song || [];
+      const response = await this.request('search3.view', { query, songCount: size.toString(), songOffset: offset.toString() });
+      const songs = response.searchResult3?.song || [];
       const mapped = songs.map((s: any) => this.mapSong(s));
       await db.cacheResponse(cacheKey, mapped);
       return mapped;
@@ -436,9 +558,8 @@ export class SubsonicService {
       return filtered.slice(offset, offset + size);
     }
     try {
-      const res = await fetch(this.buildUrl('search3.view', { query, albumCount: size.toString(), albumOffset: offset.toString() }));
-      const data = await res.json();
-      return data['subsonic-response'].searchResult3?.album || [];
+      const response = await this.request('search3.view', { query, albumCount: size.toString(), albumOffset: offset.toString() });
+      return (response.searchResult3?.album || []).map((album: any) => this.mapAlbum(album));
     } catch (e) { return []; }
   }
 
@@ -453,13 +574,12 @@ export class SubsonicService {
       };
     }
     try {
-      const res = await fetch(this.buildUrl('search3.view', { query, artistCount: '20', albumCount: '20', songCount: '40' }));
-      const data = await res.json();
-      const r = data['subsonic-response'].searchResult3;
+      const response = await this.request('search3.view', { query, artistCount: '20', albumCount: '20', songCount: '40' });
+      const r = response.searchResult3;
       if (!r) return { artists: [], albums: [], songs: [] };
       return {
         artists: r.artist || [],
-        albums: r.album || [],
+        albums: (r.album || []).map((album: any) => this.mapAlbum(album)),
         songs: (r.song || []).map((s: any) => this.mapSong(s))
       };
     } catch (e) { return { artists: [], albums: [], songs: [] }; }
@@ -478,11 +598,13 @@ export class SubsonicService {
     let unsyncedFallback = '';
     if (id) {
       try {
-        const res = await fetch(this.buildUrl('getLyricsBySongId.view', { id }));
-        const data = await res.json();
-        const structured = data['subsonic-response']?.lyricsList?.structuredLyrics;
+        const lyricsParams: Record<string, string> = { id };
+        if (this.supportsExtension('songLyrics', 2)) lyricsParams.enhanced = 'true';
+        const response = await this.request('getLyricsBySongId.view', lyricsParams);
+        const structured = response.lyricsList?.structuredLyrics;
         if (Array.isArray(structured) && structured.length > 0) {
-          const synced = structured.find((s: { synced: boolean }) => s.synced) ?? structured[0];
+          const mainLyrics = structured.filter((entry: { kind?: string }) => !entry.kind || entry.kind === 'main');
+          const synced = mainLyrics.find((entry: { synced: boolean }) => entry.synced) ?? mainLyrics[0] ?? structured[0];
           if (synced.synced && Array.isArray(synced.line)) {
             lyrics = (synced.line as { start: number; value: string }[])
               .map(l => {
@@ -519,7 +641,7 @@ export class SubsonicService {
           if (res.ok) {
             const list = await res.json();
             if (Array.isArray(list) && list.length > 0) {
-              const validMatches = list.filter((item: { duration: number }) => duration ? Math.abs(item.duration - duration) > 2 : true);
+              const validMatches = list.filter((item: { duration: number }) => duration ? Math.abs(item.duration - duration) <= 2 : true);
               validMatches.sort((a: { syncedLyrics: string }, b: { syncedLyrics: string }) => (a.syncedLyrics && !b.syncedLyrics) ? -1 : 1);
               if (validMatches.length > 0) return (validMatches[0] as { syncedLyrics: string; plainLyrics: string }).syncedLyrics || validMatches[0].plainLyrics;
             }
@@ -538,9 +660,8 @@ export class SubsonicService {
       try {
         const params: Record<string, string> = { artist, title };
         if (id) params.id = id;
-        const res = await fetch(this.buildUrl('getLyrics.view', params));
-        const data = await res.json();
-        lyrics = data['subsonic-response'].lyrics?.value;
+        const response = await this.request('getLyrics.view', params);
+        lyrics = response.lyrics?.value;
       } catch (e) { }
     }
     if (!lyrics && unsyncedFallback) lyrics = unsyncedFallback;
@@ -551,9 +672,8 @@ export class SubsonicService {
   async getPlaylists(): Promise<IPlaylist[]> {
     if (this.isDemo) return MOCK_PLAYLISTS;
     try {
-      const res = await fetch(this.buildUrl('getPlaylists.view'));
-      const data = await res.json();
-      const raw = data['subsonic-response'].playlists?.playlist || [];
+      const response = await this.request('getPlaylists.view');
+      const raw = response.playlists?.playlist || [];
       return raw.map((p: any) => ({
         id: p.id, name: p.name, comment: p.comment, owner: p.owner, public: p.public, songCount: p.songCount, duration: p.duration, created: p.created, coverArt: p.coverArt
       }));
@@ -563,9 +683,8 @@ export class SubsonicService {
   async getPlaylist(id: string): Promise<IPlaylist | null> {
     if (this.isDemo) return MOCK_PLAYLISTS.find(p => p.id === id) || null;
     try {
-      const res = await fetch(this.buildUrl('getPlaylist.view', { id }));
-      const data = await res.json();
-      const p = data['subsonic-response'].playlist;
+      const response = await this.request('getPlaylist.view', { id });
+      const p = response.playlist;
       if (!p) return null;
       const songs = (p.entry || []).map((s: any) => this.mapSong(s));
       return { id: p.id, name: p.name, comment: p.comment, owner: p.owner, public: p.public, songCount: p.songCount || songs.length, duration: p.duration, created: p.created, coverArt: p.coverArt, songs };

@@ -32,9 +32,16 @@ A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, 
 - Library Management: Artists, albums, songs, playlists, likes, and queue management.
 - Discovery: Featured hero, random mixes, recent/newest albums, and most played tracking.
 - Offline-Ready Caching: IndexedDB caching for API responses, settings, and local play stats.
+- OpenSubsonic Support: Protocol 1.16.1, extension discovery, ID3 album/starred endpoints, structured lyrics v2, and optional API-key authentication.
 - Accessibility Improvements: Stronger contrast for secondary text, larger touch targets, and semantic heading fixes.
 
 ## Changelog
+
+### Unreleased
+- Updated all npm dependencies, including React 19, Vite 8, Tailwind CSS 4, TypeScript 6, Motion 12, and Lucide React 1.
+- Added OpenSubsonic extension discovery, API-key authentication, structured lyrics v2 support, and ID3-first album/starred endpoints with legacy fallbacks.
+- Added protocol fallback negotiation for compatible servers implementing Subsonic API 1.14.0 through 1.16.1.
+- Updated the Docker build to Node.js 24 LTS and Nginx 1.30.
 
 ### v2.1.2 (2026-05-10)
 - Added AutoEq headphone calibration search and profile application in Settings.
@@ -79,16 +86,16 @@ A high-fidelity music client for Subsonic-compatible servers (Navidrome, Gonic, 
 ## Tech Stack
 
 - Language: TypeScript
-- Framework: React 18
-- Build Tooling: Vite 5
-- Styling: Tailwind CSS 3
+- Framework: React 19
+- Build Tooling: Vite 8
+- Styling: Tailwind CSS 4
 - Audio: HTMLAudioElement + Web Audio API
 - Storage: IndexedDB (custom wrapper in services/db.ts)
 - Icons: Lucide React
 
 ## Prerequisites
 
-- Node.js 18 or newer
+- Node.js 20.19+ or 22.12+ (Node.js 24 LTS recommended)
 - npm (package-lock.json is included)
 
 ## Getting Started
@@ -123,7 +130,9 @@ Local storage details:
 ## Using Nebula
 
 1. Launch the app and connect your Subsonic server.
-1. Enter your server URL, username, and password. The app stores a token + salt, not the raw password.
+1. Choose password authentication or OpenSubsonic API-key authentication.
+1. For password authentication, enter your server URL, username, and password. The app stores a token + salt, not the raw password.
+1. For API-key authentication, enter the server URL and key. The username parameter is intentionally omitted as required by the OpenSubsonic extension.
 1. Explore Home, Browse, Library, and Player screens. Toggle Light/Dark in Settings.
 1. Optional: Click "Try Demo Mode" to explore the UI with mock data.
 
@@ -193,6 +202,7 @@ Shortcuts are configurable in Settings.
 | Command | Description |
 | --- | --- |
 | npm run dev | Start the Vite dev server on port 3000 |
+| npm run typecheck | Run the TypeScript compiler without emitting files |
 | npm run build | Build production assets to dist/ |
 | npm run preview | Preview the production build locally |
 

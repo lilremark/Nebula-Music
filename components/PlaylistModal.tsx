@@ -24,7 +24,7 @@ export const PlaylistModal: React.FC = () => {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[100] bg-neutral-900/40 dark:bg-black/80 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 z-[100] bg-neutral-900/40 dark:bg-black/80 backdrop-blur-xs animate-fade-in"
         onClick={closePlaylistModal}
       />
 
@@ -63,7 +63,7 @@ export const PlaylistModal: React.FC = () => {
                 onChange={(e) => setNewPlaylistName(e.target.value)}
                 placeholder="New playlist name..."
                 className="flex-1 bg-white border border-neutral-300 rounded-lg px-4 py-2.5 text-sm text-neutral-900 
-                        placeholder:text-neutral-500 focus:border-primary/60 focus:outline-none transition
+                        placeholder:text-neutral-500 focus:border-primary/60 focus:outline-hidden transition
                         dark:bg-white/5 dark:border-white/10 dark:text-white dark:placeholder:text-white/30 dark:focus:border-white/20"
                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
               />

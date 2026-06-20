@@ -73,7 +73,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
-                className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:border-primary/60 focus:outline-none transition-all flex items-center justify-between gap-2
+                className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:border-primary/60 focus:outline-hidden transition-all flex items-center justify-between gap-2
                     bg-neutral-100 border-neutral-300 text-neutral-900 hover:bg-neutral-50
                     dark:bg-neutral-900 dark:border-white/10 dark:text-white dark:hover:bg-neutral-800
                     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-100 dark:disabled:hover:bg-neutral-900 ${className}`}

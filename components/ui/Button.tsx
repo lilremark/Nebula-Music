@@ -65,7 +65,7 @@ export const Button: React.FC<ButtonProps> = ({
         inline-flex items-center rounded-full
         transition-all duration-200 ease-out
         active:scale-95 disabled:opacity-50 disabled:pointer-events-none
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900
+        focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900
         ${variantClasses[variant]}
         ${isIconOnly ? iconSizeClasses[size] : sizeClasses[size]}
         ${glow ? 'hover:shadow-glow animate-glow-pulse' : ''}

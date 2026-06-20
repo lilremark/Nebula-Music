@@ -17,7 +17,7 @@ import {
 } from '../services/autoEqService';
 
 const rowClass = 'flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-neutral-100 dark:hover:bg-white/5';
-const inputClass = 'w-full rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900 placeholder-neutral-500 transition-all hover:bg-neutral-50 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-neutral-950/70 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-900';
+const inputClass = 'w-full rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900 placeholder-neutral-500 transition-all hover:bg-neutral-50 focus:border-primary/60 focus:outline-hidden focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-neutral-950/70 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-900';
 
 const SettingPanel = ({
     icon: Icon,
@@ -32,7 +32,7 @@ const SettingPanel = ({
     children: React.ReactNode;
     className?: string;
 }) => (
-    <section className={`grid overflow-hidden rounded-lg border border-neutral-200 bg-white/70 shadow-sm dark:border-white/10 dark:bg-neutral-900/50 lg:grid-cols-[260px_minmax(0,1fr)] ${className}`}>
+    <section className={`grid overflow-hidden rounded-lg border border-neutral-200 bg-white/70 shadow-xs dark:border-white/10 dark:bg-neutral-900/50 lg:grid-cols-[260px_minmax(0,1fr)] ${className}`}>
         <div className="flex items-start gap-3 border-b border-neutral-200 bg-neutral-100/70 px-5 py-4 dark:border-white/10 dark:bg-white/[0.03] lg:border-b-0 lg:border-r">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
                 <Icon className="h-5 w-5" />
@@ -121,7 +121,7 @@ const OptionRow = ({ label, description, options, value, onChange }: {
                         key={opt.value}
                         onClick={() => onChange(opt.value)}
                         className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-xs font-bold transition-all ${value === opt.value
-                            ? 'bg-white text-neutral-950 shadow-sm dark:bg-white dark:text-black'
+                            ? 'bg-white text-neutral-950 shadow-xs dark:bg-white dark:text-black'
                             : 'text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
                             }`}
                     >
@@ -141,6 +141,7 @@ export const SettingsView: React.FC = () => {
     const [url, setUrl] = useState(credentials?.serverUrl || '');
     const [user, setUser] = useState(credentials?.username || '');
     const [pass, setPass] = useState('');
+    const [authMode, setAuthMode] = useState<'password' | 'apiKey'>(credentials?.authType === 'apiKey' ? 'apiKey' : 'password');
     const [connStatus, setConnStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [isInsecure, setIsInsecure] = useState(false);
     const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -157,7 +158,7 @@ export const SettingsView: React.FC = () => {
     const handleConnect = async (e: React.FormEvent) => {
         e.preventDefault();
         setConnStatus('loading');
-        const success = await connectToSubsonic(url, user, pass);
+        const success = await connectToSubsonic(url, user, pass, authMode);
         setConnStatus(success ? 'success' : 'error');
     };
 
@@ -304,6 +305,28 @@ export const SettingsView: React.FC = () => {
                 <div className="space-y-5">
                         <SettingPanel icon={Server} title="Server Connection" description="Subsonic-compatible server credentials are stored locally.">
                             <form onSubmit={handleConnect} className="divide-y divide-neutral-200 dark:divide-white/10">
+                                <div className="grid grid-cols-2 gap-1 px-5 py-4">
+                                    {([
+                                        ['password', 'Password'],
+                                        ['apiKey', 'API Key'],
+                                    ] as const).map(([mode, label]) => (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            onClick={() => {
+                                                setAuthMode(mode);
+                                                setPass('');
+                                                setConnStatus('idle');
+                                            }}
+                                            className={`rounded-lg px-3 py-2.5 text-xs font-bold transition ${authMode === mode
+                                                ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
+                                                : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900 dark:bg-white/5 dark:text-white/50 dark:hover:text-white'
+                                                }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
                                 <div className="px-5 py-4">
                                     <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Server URL</label>
                                     <input
@@ -320,8 +343,8 @@ export const SettingsView: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
-                                <div className="grid gap-px divide-y divide-neutral-200 dark:divide-white/10 md:grid-cols-2 md:divide-x md:divide-y-0">
-                                    <div className="px-5 py-4">
+                                <div className={`grid gap-px divide-y divide-neutral-200 dark:divide-white/10 ${authMode === 'password' ? 'md:grid-cols-2 md:divide-x md:divide-y-0' : ''}`}>
+                                    {authMode === 'password' && <div className="px-5 py-4">
                                         <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Username</label>
                                         <input
                                             type="text"
@@ -330,14 +353,14 @@ export const SettingsView: React.FC = () => {
                                             placeholder="admin"
                                             className={inputClass}
                                         />
-                                    </div>
+                                    </div>}
                                     <div className="px-5 py-4">
-                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Password</label>
+                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">{authMode === 'apiKey' ? 'API Key' : 'Password'}</label>
                                         <input
                                             type="password"
                                             value={pass}
                                             onChange={e => setPass(e.target.value)}
-                                            placeholder="Password"
+                                            placeholder={authMode === 'apiKey' ? 'API key' : 'Password'}
                                             className={inputClass}
                                         />
                                     </div>
@@ -395,7 +418,7 @@ export const SettingsView: React.FC = () => {
                                             value={settings.eq.preset}
                                             onChange={(newPreset) => {
                                                 const typedPreset = newPreset as typeof settings.eq.preset;
-                                                const newBands = newPreset === 'custom' ? settings.eq.bands : { ...EQ_PRESETS[newPreset] };
+                                                const newBands = typedPreset === 'custom' ? settings.eq.bands : { ...EQ_PRESETS[typedPreset] };
                                                 updateSettings({
                                                     eq: {
                                                         ...settings.eq,

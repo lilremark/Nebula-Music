@@ -159,7 +159,7 @@ const extractColors = async (imageUrl: string): Promise<AdaptiveColors> => {
 export const useAdaptiveColors = (imageUrl: string | undefined) => {
     const [colors, setColors] = useState<AdaptiveColors>(defaultColors);
     const [isLoading, setIsLoading] = useState(false);
-    const prevUrlRef = useRef<string>();
+    const prevUrlRef = useRef<string | undefined>(undefined);
 
     const updateColors = useCallback(async (url: string) => {
         // Check cache first

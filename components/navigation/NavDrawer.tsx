@@ -68,7 +68,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
             {/* Backdrop */}
             <div
                 className={`
-                    fixed inset-0 z-40 bg-black/70 backdrop-blur-sm
+                    fixed inset-0 z-40 bg-black/70 backdrop-blur-xs
                     transition-opacity duration-300
                     ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
                 `}

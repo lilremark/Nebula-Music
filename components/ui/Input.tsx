@@ -37,7 +37,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
           border border-neutral-300 rounded-xl
           py-2.5 text-sm font-medium
           transition-all duration-200
-          focus:bg-white focus:border-primary/60 focus:outline-none
+          focus:bg-white focus:border-primary/60 focus:outline-hidden
           focus:ring-2 focus:ring-primary/20
           hover:bg-neutral-50 hover:border-neutral-400
           dark:bg-white/5 dark:text-white dark:placeholder-white/20 dark:border-white/10

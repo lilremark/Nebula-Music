@@ -18,6 +18,7 @@ export const SetupScreen: React.FC = () => {
   const [url, setUrl] = useState('');
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
+  const [authMode, setAuthMode] = useState<'password' | 'apiKey'>('password');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
 
   const isInsecure = useMemo(() => {
@@ -27,7 +28,7 @@ export const SetupScreen: React.FC = () => {
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('loading');
-    const success = await connectToSubsonic(url, user, pass);
+    const success = await connectToSubsonic(url, user, pass, authMode);
     if (!success) {
       setStatus('error');
       return;
@@ -79,6 +80,29 @@ export const SetupScreen: React.FC = () => {
             </div>
 
             <form onSubmit={handleConnect} className="space-y-4">
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-white/5">
+                {([
+                  ['password', 'Password'],
+                  ['apiKey', 'API Key'],
+                ] as const).map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      setAuthMode(mode);
+                      setPass('');
+                      resetError();
+                    }}
+                    className={`rounded-lg px-3 py-2 text-xs font-bold transition ${authMode === mode
+                      ? 'bg-white text-neutral-950 shadow-xs dark:bg-white dark:text-black'
+                      : 'text-neutral-500 hover:text-neutral-900 dark:text-white/50 dark:hover:text-white'
+                      }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
               <div>
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
                   Server URL
@@ -98,7 +122,7 @@ export const SetupScreen: React.FC = () => {
                 />
               </div>
 
-              <div>
+              {authMode === 'password' && <div>
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
                   Username
                 </label>
@@ -115,11 +139,11 @@ export const SetupScreen: React.FC = () => {
                   icon={<User className="h-4 w-4" />}
                   className="py-3"
                 />
-              </div>
+              </div>}
 
               <div>
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
-                  Password
+                  {authMode === 'apiKey' ? 'API Key' : 'Password'}
                 </label>
                 <Input
                   required
@@ -129,8 +153,8 @@ export const SetupScreen: React.FC = () => {
                     setPass(e.target.value);
                     resetError();
                   }}
-                  placeholder="Enter password"
-                  autoComplete="current-password"
+                  placeholder={authMode === 'apiKey' ? 'Enter API key' : 'Enter password'}
+                  autoComplete={authMode === 'apiKey' ? 'off' : 'current-password'}
                   icon={<LockKeyhole className="h-4 w-4" />}
                   className="py-3"
                 />

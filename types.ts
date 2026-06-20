@@ -95,12 +95,24 @@ export interface HomeData {
   lastFetched: number;
 }
 
-export interface SubsonicCredentials {
+export interface SubsonicTokenCredentials {
+  authType?: 'token';
   serverUrl: string;
   username: string;
   token: string; // md5(password + salt)
   salt: string;
 }
+
+export interface SubsonicApiKeyCredentials {
+  authType: 'apiKey';
+  serverUrl: string;
+  apiKey: string;
+  username?: never;
+  token?: never;
+  salt?: never;
+}
+
+export type SubsonicCredentials = SubsonicTokenCredentials | SubsonicApiKeyCredentials;
 
 export interface ShortcutBindings {
   playPause: string;

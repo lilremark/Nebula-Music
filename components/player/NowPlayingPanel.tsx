@@ -372,7 +372,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                                             <button
                                                 onClick={() => setPitchCorrection(true)}
                                                 className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${pitchCorrection
-                                                    ? 'bg-neutral-900 text-white shadow-sm dark:bg-white dark:text-black'
+                                                    ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
                                                     : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
                                                     }`}
                                             >
@@ -381,7 +381,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                                             <button
                                                 onClick={() => setPitchCorrection(false)}
                                                 className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${!pitchCorrection
-                                                    ? 'bg-neutral-900 text-white shadow-sm dark:bg-white dark:text-black'
+                                                    ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
                                                     : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
                                                     }`}
                                             >

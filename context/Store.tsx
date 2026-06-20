@@ -25,7 +25,7 @@ interface StoreContextType extends AppState {
   setVisualizerMode: (mode: VisualizerMode) => void;
   toggleRepeat: () => void;
   toggleLike: (song: ISong) => void;
-  connectToSubsonic: (url: string, user: string, pass: string) => Promise<boolean>;
+  connectToSubsonic: (url: string, user: string, secret: string, authMode?: 'password' | 'apiKey') => Promise<boolean>;
   disconnect: () => void;
   enableDemoMode: () => void;
   addToQueue: (song: ISong) => void;
@@ -56,8 +56,8 @@ interface StoreContextType extends AppState {
   history: ISong[];
 
   service: SubsonicService;
-  audioRef: React.RefObject<HTMLAudioElement>;
-  radioAudioRef: React.RefObject<HTMLAudioElement>;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+  radioAudioRef: React.RefObject<HTMLAudioElement | null>;
   analyser: AnalyserNode | null;
 
   // Data Fetching
@@ -1908,9 +1908,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [settings, isInitialized]);
 
 
-  const connectToSubsonic = async (url: string, user: string, pass: string) => {
-    const { token, salt } = SubsonicService.hashPassword(pass);
-    const creds: SubsonicCredentials = { serverUrl: url, username: user, token, salt };
+  const connectToSubsonic = async (url: string, user: string, secret: string, authMode: 'password' | 'apiKey' = 'password') => {
+    const serverUrl = url.trim();
+    const creds: SubsonicCredentials = authMode === 'apiKey'
+      ? { authType: 'apiKey', serverUrl, apiKey: secret.trim() }
+      : { serverUrl, username: user.trim(), ...SubsonicService.hashPassword(secret) };
     service.setCredentials(creds);
     const success = await service.getPing();
     if (success) {
