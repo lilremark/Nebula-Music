@@ -3,9 +3,10 @@ import { useStore } from '../context/Store';
 import { IPlaylist, ISong } from '../types';
 import { Play, Clock, ArrowLeft, Trash2, ListMusic, Shuffle, Save, ListPlus, Info, BarChart2, Heart, Pause } from 'lucide-react';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { containsSameSongs } from '../utils/playback';
 
 export const PlaylistDetailView: React.FC = () => {
-    const { viewData, setView, goBack, backTarget, playSong, isPlaying, queue, currentSongIndex, playlists, deletePlaylist, savePlaylist, service, openPlaylistModal, isDemoMode, toggleLike } = useStore();
+    const { viewData, setView, goBack, backTarget, playSong, togglePlay, isPlaying, queue, currentSongIndex, currentRadioStation, playlists, deletePlaylist, savePlaylist, service, openPlaylistModal, isDemoMode, toggleLike } = useStore();
     const [playlist, setPlaylist] = useState<IPlaylist | null>(null);
     const [isSavedPlaylist, setIsSavedPlaylist] = useState(true);
     const [showFullNotes, setShowFullNotes] = useState(false);
@@ -69,6 +70,20 @@ export const PlaylistDetailView: React.FC = () => {
     };
 
     const currentSong = queue[currentSongIndex];
+    const isPlaylistQueueActive = Boolean(currentSong)
+        && !currentRadioStation
+        && Boolean(playlist.songs?.length)
+        && containsSameSongs(queue, playlist.songs!);
+    const handlePlaylistPlay = () => {
+        if (!playlist.songs?.length) return;
+
+        if (isPlaylistQueueActive) {
+            togglePlay();
+            return;
+        }
+
+        playSong(playlist.songs[0], playlist.songs);
+    };
     const comment = playlist.comment || (!isSavedPlaylist ? (playlist as any).desc : null);
     const defaultBackView = isSavedPlaylist ? 'PLAYLISTS' : 'BROWSE';
     const backLabel = (() => {
@@ -159,11 +174,11 @@ export const PlaylistDetailView: React.FC = () => {
                                 {playlist.songs && playlist.songs.length > 0 && (
                                     <>
                                         <button
-                                            onClick={() => playlist.songs && playSong(playlist.songs[0], playlist.songs)}
+                                            onClick={handlePlaylistPlay}
                                             className="flex items-center gap-2 px-5 py-2 bg-neutral-900 text-white font-bold rounded-lg hover:bg-neutral-800 transition text-sm shadow-xl dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
                                         >
-                                            {isPlaying && currentSong?.created === playlist.created?.toString() ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                                            Play
+                                            {isPlaying && isPlaylistQueueActive ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                                            {isPlaying && isPlaylistQueueActive ? 'Pause' : 'Play'}
                                         </button>
                                         <button
                                             className="p-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 hover:text-neutral-900 transition dark:bg-white/10 dark:text-white dark:hover:bg-white/20"

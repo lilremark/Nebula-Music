@@ -3,9 +3,10 @@ import { useStore } from '../context/Store';
 import { IAlbum, ISong } from '../types';
 import { Play, Shuffle, Heart, ArrowLeft, ListPlus, BarChart2, Disc, Pause, Info } from 'lucide-react';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
+import { containsSameSongs } from '../utils/playback';
 
 export const AlbumDetailView: React.FC = () => {
-    const { viewData, setView, goBack, backTarget, service, playSong, isPlaying, queue, currentSongIndex, openPlaylistModal, toggleLike } = useStore();
+    const { viewData, setView, goBack, backTarget, service, playSong, togglePlay, isPlaying, queue, currentSongIndex, currentRadioStation, openPlaylistModal, toggleLike } = useStore();
     const [album, setAlbum] = useState<IAlbum | null>(null);
     const [relatedAlbums, setRelatedAlbums] = useState<IAlbum[]>([]);
     const [showFullNotes, setShowFullNotes] = useState(false);
@@ -88,7 +89,20 @@ export const AlbumDetailView: React.FC = () => {
     };
 
     const currentSong = queue[currentSongIndex];
-    const isAlbumPlaying = currentSong?.albumId === album.id || currentSong?.album === album.name;
+    const isAlbumQueueActive = Boolean(currentSong)
+        && !currentRadioStation
+        && Boolean(album.songs?.length)
+        && containsSameSongs(queue, album.songs!);
+    const handleAlbumPlay = () => {
+        if (!album.songs?.length) return;
+
+        if (isAlbumQueueActive) {
+            togglePlay();
+            return;
+        }
+
+        playSong(album.songs[0], album.songs);
+    };
     const backLabel = (() => {
         switch (backTarget?.view) {
             case 'HOME': return 'Home';
@@ -173,11 +187,11 @@ export const AlbumDetailView: React.FC = () => {
 
                             <div className="flex flex-wrap items-center gap-2">
                                 <button
-                                    onClick={() => album.songs && playSong(album.songs[0], album.songs)}
+                                    onClick={handleAlbumPlay}
                                     className="flex items-center gap-2 px-5 py-2 bg-neutral-900 text-white font-bold rounded-lg hover:bg-neutral-800 transition text-sm dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
                                 >
-                                    {isPlaying && isAlbumPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                                    {isPlaying && isAlbumPlaying ? 'Pause' : 'Play'}
+                                    {isPlaying && isAlbumQueueActive ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                                    {isPlaying && isAlbumQueueActive ? 'Pause' : 'Play'}
                                 </button>
                                 <button
                                     className="p-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 hover:text-neutral-900 transition dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
