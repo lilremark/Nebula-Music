@@ -8,6 +8,7 @@ import {
   type StreamDeckErrorCode,
   type StreamDeckSnapshot,
 } from './streamDeckProtocol';
+import { createAuthenticationProof } from './streamDeckAuthentication';
 
 export type StreamDeckConnectionStatus =
   | 'disabled'
@@ -48,11 +49,22 @@ export interface StreamDeckBridgeOptions {
   onStatus: (status: StreamDeckBridgeStatus) => void;
   onCommand: (command: StreamDeckCommand) => Promise<void>;
   getSnapshot: () => StreamDeckSnapshot;
+  createProof?: typeof createAuthenticationProof;
 }
 
 const RETRY_DELAYS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000] as const;
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const STATE_THROTTLE_MS = 1_000;
+const REVOCATION_TIMEOUT_MS = 5_000;
+const COMMAND_ERROR_CODES = new Set<StreamDeckErrorCode>([
+  'unauthorized',
+  'disconnected',
+  'stale_playlist',
+  'empty_playlist',
+  'playback_failed',
+  'invalid_command',
+  'internal_error',
+]);
 
 const failureFromUnknown = (error: unknown): StreamDeckCommandFailure => {
   if (
@@ -61,6 +73,7 @@ const failureFromUnknown = (error: unknown): StreamDeckCommandFailure => {
     'code' in error &&
     'message' in error &&
     typeof error.code === 'string' &&
+    COMMAND_ERROR_CODES.has(error.code as StreamDeckErrorCode) &&
     typeof error.message === 'string'
   ) {
     return {
@@ -73,6 +86,7 @@ const failureFromUnknown = (error: unknown): StreamDeckCommandFailure => {
 
 export class StreamDeckBridge {
   private readonly socketFactory: (url: string) => WebSocket;
+  private readonly createProof: typeof createAuthenticationProof;
   private socket: WebSocket | null = null;
   private enabled = false;
   private authenticated = false;
@@ -87,9 +101,18 @@ export class StreamDeckBridge {
   private forceFullState = true;
   private forceArtwork = true;
   private generation = 0;
+  private protocolTerminal = false;
+  private pendingRevocation:
+    | {
+        resolve: () => void;
+        reject: (error: Error) => void;
+        timer: number;
+      }
+    | undefined;
 
   constructor(private readonly options: StreamDeckBridgeOptions) {
     this.socketFactory = options.socketFactory ?? ((url) => new WebSocket(url));
+    this.createProof = options.createProof ?? createAuthenticationProof;
   }
 
   configure(enabled: boolean, port: number): void {
@@ -105,6 +128,7 @@ export class StreamDeckBridge {
 
   reconnect(): void {
     if (!this.enabled) return;
+    this.protocolTerminal = false;
     this.retryAttempt = 0;
     this.disconnect(false);
     void this.connect();
@@ -127,10 +151,30 @@ export class StreamDeckBridge {
   }
 
   async unpair(): Promise<void> {
-    this.token = null;
-    await this.options.tokenStore.clear();
-    this.disconnect(false);
-    if (this.enabled) void this.connect();
+    if (!this.token) return;
+    if (!this.authenticated || !this.isSocketOpen()) {
+      throw new Error('Reconnect to Stream Deck before revoking this pairing.');
+    }
+    if (this.pendingRevocation) {
+      throw new Error('Pairing revocation is already in progress.');
+    }
+    await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(() => {
+        if (!this.pendingRevocation) return;
+        this.pendingRevocation = undefined;
+        reject(new Error('Stream Deck did not confirm pairing revocation.'));
+      }, REVOCATION_TIMEOUT_MS);
+      this.pendingRevocation = { resolve, reject, timer };
+      this.send({
+        protocol: STREAM_DECK_PROTOCOL,
+        type: 'revoke',
+        clientId: this.options.clientId,
+      });
+    });
+  }
+
+  notifyActivity(): void {
+    this.sendHeartbeat();
   }
 
   notifyStateChanged(immediate = false, full = false, includeArtwork = false): void {
@@ -160,6 +204,13 @@ export class StreamDeckBridge {
   }
 
   private async connect(): Promise<void> {
+    if (this.protocolTerminal) {
+      this.publishStatus(
+        'protocol-mismatch',
+        'Protocol mismatch. Reconnect explicitly after updating Nebula or the plugin.',
+      );
+      return;
+    }
     const generation = ++this.generation;
     this.clearRetry();
     this.publishStatus('connecting');
@@ -190,57 +241,121 @@ export class StreamDeckBridge {
       });
       if (this.token) {
         this.publishStatus('authenticating');
-        this.send({
-          protocol: STREAM_DECK_PROTOCOL,
-          type: 'authenticate',
-          clientId: this.options.clientId,
-          token: this.token,
-        });
       } else {
         this.publishStatus('pairing-required');
       }
       this.startHeartbeat();
     });
-    socket.addEventListener('message', (event) => void this.handleMessage(event));
+    let inbound = Promise.resolve();
+    socket.addEventListener('message', (event) => {
+      inbound = inbound
+        .then(() => this.handleMessage(socket, event))
+        .catch(() => {
+          if (socket !== this.socket) return;
+          this.publishStatus('error', 'Unable to process a Stream Deck message.');
+          socket.close(1011, 'Message processing failed');
+        });
+    });
     socket.addEventListener('close', () => {
       if (socket !== this.socket) return;
       this.socket = null;
+      this.authenticated = false;
+      this.lastTrackId = null;
+      this.forceFullState = true;
+      this.forceArtwork = true;
       this.stopHeartbeat();
-      if (this.enabled) this.scheduleRetry('Stream Deck disconnected.');
+      if (this.stateTimer !== undefined) window.clearTimeout(this.stateTimer);
+      this.stateTimer = undefined;
+      this.rejectPendingRevocation('Stream Deck disconnected before revocation was confirmed.');
+      if (this.enabled && !this.protocolTerminal) {
+        this.scheduleRetry('Stream Deck disconnected.');
+      }
     });
     socket.addEventListener('error', () => {
       if (socket === this.socket) socket.close();
     });
   }
 
-  private async handleMessage(event: MessageEvent): Promise<void> {
+  private async handleMessage(socket: WebSocket, event: MessageEvent): Promise<void> {
+    if (socket !== this.socket) return;
     if (typeof event.data !== 'string') {
-      this.socket?.close(1003, 'Text messages required');
+      socket.close(1003, 'Text messages required');
       return;
     }
     if (new Blob([event.data]).size > STREAM_DECK_MAX_MESSAGE_BYTES) {
       this.sendCommandError('', 'invalid_command', 'Message exceeds the 512 KiB limit.');
-      this.socket?.close(1009, 'Message too large');
+      socket.close(1009, 'Message too large');
       return;
     }
     const parsed = parsePluginMessage(event.data);
     if (!parsed.ok) {
       if (parsed.code === 'protocol_mismatch') {
+        this.protocolTerminal = true;
         this.publishStatus('protocol-mismatch', parsed.message);
+        socket.close(1002, 'Protocol mismatch');
       }
       this.sendCommandError('', 'invalid_command', parsed.message);
       return;
     }
 
     const message = parsed.message;
+    if (message.type === 'authChallenge') {
+      if (!this.token) {
+        this.publishStatus('pairing-required');
+        return;
+      }
+      this.publishStatus('authenticating');
+      const token = this.token;
+      const proof = await this.createProof(
+        token,
+        this.options.clientId,
+        this.options.sessionId,
+        message.nonce,
+      );
+      if (socket !== this.socket || token !== this.token) return;
+      this.send({
+        protocol: STREAM_DECK_PROTOCOL,
+        type: 'authenticate',
+        clientId: this.options.clientId,
+        proof,
+      });
+      return;
+    }
+
+    if (message.type === 'revocationResult') {
+      const pending = this.pendingRevocation;
+      if (!pending) return;
+      window.clearTimeout(pending.timer);
+      this.pendingRevocation = undefined;
+      if (!message.ok) {
+        pending.reject(new Error('Stream Deck did not revoke this pairing.'));
+        return;
+      }
+      this.authenticated = false;
+      this.token = null;
+      await this.options.tokenStore.clear();
+      this.publishStatus('pairing-required', 'Pairing was revoked.');
+      pending.resolve();
+      return;
+    }
+
     if (message.type === 'pairingResult') {
       if (!message.ok) {
+        if (message.error === 'protocol_mismatch') {
+          this.protocolTerminal = true;
+          this.publishStatus(
+            'protocol-mismatch',
+            'Protocol mismatch. Reconnect explicitly after updating Nebula or the plugin.',
+          );
+          socket.close(1002, 'Protocol mismatch');
+          return;
+        }
         if (message.error === 'unauthorized' && this.token) {
           this.token = null;
           await this.options.tokenStore.clear();
         }
         this.publishStatus(
-          message.error === 'protocol_mismatch' ? 'protocol-mismatch' : 'pairing-required',
+          'pairing-required',
           message.error
             ? `Pairing failed: ${message.error.replaceAll('_', ' ')}.`
             : 'Pairing or authentication failed.',
@@ -250,13 +365,8 @@ export class StreamDeckBridge {
       if (message.token) {
         this.token = message.token;
         await this.options.tokenStore.set(message.token);
+        if (socket !== this.socket) return;
         this.publishStatus('authenticating');
-        this.send({
-          protocol: STREAM_DECK_PROTOCOL,
-          type: 'authenticate',
-          clientId: this.options.clientId,
-          token: message.token,
-        });
         return;
       }
       this.authenticated = true;
@@ -280,6 +390,7 @@ export class StreamDeckBridge {
     }
     try {
       await this.options.onCommand(message.command);
+      if (socket !== this.socket) return;
       this.send({
         protocol: STREAM_DECK_PROTOCOL,
         type: 'commandResult',
@@ -330,15 +441,20 @@ export class StreamDeckBridge {
   private startHeartbeat(): void {
     this.stopHeartbeat();
     this.heartbeatTimer = window.setInterval(() => {
-      const snapshot = this.options.getSnapshot();
-      this.send({
-        protocol: STREAM_DECK_PROTOCOL,
-        type: 'heartbeat',
-        sessionId: snapshot.sessionId,
-        visible: snapshot.visible,
-        lastActiveAt: snapshot.lastActiveAt,
-      });
+      this.sendHeartbeat();
     }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private sendHeartbeat(): void {
+    if (!this.authenticated || !this.isSocketOpen()) return;
+    const snapshot = this.options.getSnapshot();
+    this.send({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'heartbeat',
+      sessionId: snapshot.sessionId,
+      visible: snapshot.visible,
+      lastActiveAt: snapshot.lastActiveAt,
+    });
   }
 
   private stopHeartbeat(): void {
@@ -347,7 +463,7 @@ export class StreamDeckBridge {
   }
 
   private scheduleRetry(message: string): void {
-    if (!this.enabled || this.retryTimer !== undefined) return;
+    if (!this.enabled || this.protocolTerminal || this.retryTimer !== undefined) return;
     const delay = RETRY_DELAYS[Math.min(this.retryAttempt, RETRY_DELAYS.length - 1)];
     this.retryAttempt += 1;
     this.publishStatus('disconnected', message, delay);
@@ -374,6 +490,7 @@ export class StreamDeckBridge {
     this.lastTrackId = null;
     this.forceFullState = true;
     this.forceArtwork = true;
+    this.rejectPendingRevocation('Connection closed before revocation was confirmed.');
     if (socket && socket.readyState < WebSocket.CLOSING) socket.close(1000, 'Reconfigured');
     if (scheduleRetry && this.enabled) this.scheduleRetry('Stream Deck disconnected.');
   }
@@ -384,7 +501,19 @@ export class StreamDeckBridge {
 
   private send(message: BrowserToPluginMessage): void {
     if (!this.isSocketOpen()) return;
-    this.socket?.send(serializeBrowserMessage(message));
+    try {
+      this.socket?.send(serializeBrowserMessage(message));
+    } catch {
+      this.publishStatus('error', 'A Stream Deck message exceeded the safe size limit.');
+    }
+  }
+
+  private rejectPendingRevocation(message: string): void {
+    const pending = this.pendingRevocation;
+    if (!pending) return;
+    window.clearTimeout(pending.timer);
+    this.pendingRevocation = undefined;
+    pending.reject(new Error(message));
   }
 
   private sendCommandError(
@@ -398,7 +527,7 @@ export class StreamDeckBridge {
       type: 'commandResult',
       requestId,
       ok: false,
-      error: { code, message },
+      error: { code, message: message.slice(0, 512) },
     });
   }
 

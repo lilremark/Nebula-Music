@@ -224,14 +224,19 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
   useEffect(() => {
     const noteActivity = () => {
       lastActiveAtRef.current = Date.now();
+      bridge.notifyActivity();
     };
     window.addEventListener('focus', noteActivity);
     document.addEventListener('visibilitychange', noteActivity);
+    window.addEventListener('pointerdown', noteActivity);
+    window.addEventListener('keydown', noteActivity);
     return () => {
       window.removeEventListener('focus', noteActivity);
       document.removeEventListener('visibilitychange', noteActivity);
+      window.removeEventListener('pointerdown', noteActivity);
+      window.removeEventListener('keydown', noteActivity);
     };
-  }, []);
+  }, [bridge]);
 
   const song =
     currentSongIndex >= 0 && currentSongIndex < queue.length

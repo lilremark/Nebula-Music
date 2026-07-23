@@ -15,6 +15,7 @@ export interface StreamDeckCommandDependencies {
   playSong: (song: ISong, queue: ISong[]) => void;
   getPlaylist: (id: string) => Promise<IPlaylist | null>;
   audioRef: React.RefObject<HTMLAudioElement | null>;
+  waitForCommit?: () => Promise<void>;
 }
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -23,22 +24,35 @@ const clamp = (value: number, min: number, max: number): number =>
 export const createStreamDeckCommandHandler =
   (dependencies: StreamDeckCommandDependencies) =>
   async (command: StreamDeckCommand): Promise<void> => {
+    const waitForCommit =
+      dependencies.waitForCommit ??
+      (() =>
+        new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 0);
+        }));
     const state = dependencies.getState();
     switch (command.name) {
       case 'setPlayback':
-        if (state.isPlaying !== command.playing) dependencies.togglePlay();
+        if (state.isPlaying !== command.playing) {
+          dependencies.togglePlay();
+          await waitForCommit();
+        }
         return;
       case 'togglePlayback':
         dependencies.togglePlay();
+        await waitForCommit();
         return;
       case 'previous':
         dependencies.prevSong();
+        await waitForCommit();
         return;
       case 'next':
         dependencies.nextSong();
+        await waitForCommit();
         return;
       case 'setVolume':
         dependencies.setVolume(clamp(command.volume, 0, 1));
+        await waitForCommit();
         return;
       case 'seekRelative': {
         const audio = dependencies.audioRef.current;
@@ -65,6 +79,7 @@ export const createStreamDeckCommandHandler =
           throw commandFailure('empty_playlist', 'The selected playlist is empty.');
         }
         dependencies.playSong(playlist.songs[0], playlist.songs);
+        await waitForCommit();
       }
     }
   };

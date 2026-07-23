@@ -87,9 +87,8 @@ the same local port as the plugin, and enter the six-digit code shown by Stream 
 The bridge connects only to IPv4 loopback, is disabled by default, and stores its
 pairing token in this browser's IndexedDB. It sends playback metadata, playlist
 summaries, and compressed cover-art pixels; it never sends Subsonic credentials,
-the complete queue, or authenticated artwork URLs. Use **Forget pairing** to remove
-the saved token from Nebula; use the plugin's property inspector to revoke a paired
-browser from Stream Deck.
+the complete queue, or authenticated artwork URLs. Use **Revoke pairing** to remove
+the pairing from Stream Deck and delete the saved browser token after confirmation.
 
 ## Compatibility
 

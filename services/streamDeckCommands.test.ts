@@ -24,6 +24,7 @@ const makeDependencies = (playlist?: IPlaylist) => {
     playSong: vi.fn(),
     getPlaylist: vi.fn(async () => playlist ?? null),
     audioRef: { current: audio } as { current: HTMLAudioElement | null },
+    waitForCommit: vi.fn(async () => undefined),
   };
   return { dependencies, audio };
 };
@@ -49,6 +50,24 @@ describe('Stream Deck command routing', () => {
       playing: true,
     });
     expect(dependencies.togglePlay).not.toHaveBeenCalled();
+  });
+
+  it('waits for each commit before evaluating the next explicit playback command', async () => {
+    let isPlaying = false;
+    let pendingState = false;
+    const { dependencies } = makeDependencies();
+    dependencies.getState.mockImplementation(() => ({ isPlaying, playlists: [] }));
+    dependencies.togglePlay.mockImplementation(() => {
+      pendingState = !isPlaying;
+    });
+    dependencies.waitForCommit.mockImplementation(async () => {
+      isPlaying = pendingState;
+    });
+    const handle = createStreamDeckCommandHandler(dependencies);
+    await handle({ name: 'setPlayback', playing: true });
+    await handle({ name: 'setPlayback', playing: false });
+    expect(dependencies.togglePlay).toHaveBeenCalledTimes(2);
+    expect(isPlaying).toBe(false);
   });
 
   it('clamps volume and relative seeks', async () => {

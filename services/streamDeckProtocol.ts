@@ -64,11 +64,20 @@ export type StreamDeckCommand =
 export type PluginToBrowserMessage =
   | {
       protocol: typeof STREAM_DECK_PROTOCOL;
+      type: 'authChallenge';
+      nonce: string;
+    }
+  | {
+      protocol: typeof STREAM_DECK_PROTOCOL;
       type: 'pairingResult';
-      requestId?: string;
       ok: boolean;
       token?: string;
       error?: PairingErrorCode;
+    }
+  | {
+      protocol: typeof STREAM_DECK_PROTOCOL;
+      type: 'revocationResult';
+      ok: boolean;
     }
   | { protocol: typeof STREAM_DECK_PROTOCOL; type: 'requestSnapshot' }
   | {
@@ -94,8 +103,9 @@ export type BrowserToPluginMessage =
       protocol: typeof STREAM_DECK_PROTOCOL;
       type: 'authenticate';
       clientId: string;
-      token: string;
+      proof: string;
     }
+  | { protocol: typeof STREAM_DECK_PROTOCOL; type: 'revoke'; clientId: string }
   | { protocol: typeof STREAM_DECK_PROTOCOL; type: 'state'; snapshot: StreamDeckSnapshot }
   | {
       protocol: typeof STREAM_DECK_PROTOCOL;
@@ -120,13 +130,14 @@ export type BrowserToPluginMessage =
       lastActiveAt: number;
     };
 
-export const toPlaylistSummary = (playlist: IPlaylist): StreamDeckPlaylist => ({
-  id: (playlist.id || 'unknown-playlist').slice(0, 256),
-  name: (playlist.name || 'Untitled playlist').slice(0, 512),
-  trackCount: Math.floor(
-    Math.max(0, Number(playlist.songCount) || playlist.songs?.length || 0),
-  ),
-});
+export const toPlaylistSummary = (playlist: IPlaylist): StreamDeckPlaylist => {
+  const count = Number(playlist.songCount) || playlist.songs?.length || 0;
+  return {
+    id: (playlist.id || 'unknown-playlist').slice(0, 256),
+    name: (playlist.name || 'Untitled playlist').slice(0, 512),
+    trackCount: Number.isFinite(count) ? Math.floor(Math.max(0, count)) : 0,
+  };
+};
 
 export const toTrackSummary = (song: ISong, artwork?: string): StreamDeckTrack => ({
   id: (song.id || 'unknown-track').slice(0, 256),
@@ -141,6 +152,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const hasProtocol = (value: Record<string, unknown>): boolean =>
   value.protocol === STREAM_DECK_PROTOCOL;
+
+const isCryptographicValue = (value: unknown): value is string =>
+  typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
+
+const serializedByteLength = (value: string): number => new TextEncoder().encode(value).byteLength;
 
 export const parsePluginMessage = (
   raw: string,
@@ -169,11 +185,16 @@ export const parsePluginMessage = (
     return { ok: true, message: value as PluginToBrowserMessage };
   }
 
+  if (value.type === 'authChallenge' && isCryptographicValue(value.nonce)) {
+    return { ok: true, message: value as PluginToBrowserMessage };
+  }
+
+  if (value.type === 'revocationResult' && typeof value.ok === 'boolean') {
+    return { ok: true, message: value as PluginToBrowserMessage };
+  }
+
   if (value.type === 'pairingResult' && typeof value.ok === 'boolean') {
-    if (
-      value.token !== undefined &&
-      typeof value.token !== 'string'
-    ) {
+    if (value.token !== undefined && !isCryptographicValue(value.token)) {
       return { ok: false, code: 'invalid_command', message: 'Pairing token is invalid.' };
     }
     if (
@@ -235,4 +256,52 @@ export const isValidCommand = (value: unknown): value is StreamDeckCommand => {
 };
 
 export const serializeBrowserMessage = (message: BrowserToPluginMessage): string =>
-  JSON.stringify(message);
+  serializeWithinBudget(message);
+
+const serializeWithinBudget = (message: BrowserToPluginMessage): string => {
+  let serialized = JSON.stringify(message);
+  if (serializedByteLength(serialized) <= STREAM_DECK_MAX_MESSAGE_BYTES) return serialized;
+
+  if (message.type !== 'state') {
+    throw new Error('Stream Deck message exceeds the 512 KiB limit.');
+  }
+
+  const withoutArtwork: BrowserToPluginMessage = {
+    ...message,
+    snapshot: {
+      ...message.snapshot,
+      track: message.snapshot.track
+        ? {
+            id: message.snapshot.track.id,
+            title: message.snapshot.track.title,
+            artist: message.snapshot.track.artist,
+            ...(message.snapshot.track.album ? { album: message.snapshot.track.album } : {}),
+          }
+        : null,
+    },
+  };
+  serialized = JSON.stringify(withoutArtwork);
+  if (serializedByteLength(serialized) <= STREAM_DECK_MAX_MESSAGE_BYTES) return serialized;
+
+  let low = 0;
+  let high = withoutArtwork.snapshot.playlists.length;
+  let best = '';
+  while (low <= high) {
+    const count = Math.floor((low + high) / 2);
+    const candidate = JSON.stringify({
+      ...withoutArtwork,
+      snapshot: {
+        ...withoutArtwork.snapshot,
+        playlists: withoutArtwork.snapshot.playlists.slice(0, count),
+      },
+    });
+    if (serializedByteLength(candidate) <= STREAM_DECK_MAX_MESSAGE_BYTES) {
+      best = candidate;
+      low = count + 1;
+    } else {
+      high = count - 1;
+    }
+  }
+  if (best) return best;
+  throw new Error('Stream Deck state metadata exceeds the 512 KiB limit.');
+};

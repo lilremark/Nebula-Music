@@ -9,7 +9,11 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary'],
-      include: ['services/streamDeckProtocol.ts', 'services/streamDeckCommands.ts'],
+      include: [
+        'services/streamDeckProtocol.ts',
+        'services/streamDeckCommands.ts',
+        'services/streamDeckAuthentication.ts',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,

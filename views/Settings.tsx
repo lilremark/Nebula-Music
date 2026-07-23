@@ -527,11 +527,18 @@ export const SettingsView: React.FC = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => void streamDeckBridge.unpair()}
+                                    onClick={async () => {
+                                        setPairingError('');
+                                        try {
+                                            await streamDeckBridge.unpair();
+                                        } catch (error) {
+                                            setPairingError(error instanceof Error ? error.message : 'Unable to revoke pairing.');
+                                        }
+                                    }}
                                     className="flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-2 text-xs font-bold text-red-600 transition hover:bg-red-500/20 dark:text-red-400"
                                 >
                                     <Unplug className="h-3.5 w-3.5" />
-                                    Forget pairing
+                                    Revoke pairing
                                 </button>
                             </div>
                         </SettingPanel>
