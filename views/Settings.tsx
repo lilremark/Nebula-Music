@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Activity, AlertCircle, CheckCircle, Headphones, Keyboard, Layout, Loader2, LogOut, Monitor,
-    Moon, Palette, RefreshCw, Search, Server, ShieldAlert, Sliders, Sun, X
+    Activity, AlertCircle, Cable, CheckCircle, Headphones, Keyboard, Layout, Loader2, LogOut, Monitor,
+    Moon, Palette, RefreshCw, Search, Server, ShieldAlert, Sliders, Sun, Unplug, X
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
@@ -15,6 +15,8 @@ import {
     getCachedAutoEqIndexInfo,
     searchAutoEqProfiles,
 } from '../services/autoEqService';
+import { useStreamDeckBridge } from '../context/StreamDeckBridgeContext';
+import { STREAM_DECK_DEFAULT_PORT } from '../services/streamDeckProtocol';
 
 const rowClass = 'flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-neutral-100 dark:hover:bg-white/5';
 const inputClass = 'w-full rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900 placeholder-neutral-500 transition-all hover:bg-neutral-50 focus:border-primary/60 focus:outline-hidden focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-neutral-950/70 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-900';
@@ -137,6 +139,7 @@ const OptionRow = ({ label, description, options, value, onChange }: {
 export const SettingsView: React.FC = () => {
     const { settings, updateSettings, connectToSubsonic, isDemoMode, credentials, visualizerMode, setVisualizerMode, disconnect } = useStore();
     const { mode, setTheme } = useTheme();
+    const streamDeckBridge = useStreamDeckBridge();
 
     const [url, setUrl] = useState(credentials?.serverUrl || '');
     const [user, setUser] = useState(credentials?.username || '');
@@ -150,6 +153,8 @@ export const SettingsView: React.FC = () => {
     const [autoEqStatus, setAutoEqStatus] = useState<'idle' | 'loading' | 'applying' | 'error'>('idle');
     const [autoEqError, setAutoEqError] = useState('');
     const [autoEqLastFetchedAt, setAutoEqLastFetchedAt] = useState<number | null>(() => settings.eq.autoEqIndexFetchedAt || getCachedAutoEqIndexInfo()?.fetchedAt || null);
+    const [pairingCode, setPairingCode] = useState('');
+    const [pairingError, setPairingError] = useState('');
 
     useEffect(() => {
         setIsInsecure(Boolean(url && !url.startsWith('https://') && url.length > 7));
@@ -402,6 +407,133 @@ export const SettingsView: React.FC = () => {
                                     )}
                                 </div>
                             </form>
+                        </SettingPanel>
+
+                        <SettingPanel icon={Cable} title="Stream Deck" description="Control this browser tab from the Nebula Music Stream Deck plugin.">
+                            <ToggleRow
+                                label="Enable Stream Deck bridge"
+                                description="Connect only to the plugin on this computer. Disabled by default."
+                                checked={settings.streamDeck?.enabled ?? false}
+                                onChange={(enabled) => updateSettings({
+                                    streamDeck: {
+                                        enabled,
+                                        port: settings.streamDeck?.port ?? STREAM_DECK_DEFAULT_PORT,
+                                    },
+                                })}
+                            />
+                            <div className="px-5 py-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Connection status</span>
+                                        <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+                                            {streamDeckBridge.status.message || {
+                                                disabled: 'The browser bridge is off.',
+                                                connecting: 'Looking for the Stream Deck plugin.',
+                                                'pairing-required': 'Connected locally. Enter the pairing code from Stream Deck.',
+                                                authenticating: 'Verifying this browser with Stream Deck.',
+                                                connected: 'Paired and ready to receive playback commands.',
+                                                disconnected: 'The plugin is not currently reachable. Nebula will retry automatically.',
+                                                'protocol-mismatch': 'The plugin and Nebula use incompatible bridge versions.',
+                                                error: 'The local bridge encountered an error.',
+                                            }[streamDeckBridge.status.state]}
+                                        </span>
+                                    </div>
+                                    <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+                                        streamDeckBridge.status.state === 'connected'
+                                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                            : streamDeckBridge.status.state === 'disabled'
+                                                ? 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/50'
+                                                : streamDeckBridge.status.state === 'protocol-mismatch' || streamDeckBridge.status.state === 'error'
+                                                    ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                                                    : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                    }`}>
+                                        {streamDeckBridge.status.state.replace('-', ' ')}
+                                    </span>
+                                </div>
+                                <div className="mt-3 rounded-md bg-neutral-100 px-3 py-2 font-mono text-xs text-neutral-700 dark:bg-black/30 dark:text-white/60">
+                                    {streamDeckBridge.status.endpoint}
+                                </div>
+                            </div>
+                            <div className="grid gap-px divide-y divide-neutral-200 dark:divide-white/10 md:grid-cols-2 md:divide-x md:divide-y-0">
+                                <div className="px-5 py-4">
+                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Local port</label>
+                                    <input
+                                        type="number"
+                                        min={1024}
+                                        max={65535}
+                                        value={settings.streamDeck?.port ?? STREAM_DECK_DEFAULT_PORT}
+                                        disabled={settings.streamDeck?.enabled}
+                                        onChange={(event) => {
+                                            const port = Number(event.target.value);
+                                            if (Number.isInteger(port) && port >= 1024 && port <= 65535) {
+                                                updateSettings({
+                                                    streamDeck: {
+                                                        enabled: settings.streamDeck?.enabled ?? false,
+                                                        port,
+                                                    },
+                                                });
+                                            }
+                                        }}
+                                        className={inputClass}
+                                    />
+                                    <p className="mt-2 text-xs text-neutral-600 dark:text-white/50">Use the same port in the plugin. Disable the bridge before changing it.</p>
+                                </div>
+                                <form
+                                    className="px-5 py-4"
+                                    onSubmit={async (event) => {
+                                        event.preventDefault();
+                                        setPairingError('');
+                                        try {
+                                            await streamDeckBridge.pair(pairingCode);
+                                            setPairingCode('');
+                                        } catch (error) {
+                                            setPairingError(error instanceof Error ? error.message : 'Pairing failed.');
+                                        }
+                                    }}
+                                >
+                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Pairing code</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            autoComplete="one-time-code"
+                                            maxLength={6}
+                                            value={pairingCode}
+                                            onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                                            placeholder="000000"
+                                            aria-label="Six-digit Stream Deck pairing code"
+                                            className={`${inputClass} font-mono tracking-[0.3em]`}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={pairingCode.length !== 6 || !settings.streamDeck?.enabled}
+                                            className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                            Pair
+                                        </button>
+                                    </div>
+                                    {pairingError && <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{pairingError}</p>}
+                                </form>
+                            </div>
+                            <div className="flex flex-wrap gap-2 px-5 py-4">
+                                <button
+                                    type="button"
+                                    onClick={streamDeckBridge.reconnect}
+                                    disabled={!settings.streamDeck?.enabled}
+                                    className="flex items-center gap-2 rounded-lg bg-neutral-200 px-4 py-2 text-xs font-bold text-neutral-800 transition hover:bg-neutral-300 disabled:opacity-40 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+                                >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                    Reconnect
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => void streamDeckBridge.unpair()}
+                                    className="flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-2 text-xs font-bold text-red-600 transition hover:bg-red-500/20 dark:text-red-400"
+                                >
+                                    <Unplug className="h-3.5 w-3.5" />
+                                    Forget pairing
+                                </button>
+                            </div>
                         </SettingPanel>
 
                         <SettingPanel icon={Sliders} title="Equalizer" description="Shape playback with presets or individual frequency bands.">

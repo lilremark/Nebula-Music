@@ -114,6 +114,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   progressVisualization: 'bar',
   magicCrossfade: false,
   alwaysShowZenControls: false,
+  streamDeck: {
+    enabled: false,
+    port: 37921,
+  },
 };
 
 const parseIcyMetadata = (bytes: Uint8Array): Pick<IRadioMetadata, 'title' | 'artist' | 'album' | 'rawTitle'> | null => {
