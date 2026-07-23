@@ -21,6 +21,7 @@ import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { MobilePlayerBar } from './components/MobilePlayerBar';
 import { VISUALIZER_MODES } from './types';
+import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 
 const AppContent: React.FC = () => {
   const {
@@ -221,7 +222,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <StoreProvider>
-      <AppContent />
+      <StreamDeckBridgeProvider>
+        <AppContent />
+      </StreamDeckBridgeProvider>
     </StoreProvider>
   );
 };

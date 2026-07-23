@@ -76,6 +76,19 @@
 - Responsive light and dark themes with system-preference detection
 - IndexedDB caching for API responses, settings, credentials, and local play statistics
 - Docker, Vercel, and static-hosting deployment options
+- Optional authenticated localhost bridge for the Nebula Music Stream Deck plugin
+
+### Stream Deck
+
+Nebula can expose the currently open browser player to the Nebula Music plugin for
+Stream Deck and Stream Deck+. In **Settings → Stream Deck**, enable the bridge, use
+the same local port as the plugin, and enter the six-digit code shown by Stream Deck.
+
+The bridge connects only to IPv4 loopback, is disabled by default, and stores its
+pairing token in this browser's IndexedDB. It sends playback metadata, playlist
+summaries, and compressed cover-art pixels; it never sends Subsonic credentials,
+the complete queue, or authenticated artwork URLs. Use **Revoke pairing** to remove
+the pairing from Stream Deck and delete the saved browser token after confirmation.
 
 ## Compatibility
 

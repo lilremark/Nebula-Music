@@ -169,6 +169,10 @@ export interface AppSettings {
   progressVisualization: 'bar' | 'waveform';
   magicCrossfade: boolean;
   alwaysShowZenControls: boolean;
+  streamDeck: {
+    enabled: boolean;
+    port: number;
+  };
 }
 
 export type PlaybackMode = 'normal' | 'shuffle';
