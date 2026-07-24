@@ -10,10 +10,7 @@ import React, {
 import { useStore } from './Store';
 import { db } from '../services/db';
 import { createSanitizedArtwork } from '../services/streamDeckArtwork';
-import {
-  StreamDeckBridge,
-  type StreamDeckBridgeStatus,
-} from '../services/streamDeckBridge';
+import { StreamDeckBridge, type StreamDeckBridgeStatus } from '../services/streamDeckBridge';
 import { createStreamDeckCommandHandler } from '../services/streamDeckCommands';
 import {
   STREAM_DECK_DEFAULT_PORT,
@@ -37,9 +34,7 @@ const defaultStatus: StreamDeckBridgeStatus = {
   endpoint: `ws://127.0.0.1:${STREAM_DECK_DEFAULT_PORT}/nebula/v1`,
 };
 
-const StreamDeckBridgeContext = createContext<StreamDeckBridgeContextValue | undefined>(
-  undefined,
-);
+const StreamDeckBridgeContext = createContext<StreamDeckBridgeContextValue | undefined>(undefined);
 
 const getSessionId = (): string => {
   const key = 'nebula_stream_deck_session_id';
@@ -69,11 +64,17 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
     currentSongIndex,
     isPlaying,
     volume,
+    playbackRate,
+    pitch,
+    pitchCorrection,
     playlists,
     togglePlay,
     nextSong,
     prevSong,
     setVolume,
+    setPlaybackRate,
+    setPitch,
+    setPitchCorrection,
     playSong,
     service,
     audioRef,
@@ -84,7 +85,9 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
   const clientIdRef = useRef(getClientId());
   const connectedAtRef = useRef(Date.now());
   const lastActiveAtRef = useRef(Date.now());
-  const artworkRef = useRef<{ trackId: string | null; data?: string }>({ trackId: null });
+  const artworkRef = useRef<{ trackId: string | null; data?: string }>({
+    trackId: null,
+  });
   const snapshotRef = useRef<StreamDeckSnapshot>({
     sessionId: sessionIdRef.current,
     clientId: clientIdRef.current,
@@ -98,6 +101,9 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
     durationSeconds: 0,
     volume: 1,
     muted: false,
+    playbackRate: 1,
+    pitchSemitones: 0,
+    pitchCorrection: true,
     track: null,
     playlists: [],
   });
@@ -107,11 +113,17 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
     currentSongIndex,
     isPlaying,
     volume,
+    playbackRate,
+    pitch,
+    pitchCorrection,
     playlists,
     togglePlay,
     nextSong,
     prevSong,
     setVolume,
+    setPlaybackRate,
+    setPitch,
+    setPitchCorrection,
     playSong,
     service,
     audioRef,
@@ -121,11 +133,17 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
     currentSongIndex,
     isPlaying,
     volume,
+    playbackRate,
+    pitch,
+    pitchCorrection,
     playlists,
     togglePlay,
     nextSong,
     prevSong,
     setVolume,
+    setPlaybackRate,
+    setPitch,
+    setPitchCorrection,
     playSong,
     service,
     audioRef,
@@ -134,7 +152,7 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
   const buildSnapshot = useCallback((): StreamDeckSnapshot => {
     const current = stateRef.current;
     const song =
-      current.currentSongIndex >= 0 ? current.queue[current.currentSongIndex] ?? null : null;
+      current.currentSongIndex >= 0 ? (current.queue[current.currentSongIndex] ?? null) : null;
     const audio = current.audioRef.current;
     const songDuration = Number.isFinite(song?.duration) ? Math.max(0, song?.duration ?? 0) : 0;
     const duration = Number.isFinite(audio?.duration)
@@ -157,6 +175,9 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
       durationSeconds: duration,
       volume: clamp(current.volume, 0, 1),
       muted: current.volume === 0,
+      playbackRate: clamp(current.playbackRate, 0.5, 2),
+      pitchSemitones: clamp(current.pitch, -12, 12),
+      pitchCorrection: current.pitchCorrection,
       track: song
         ? toTrackSummary(
             song,
@@ -182,6 +203,9 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
         nextSong: () => stateRef.current.nextSong(),
         prevSong: () => stateRef.current.prevSong(),
         setVolume: (value) => stateRef.current.setVolume(value),
+        setPlaybackRate: (value) => stateRef.current.setPlaybackRate(value),
+        setPitch: (value) => stateRef.current.setPitch(value),
+        setPitchCorrection: (enabled) => stateRef.current.setPitchCorrection(enabled),
         playSong: (song, playlistQueue) => stateRef.current.playSong(song, playlistQueue),
         getPlaylist: (id) => stateRef.current.service.getPlaylist(id),
         audioRef,
@@ -243,9 +267,7 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
   }, [bridge]);
 
   const song =
-    currentSongIndex >= 0 && currentSongIndex < queue.length
-      ? queue[currentSongIndex]
-      : undefined;
+    currentSongIndex >= 0 && currentSongIndex < queue.length ? queue[currentSongIndex] : undefined;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -267,6 +289,10 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
   useEffect(() => {
     bridge.notifyStateChanged();
   }, [bridge, isPlaying, volume]);
+
+  useEffect(() => {
+    bridge.notifyStateChanged(true, true);
+  }, [bridge, playbackRate, pitch, pitchCorrection]);
 
   useEffect(() => {
     bridge.notifyStateChanged(false, true);
@@ -297,9 +323,7 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
   );
 
   return (
-    <StreamDeckBridgeContext.Provider value={value}>
-      {children}
-    </StreamDeckBridgeContext.Provider>
+    <StreamDeckBridgeContext.Provider value={value}>{children}</StreamDeckBridgeContext.Provider>
   );
 };
 

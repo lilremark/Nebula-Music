@@ -89,6 +89,8 @@ pairing token in this browser's IndexedDB. It sends playback metadata, playlist
 summaries, and compressed cover-art pixels; it never sends Subsonic credentials,
 the complete queue, or authenticated artwork URLs. Use **Revoke pairing** to remove
 the pairing from Stream Deck and delete the saved browser token after confirmation.
+The bridge also exposes Nebula's playback-rate, pitch, and pitch-correction controls
+to compatible Stream Deck+ plugin versions.
 
 ## Compatibility
 

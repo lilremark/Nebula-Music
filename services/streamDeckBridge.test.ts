@@ -46,6 +46,9 @@ const snapshot: StreamDeckSnapshot = {
   durationSeconds: 100,
   volume: 1,
   muted: false,
+  playbackRate: 1,
+  pitchSemitones: 0,
+  pitchCorrection: true,
   track: null,
   playlists: [],
 };
@@ -89,9 +92,13 @@ describe('StreamDeckBridge', () => {
     expect(messages(socket).map((message) => message.type)).toEqual(['hello']);
     expect(messages(socket)[0]).toMatchObject({
       type: 'hello',
-      capabilities: ['seekAbsolute', 'progressVolume'],
+      capabilities: ['seekAbsolute', 'progressVolume', 'playbackTuning'],
     });
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'authChallenge', nonce: NONCE });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: NONCE,
+    });
     await vi.waitFor(() =>
       expect(messages(socket).at(-1)).toMatchObject({
         type: 'authenticate',
@@ -100,7 +107,11 @@ describe('StreamDeckBridge', () => {
       }),
     );
     expect(socket.sent.join('')).not.toContain(TOKEN);
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+    });
     await vi.waitFor(() => expect(statuses.at(-1)?.state).toBe('connected'));
     socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'requestSnapshot' });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('state'));
@@ -140,24 +151,37 @@ describe('StreamDeckBridge', () => {
     await vi.waitFor(() => expect(socket.readyState).toBe(FakeSocket.CONNECTING));
     socket.open();
     await bridge.pair('123456');
-    expect(messages(socket).at(-1)).toMatchObject({ type: 'pair', code: '123456' });
+    expect(messages(socket).at(-1)).toMatchObject({
+      type: 'pair',
+      code: '123456',
+    });
 
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true, token: TOKEN });
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'authChallenge', nonce: NONCE });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+      token: TOKEN,
+    });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: NONCE,
+    });
     await vi.waitFor(() => expect(setToken).toHaveBeenCalledWith(TOKEN));
-    await vi.waitFor(() => expect(createProof).toHaveBeenCalledWith(
-      TOKEN,
-      snapshot.clientId,
-      snapshot.sessionId,
-      NONCE,
-    ));
+    await vi.waitFor(() =>
+      expect(createProof).toHaveBeenCalledWith(TOKEN, snapshot.clientId, snapshot.sessionId, NONCE),
+    );
     expect(order).toEqual(['store-start', 'store-finish', 'proof']);
     expect(messages(socket).at(-1)).toMatchObject({
       type: 'authenticate',
       clientId: snapshot.clientId,
       proof: PROOF,
     });
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+    });
     socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'requestSnapshot' });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('state'));
     const commandMessageStart = socket.sent.length;
@@ -169,15 +193,23 @@ describe('StreamDeckBridge', () => {
     });
     await vi.waitFor(() => expect(onCommand).toHaveBeenCalledWith({ name: 'next' }));
     expect(messages(socket)).toContainEqual(
-      expect.objectContaining({ type: 'commandResult', requestId: 'next-1', ok: true }),
+      expect.objectContaining({
+        type: 'commandResult',
+        requestId: 'next-1',
+        ok: true,
+      }),
     );
     await vi.waitFor(() =>
-      expect(messages(socket).slice(commandMessageStart).map((message) => message.type)).toContain(
-        'progress',
-      ),
+      expect(
+        messages(socket)
+          .slice(commandMessageStart)
+          .map((message) => message.type),
+      ).toContain('progress'),
     );
     expect(
-      messages(socket).slice(commandMessageStart).filter((message) => message.type === 'state'),
+      messages(socket)
+        .slice(commandMessageStart)
+        .filter((message) => message.type === 'state'),
     ).toHaveLength(0);
     expect(messages(socket).at(-1)).toMatchObject({
       type: 'progress',
@@ -203,7 +235,11 @@ describe('StreamDeckBridge', () => {
       clientId: snapshot.clientId,
       origin: snapshot.origin,
       nebulaVersion: snapshot.nebulaVersion,
-      tokenStore: { get: vi.fn(async () => TOKEN), set: vi.fn(), clear: vi.fn() },
+      tokenStore: {
+        get: vi.fn(async () => TOKEN),
+        set: vi.fn(),
+        clear: vi.fn(),
+      },
       createProof: vi.fn(async () => PROOF),
       socketFactory: () => socket as unknown as WebSocket,
       onStatus: vi.fn(),
@@ -213,9 +249,17 @@ describe('StreamDeckBridge', () => {
     bridge.configure(true, 37921);
     await Promise.resolve();
     socket.open();
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'authChallenge', nonce: NONCE });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: NONCE,
+    });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('authenticate'));
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+    });
     socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'requestSnapshot' });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('state'));
 
@@ -227,15 +271,65 @@ describe('StreamDeckBridge', () => {
       command: { name: 'setVolume', volume: 0.42 },
     });
     await vi.waitFor(() =>
-      expect(messages(socket).slice(commandMessageStart).map((message) => message.type)).toEqual([
-        'commandResult',
-        'progress',
-      ]),
+      expect(
+        messages(socket)
+          .slice(commandMessageStart)
+          .map((message) => message.type),
+      ).toEqual(['commandResult', 'progress']),
     );
     const commandTraffic = socket.sent.slice(commandMessageStart);
     expect(commandTraffic.join('')).not.toContain('"type":"state"');
     expect(commandTraffic.reduce((bytes, message) => bytes + message.length, 0)).toBeLessThan(
       1_000,
+    );
+    bridge.destroy();
+  });
+
+  it('sends a full state immediately after a playback tuning command', async () => {
+    const socket = new FakeSocket();
+    const bridge = new StreamDeckBridge({
+      sessionId: snapshot.sessionId,
+      clientId: snapshot.clientId,
+      origin: snapshot.origin,
+      nebulaVersion: snapshot.nebulaVersion,
+      tokenStore: {
+        get: vi.fn(async () => TOKEN),
+        set: vi.fn(),
+        clear: vi.fn(),
+      },
+      createProof: vi.fn(async () => PROOF),
+      socketFactory: () => socket as unknown as WebSocket,
+      onStatus: vi.fn(),
+      onCommand: vi.fn(async () => undefined),
+      getSnapshot: () => snapshot,
+    });
+    bridge.configure(true, 37921);
+    await Promise.resolve();
+    socket.open();
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: NONCE,
+    });
+    await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('authenticate'));
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+    });
+    const start = socket.sent.length;
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'command',
+      requestId: 'rate-1',
+      command: { name: 'setPlaybackRate', playbackRate: 1.2 },
+    });
+    await vi.waitFor(() =>
+      expect(
+        messages(socket)
+          .slice(start)
+          .map((message) => message.type),
+      ).toEqual(['commandResult', 'state']),
     );
     bridge.destroy();
   });
@@ -248,7 +342,11 @@ describe('StreamDeckBridge', () => {
       clientId: snapshot.clientId,
       origin: snapshot.origin,
       nebulaVersion: snapshot.nebulaVersion,
-      tokenStore: { get: vi.fn(async () => null), set: vi.fn(), clear: vi.fn() },
+      tokenStore: {
+        get: vi.fn(async () => null),
+        set: vi.fn(),
+        clear: vi.fn(),
+      },
       socketFactory: () => socket as unknown as WebSocket,
       onStatus: vi.fn(),
       onCommand,
@@ -295,9 +393,17 @@ describe('StreamDeckBridge', () => {
     bridge.configure(true, 37921);
     await Promise.resolve();
     socket.open();
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'authChallenge', nonce: NONCE });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: NONCE,
+    });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('authenticate'));
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+    });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('authenticate'));
 
     const revocation = bridge.unpair();
@@ -308,7 +414,11 @@ describe('StreamDeckBridge', () => {
       }),
     );
     expect(clear).not.toHaveBeenCalled();
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'revocationResult', ok: true });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'revocationResult',
+      ok: true,
+    });
     await revocation;
     expect(clear).toHaveBeenCalledOnce();
     bridge.destroy();
@@ -329,7 +439,11 @@ describe('StreamDeckBridge', () => {
       clientId: snapshot.clientId,
       origin: snapshot.origin,
       nebulaVersion: snapshot.nebulaVersion,
-      tokenStore: { get: vi.fn(async () => TOKEN), set: vi.fn(), clear: vi.fn() },
+      tokenStore: {
+        get: vi.fn(async () => TOKEN),
+        set: vi.fn(),
+        clear: vi.fn(),
+      },
       createProof: vi.fn(async () => PROOF),
       socketFactory: () => socket as unknown as WebSocket,
       onStatus: vi.fn(),
@@ -339,9 +453,17 @@ describe('StreamDeckBridge', () => {
     bridge.configure(true, 37921);
     await Promise.resolve();
     socket.open();
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'authChallenge', nonce: NONCE });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: NONCE,
+    });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('authenticate'));
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+    });
     socket.receive({
       protocol: STREAM_DECK_PROTOCOL,
       type: 'command',
@@ -368,7 +490,11 @@ describe('StreamDeckBridge', () => {
       clientId: snapshot.clientId,
       origin: snapshot.origin,
       nebulaVersion: snapshot.nebulaVersion,
-      tokenStore: { get: vi.fn(async () => TOKEN), set: vi.fn(), clear: vi.fn() },
+      tokenStore: {
+        get: vi.fn(async () => TOKEN),
+        set: vi.fn(),
+        clear: vi.fn(),
+      },
       createProof: vi.fn(async () => PROOF),
       socketFactory: () => socket as unknown as WebSocket,
       onStatus: vi.fn(),
@@ -378,9 +504,17 @@ describe('StreamDeckBridge', () => {
     bridge.configure(true, 37921);
     await Promise.resolve();
     socket.open();
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'authChallenge', nonce: NONCE });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: NONCE,
+    });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('authenticate'));
-    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true });
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+    });
     await vi.waitFor(() => {
       bridge.notifyActivity();
       expect(messages(socket).at(-1)?.type).toBe('heartbeat');
@@ -398,7 +532,11 @@ describe('StreamDeckBridge', () => {
         clientId: snapshot.clientId,
         origin: snapshot.origin,
         nebulaVersion: snapshot.nebulaVersion,
-        tokenStore: { get: vi.fn(async () => null), set: vi.fn(), clear: vi.fn() },
+        tokenStore: {
+          get: vi.fn(async () => null),
+          set: vi.fn(),
+          clear: vi.fn(),
+        },
         createProof: vi.fn(async () => PROOF),
         socketFactory: () => {
           const socket = new FakeSocket();

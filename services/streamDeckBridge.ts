@@ -81,7 +81,10 @@ const failureFromUnknown = (error: unknown): StreamDeckCommandFailure => {
       message: error.message,
     };
   }
-  return { code: 'internal_error', message: 'The command could not be completed.' };
+  return {
+    code: 'internal_error',
+    message: 'The command could not be completed.',
+  };
 };
 
 export class StreamDeckBridge {
@@ -238,7 +241,7 @@ export class StreamDeckBridge {
         nebulaVersion: this.options.nebulaVersion,
         visible: this.options.getSnapshot().visible,
         lastActiveAt: this.options.getSnapshot().lastActiveAt,
-        capabilities: ['seekAbsolute', 'progressVolume'],
+        capabilities: ['seekAbsolute', 'progressVolume', 'playbackTuning'],
       });
       if (this.token) {
         this.publishStatus('authenticating');
@@ -398,7 +401,11 @@ export class StreamDeckBridge {
         requestId: message.requestId,
         ok: true,
       });
-      this.notifyStateChanged(true);
+      const tuningCommand =
+        message.command.name === 'setPlaybackRate' ||
+        message.command.name === 'setPitch' ||
+        message.command.name === 'setPitchCorrection';
+      this.notifyStateChanged(true, tuningCommand);
     } catch (error) {
       const failure = failureFromUnknown(error);
       this.sendCommandError(message.requestId, failure.code, failure.message);
@@ -427,7 +434,11 @@ export class StreamDeckBridge {
           : snapshot;
       this.forceFullState = false;
       this.forceArtwork = false;
-      this.send({ protocol: STREAM_DECK_PROTOCOL, type: 'state', snapshot: stateSnapshot });
+      this.send({
+        protocol: STREAM_DECK_PROTOCOL,
+        type: 'state',
+        snapshot: stateSnapshot,
+      });
       return;
     }
     this.send({
@@ -520,11 +531,7 @@ export class StreamDeckBridge {
     pending.reject(new Error(message));
   }
 
-  private sendCommandError(
-    requestId: string,
-    code: StreamDeckErrorCode,
-    message: string,
-  ): void {
+  private sendCommandError(requestId: string, code: StreamDeckErrorCode, message: string): void {
     if (!requestId) return;
     this.send({
       protocol: STREAM_DECK_PROTOCOL,
