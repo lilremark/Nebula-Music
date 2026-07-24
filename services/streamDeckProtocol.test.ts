@@ -117,7 +117,7 @@ describe('Stream Deck protocol', () => {
         sessionId: 'session-1',
         clientId: 'client-1',
         origin: 'https://music.example.com',
-        nebulaVersion: '2.1.3',
+        nebulaVersion: '2.2.0',
         visible: true,
         lastActiveAt: 1,
         connectedAt: 1,

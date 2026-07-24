@@ -1,9 +1,37 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.1.3';
+export const APP_VERSION = '2.2.0';
 
-export const CHANGELOG = [
+export interface ChangelogEntry {
+  version: string;
+  date: string;
+  title: string;
+  changes: string[];
+  link?: {
+    label: string;
+    href: string;
+  };
+}
+
+export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.2.0',
+    date: '2026-07-24',
+    title: 'Stream Deck Control Arrives',
+    changes: [
+      'Added an opt-in, authenticated localhost bridge for controlling Nebula from Stream Deck and Stream Deck+.',
+      'Added controls for now playing, album artwork, playback progress, seeking, volume, mute, previous and next tracks, and playlists.',
+      'Added Stream Deck+ controls for scrubbing, playlist browsing, volume, playback speed, pitch, and pitch correction.',
+      'Protected pairing with single-use six-digit codes, browser-stored tokens, loopback-only connections, and sanitized artwork.',
+      'Reduced bridge traffic and command latency so hardware controls stay responsive while Stream Deck is minimized.',
+      'Improved album and playlist queue replacement, Docker security, health checks, and published-image deployment.'
+    ],
+    link: {
+      label: 'Get the Stream Deck plugin',
+      href: 'https://github.com/lilremark/nebula-music-stream-deck-plugin'
+    }
+  },
   {
     version: '2.1.3',
     date: '2026-06-20',

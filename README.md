@@ -8,7 +8,7 @@
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
   a responsive interface built for desktop and mobile.
 
-  [![Version](https://img.shields.io/badge/version-2.1.3-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music)
+  [![Version](https://img.shields.io/badge/version-2.2.0-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
@@ -80,9 +80,12 @@
 
 ### Stream Deck
 
-Nebula can expose the currently open browser player to the Nebula Music plugin for
-Stream Deck and Stream Deck+. In **Settings → Stream Deck**, enable the bridge, use
-the same local port as the plugin, and enter the six-digit code shown by Stream Deck.
+Nebula can expose the currently open browser player to the
+[Nebula Music plugin for Stream Deck and Stream Deck+](https://github.com/lilremark/nebula-music-stream-deck-plugin).
+Install the plugin from its
+[latest release](https://github.com/lilremark/nebula-music-stream-deck-plugin/releases/latest).
+In **Settings → Stream Deck**, enable the bridge, use the same local port as the
+plugin, and enter the six-digit code shown by Stream Deck.
 
 The bridge connects only to IPv4 loopback, is disabled by default, and stores its
 pairing token in this browser's IndexedDB. It sends playback metadata, playlist
@@ -181,7 +184,7 @@ docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml down
 ```
 
-Compose uses `latest` by default. Set `NEBULA_VERSION=2.1.3` to pin the current
+Compose uses `latest` by default. Set `NEBULA_VERSION=2.2.0` to pin the current
 release. See [docker/README.md](./docker/README.md) for local-build commands and
 additional deployment details.
 
@@ -306,6 +309,25 @@ permitted by the music server's CORS policy.
 </details>
 
 ## Changelog
+
+### v2.2.0 — July 24, 2026
+
+- Added an opt-in, authenticated localhost bridge for the
+  [Nebula Music Stream Deck plugin](https://github.com/lilremark/nebula-music-stream-deck-plugin).
+- Added Stream Deck and Stream Deck+ control for now-playing artwork and metadata,
+  playback, seeking and scrubbing, volume and mute, previous and next tracks,
+  fixed playlists, and live playlist browsing.
+- Added Stream Deck+ playback-speed, pitch, and pitch-correction controls.
+- Added single-use pairing codes, token authentication, loopback-only connections,
+  runtime protocol validation, and sanitized artwork transfer without Subsonic
+  credentials or authenticated URLs.
+- Reduced bridge update traffic and removed background command delays for responsive
+  hardware control while Stream Deck is minimized.
+- Improved full album and playlist queue replacement before playback.
+- Refined Docker security, health checks, Compose deployment, and published
+  multi-platform `2.2.0` and `latest` images.
+- Updated the Tailwind CSS and PostCSS build chain to patched releases with a
+  clean npm audit.
 
 ### v2.1.3 — June 20, 2026
 
