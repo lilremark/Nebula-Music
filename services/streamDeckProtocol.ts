@@ -59,6 +59,7 @@ export type StreamDeckCommand =
   | { name: 'next' }
   | { name: 'setVolume'; volume: number }
   | { name: 'seekRelative'; seconds: number }
+  | { name: 'seekAbsolute'; seconds: number; trackId: string }
   | { name: 'startPlaylist'; playlistId: string };
 
 export type PluginToBrowserMessage =
@@ -97,6 +98,7 @@ export type BrowserToPluginMessage =
       nebulaVersion: string;
       visible: boolean;
       lastActiveAt: number;
+      capabilities?: Array<'seekAbsolute' | 'progressVolume'>;
     }
   | { protocol: typeof STREAM_DECK_PROTOCOL; type: 'pair'; clientId: string; code: string }
   | {
@@ -114,6 +116,8 @@ export type BrowserToPluginMessage =
       positionSeconds: number;
       durationSeconds: number;
       playing: boolean;
+      volume?: number;
+      muted?: boolean;
     }
   | {
       protocol: typeof STREAM_DECK_PROTOCOL;
@@ -243,6 +247,16 @@ export const isValidCommand = (value: unknown): value is StreamDeckCommand => {
         Number.isFinite(value.seconds) &&
         value.seconds >= -86_400 &&
         value.seconds <= 86_400
+      );
+    case 'seekAbsolute':
+      return (
+        typeof value.seconds === 'number' &&
+        Number.isFinite(value.seconds) &&
+        value.seconds >= 0 &&
+        value.seconds <= 86_400 &&
+        typeof value.trackId === 'string' &&
+        value.trackId.length > 0 &&
+        value.trackId.length <= 256
       );
     case 'startPlaylist':
       return (

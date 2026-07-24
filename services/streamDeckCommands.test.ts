@@ -16,6 +16,7 @@ const makeDependencies = (playlist?: IPlaylist) => {
     getState: vi.fn(() => ({
       isPlaying: false,
       playlists: playlist ? [playlist] : [],
+      trackId: song.id,
     })),
     togglePlay: vi.fn(),
     nextSong: vi.fn(),
@@ -44,7 +45,7 @@ describe('Stream Deck command routing', () => {
 
   it('does not toggle when explicit playback state already matches', async () => {
     const { dependencies } = makeDependencies();
-    dependencies.getState.mockReturnValue({ isPlaying: true, playlists: [] });
+    dependencies.getState.mockReturnValue({ isPlaying: true, playlists: [], trackId: song.id });
     await createStreamDeckCommandHandler(dependencies)({
       name: 'setPlayback',
       playing: true,
@@ -56,7 +57,11 @@ describe('Stream Deck command routing', () => {
     let isPlaying = false;
     let pendingState = false;
     const { dependencies } = makeDependencies();
-    dependencies.getState.mockImplementation(() => ({ isPlaying, playlists: [] }));
+    dependencies.getState.mockImplementation(() => ({
+      isPlaying,
+      playlists: [],
+      trackId: song.id,
+    }));
     dependencies.togglePlay.mockImplementation(() => {
       pendingState = !isPlaying;
     });
@@ -80,6 +85,11 @@ describe('Stream Deck command routing', () => {
     audio.currentTime = 95;
     await handle({ name: 'seekRelative', seconds: 20 });
     expect(audio.currentTime).toBe(100);
+    await handle({ name: 'seekAbsolute', seconds: 42, trackId: song.id });
+    expect(audio.currentTime).toBe(42);
+    await expect(
+      handle({ name: 'seekAbsolute', seconds: 10, trackId: 'different-track' }),
+    ).rejects.toMatchObject({ code: 'playback_failed' });
   });
 
   it('loads a remote playlist and replaces the queue', async () => {
