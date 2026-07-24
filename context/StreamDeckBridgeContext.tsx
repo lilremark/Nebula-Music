@@ -199,14 +199,34 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
               ? stateRef.current.queue[stateRef.current.currentSongIndex]?.id
               : undefined,
         }),
-        togglePlay: () => stateRef.current.togglePlay(),
+        togglePlay: () => {
+          stateRef.current.isPlaying = !stateRef.current.isPlaying;
+          stateRef.current.togglePlay();
+        },
         nextSong: () => stateRef.current.nextSong(),
         prevSong: () => stateRef.current.prevSong(),
-        setVolume: (value) => stateRef.current.setVolume(value),
-        setPlaybackRate: (value) => stateRef.current.setPlaybackRate(value),
-        setPitch: (value) => stateRef.current.setPitch(value),
-        setPitchCorrection: (enabled) => stateRef.current.setPitchCorrection(enabled),
-        playSong: (song, playlistQueue) => stateRef.current.playSong(song, playlistQueue),
+        setVolume: (value) => {
+          stateRef.current.volume = value;
+          stateRef.current.setVolume(value);
+        },
+        setPlaybackRate: (value) => {
+          stateRef.current.playbackRate = value;
+          stateRef.current.setPlaybackRate(value);
+        },
+        setPitch: (value) => {
+          stateRef.current.pitch = value;
+          stateRef.current.setPitch(value);
+        },
+        setPitchCorrection: (enabled) => {
+          stateRef.current.pitchCorrection = enabled;
+          stateRef.current.setPitchCorrection(enabled);
+        },
+        playSong: (song, playlistQueue) => {
+          stateRef.current.queue = playlistQueue;
+          stateRef.current.currentSongIndex = 0;
+          stateRef.current.isPlaying = true;
+          stateRef.current.playSong(song, playlistQueue);
+        },
         getPlaylist: (id) => stateRef.current.service.getPlaylist(id),
         audioRef,
       }),
