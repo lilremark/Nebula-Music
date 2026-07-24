@@ -1,6 +1,6 @@
 # Docker Deployment
 
-This folder contains the production Docker setup for Nebula Music 2.1.3.
+This folder contains the production Docker setup for Nebula Music 2.2.0.
 
 The image uses:
 
@@ -42,11 +42,11 @@ From the repository root:
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Compose pulls `lilremark/nebula-music:latest` by default. To pin the 2.1.3
+Compose pulls `lilremark/nebula-music:latest` by default. To pin the 2.2.0
 release:
 
 ```powershell
-$env:NEBULA_VERSION = "2.1.3"
+$env:NEBULA_VERSION = "2.2.0"
 docker compose -f docker/docker-compose.yml up -d
 ```
 
@@ -62,9 +62,9 @@ Build the image:
 
 ```bash
 docker build \
-  --build-arg APP_VERSION=2.1.3 \
+  --build-arg APP_VERSION=2.2.0 \
   -f docker/Dockerfile \
-  -t nebula-music:2.1.3 .
+  -t nebula-music:2.2.0 .
 ```
 
 Run the image:
@@ -76,7 +76,7 @@ docker run --rm \
   --security-opt no-new-privileges \
   --cap-drop ALL \
   -p 8080:8080 \
-  nebula-music:2.1.3
+  nebula-music:2.2.0
 ```
 
 ## Configuration

@@ -20,7 +20,7 @@ import {
 } from '../services/streamDeckProtocol';
 
 const TOKEN_KEY = 'stream_deck_pairing_token';
-const NEBULA_VERSION = '2.1.3';
+const NEBULA_VERSION = '2.2.0';
 
 interface StreamDeckBridgeContextValue {
   status: StreamDeckBridgeStatus;

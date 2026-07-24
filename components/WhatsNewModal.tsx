@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Sparkles, X, Check, Rocket } from 'lucide-react';
+import { Check, ExternalLink, Sparkles, X } from 'lucide-react';
 import { APP_VERSION, CHANGELOG } from '../constants';
 
 export const WhatsNewModal: React.FC = () => {
@@ -80,7 +80,18 @@ export const WhatsNewModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-neutral-900">
+        <div className="p-6 border-t border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-neutral-900 space-y-3">
+          {currentLog.link && (
+            <a
+              href={currentLog.link.href}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-lg hover:brightness-110 transition-all flex items-center justify-center gap-2"
+            >
+              {currentLog.link.label}
+              <ExternalLink className="w-4 h-4" aria-hidden="true" />
+            </a>
+          )}
           <button
             onClick={handleClose}
             className="w-full py-3 bg-neutral-900 text-white font-semibold rounded-lg hover:bg-neutral-800 transition-colors dark:bg-white dark:text-black dark:hover:bg-neutral-200"
