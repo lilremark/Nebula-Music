@@ -28,7 +28,6 @@ const makeDependencies = (playlist?: IPlaylist) => {
     playSong: vi.fn(),
     getPlaylist: vi.fn(async () => playlist ?? null),
     audioRef: { current: audio } as { current: HTMLAudioElement | null },
-    waitForCommit: vi.fn(async () => undefined),
   };
   return { dependencies, audio };
 };
@@ -60,9 +59,8 @@ describe('Stream Deck command routing', () => {
     expect(dependencies.togglePlay).not.toHaveBeenCalled();
   });
 
-  it('waits for each commit before evaluating the next explicit playback command', async () => {
+  it('uses synchronously mirrored state for consecutive playback commands', async () => {
     let isPlaying = false;
-    let pendingState = false;
     const { dependencies } = makeDependencies();
     dependencies.getState.mockImplementation(() => ({
       isPlaying,
@@ -70,10 +68,7 @@ describe('Stream Deck command routing', () => {
       trackId: song.id,
     }));
     dependencies.togglePlay.mockImplementation(() => {
-      pendingState = !isPlaying;
-    });
-    dependencies.waitForCommit.mockImplementation(async () => {
-      isPlaying = pendingState;
+      isPlaying = !isPlaying;
     });
     const handle = createStreamDeckCommandHandler(dependencies);
     await handle({ name: 'setPlayback', playing: true });
@@ -108,6 +103,22 @@ describe('Stream Deck command routing', () => {
     expect(dependencies.setPlaybackRate).toHaveBeenCalledWith(1.4);
     expect(dependencies.setPitch).toHaveBeenCalledWith(-3);
     expect(dependencies.setPitchCorrection).toHaveBeenCalledWith(false);
+  });
+
+  it('acknowledges high-frequency controls without scheduling a browser timer', async () => {
+    vi.useFakeTimers();
+    try {
+      const { dependencies } = makeDependencies();
+      const handle = createStreamDeckCommandHandler(dependencies);
+      await expect(handle({ name: 'setVolume', volume: 0.4 })).resolves.toBeUndefined();
+      await expect(
+        handle({ name: 'setPlaybackRate', playbackRate: 1.3 }),
+      ).resolves.toBeUndefined();
+      await expect(handle({ name: 'setPitch', pitchSemitones: 2 })).resolves.toBeUndefined();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('loads a remote playlist and replaces the queue', async () => {
