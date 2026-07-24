@@ -22,6 +22,9 @@ const makeDependencies = (playlist?: IPlaylist) => {
     nextSong: vi.fn(),
     prevSong: vi.fn(),
     setVolume: vi.fn(),
+    setPlaybackRate: vi.fn(),
+    setPitch: vi.fn(),
+    setPitchCorrection: vi.fn(),
     playSong: vi.fn(),
     getPlaylist: vi.fn(async () => playlist ?? null),
     audioRef: { current: audio } as { current: HTMLAudioElement | null },
@@ -45,7 +48,11 @@ describe('Stream Deck command routing', () => {
 
   it('does not toggle when explicit playback state already matches', async () => {
     const { dependencies } = makeDependencies();
-    dependencies.getState.mockReturnValue({ isPlaying: true, playlists: [], trackId: song.id });
+    dependencies.getState.mockReturnValue({
+      isPlaying: true,
+      playlists: [],
+      trackId: song.id,
+    });
     await createStreamDeckCommandHandler(dependencies)({
       name: 'setPlayback',
       playing: true,
@@ -90,6 +97,17 @@ describe('Stream Deck command routing', () => {
     await expect(
       handle({ name: 'seekAbsolute', seconds: 10, trackId: 'different-track' }),
     ).rejects.toMatchObject({ code: 'playback_failed' });
+  });
+
+  it('routes playback tuning controls', async () => {
+    const { dependencies } = makeDependencies();
+    const handle = createStreamDeckCommandHandler(dependencies);
+    await handle({ name: 'setPlaybackRate', playbackRate: 1.4 });
+    await handle({ name: 'setPitch', pitchSemitones: -3 });
+    await handle({ name: 'setPitchCorrection', enabled: false });
+    expect(dependencies.setPlaybackRate).toHaveBeenCalledWith(1.4);
+    expect(dependencies.setPitch).toHaveBeenCalledWith(-3);
+    expect(dependencies.setPitchCorrection).toHaveBeenCalledWith(false);
   });
 
   it('loads a remote playlist and replaces the queue', async () => {

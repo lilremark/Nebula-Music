@@ -14,13 +14,12 @@ describe('Stream Deck protocol', () => {
     expect(isValidCommand({ name: 'togglePlayback' })).toBe(true);
     expect(isValidCommand({ name: 'setPlayback', playing: true })).toBe(true);
     expect(isValidCommand({ name: 'setVolume', volume: 0.42 })).toBe(true);
+    expect(isValidCommand({ name: 'setPlaybackRate', playbackRate: 1.2 })).toBe(true);
+    expect(isValidCommand({ name: 'setPitch', pitchSemitones: -4 })).toBe(true);
+    expect(isValidCommand({ name: 'setPitchCorrection', enabled: false })).toBe(true);
     expect(isValidCommand({ name: 'seekRelative', seconds: -5 })).toBe(true);
-    expect(
-      isValidCommand({ name: 'seekAbsolute', seconds: 125, trackId: 'song-1' }),
-    ).toBe(true);
-    expect(isValidCommand({ name: 'startPlaylist', playlistId: 'road-trip' })).toBe(
-      true,
-    );
+    expect(isValidCommand({ name: 'seekAbsolute', seconds: 125, trackId: 'song-1' })).toBe(true);
+    expect(isValidCommand({ name: 'startPlaylist', playlistId: 'road-trip' })).toBe(true);
   });
 
   it('rejects malformed, unknown, and non-finite commands', () => {
@@ -28,6 +27,9 @@ describe('Stream Deck protocol', () => {
     expect(isValidCommand({ name: 'deletePlaylist', payload: {} })).toBe(false);
     expect(isValidCommand({ name: 'setVolume', volume: Number.NaN })).toBe(false);
     expect(isValidCommand({ name: 'setPlayback', playing: 'yes' })).toBe(false);
+    expect(isValidCommand({ name: 'setPlaybackRate', playbackRate: 2.1 })).toBe(false);
+    expect(isValidCommand({ name: 'setPitch', pitchSemitones: -13 })).toBe(false);
+    expect(isValidCommand({ name: 'setPitchCorrection', enabled: 'yes' })).toBe(false);
     expect(isValidCommand({ name: 'seekAbsolute', seconds: -1, trackId: 'song-1' })).toBe(false);
     expect(isValidCommand({ name: 'seekAbsolute', seconds: 1, trackId: '' })).toBe(false);
     expect(isValidCommand({ name: 'startPlaylist', playlistId: '' })).toBe(false);
@@ -36,7 +38,12 @@ describe('Stream Deck protocol', () => {
   it('classifies malformed JSON and protocol mismatch', () => {
     expect(parsePluginMessage('{').ok).toBe(false);
     expect(
-      parsePluginMessage(JSON.stringify({ protocol: 'nebula-streamdeck/2', type: 'requestSnapshot' })),
+      parsePluginMessage(
+        JSON.stringify({
+          protocol: 'nebula-streamdeck/2',
+          type: 'requestSnapshot',
+        }),
+      ),
     ).toEqual({
       ok: false,
       code: 'protocol_mismatch',
@@ -47,7 +54,10 @@ describe('Stream Deck protocol', () => {
   it('parses every plugin handshake message using the exact schema', () => {
     expect(
       parsePluginMessage(
-        JSON.stringify({ protocol: STREAM_DECK_PROTOCOL, type: 'requestSnapshot' }),
+        JSON.stringify({
+          protocol: STREAM_DECK_PROTOCOL,
+          type: 'requestSnapshot',
+        }),
       ).ok,
     ).toBe(true);
     expect(
@@ -116,6 +126,9 @@ describe('Stream Deck protocol', () => {
         durationSeconds: 200,
         volume: 0.5,
         muted: false,
+        playbackRate: 1,
+        pitchSemitones: 0,
+        pitchCorrection: true,
         track: {
           id: 'song-1',
           title: 'Nebula',
@@ -160,14 +173,16 @@ describe('Stream Deck protocol', () => {
       songCount: 0,
       duration: 0,
       created: '2026-01-01',
-      songs: [{
-        id: track.id,
-        title: track.title,
-        artist: track.artist,
-        album: track.album ?? '',
-        duration: 215,
-        path: '/private/file',
-      }],
+      songs: [
+        {
+          id: track.id,
+          title: track.title,
+          artist: track.artist,
+          album: track.album ?? '',
+          duration: 215,
+          path: '/private/file',
+        },
+      ],
     });
     expect(playlist).toEqual({
       id: 'playlist-1',

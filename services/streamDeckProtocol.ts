@@ -15,11 +15,7 @@ export type StreamDeckErrorCode =
   | 'internal_error';
 
 export type PairingErrorCode =
-  | 'invalid_code'
-  | 'expired_code'
-  | 'rate_limited'
-  | 'protocol_mismatch'
-  | 'unauthorized';
+  'invalid_code' | 'expired_code' | 'rate_limited' | 'protocol_mismatch' | 'unauthorized';
 
 export interface StreamDeckTrack {
   id: string;
@@ -48,6 +44,9 @@ export interface StreamDeckSnapshot {
   durationSeconds: number;
   volume: number;
   muted: boolean;
+  playbackRate: number;
+  pitchSemitones: number;
+  pitchCorrection: boolean;
   track: StreamDeckTrack | null;
   playlists: StreamDeckPlaylist[];
 }
@@ -58,6 +57,9 @@ export type StreamDeckCommand =
   | { name: 'previous' }
   | { name: 'next' }
   | { name: 'setVolume'; volume: number }
+  | { name: 'setPlaybackRate'; playbackRate: number }
+  | { name: 'setPitch'; pitchSemitones: number }
+  | { name: 'setPitchCorrection'; enabled: boolean }
   | { name: 'seekRelative'; seconds: number }
   | { name: 'seekAbsolute'; seconds: number; trackId: string }
   | { name: 'startPlaylist'; playlistId: string };
@@ -98,9 +100,14 @@ export type BrowserToPluginMessage =
       nebulaVersion: string;
       visible: boolean;
       lastActiveAt: number;
-      capabilities?: Array<'seekAbsolute' | 'progressVolume'>;
+      capabilities?: Array<'seekAbsolute' | 'progressVolume' | 'playbackTuning'>;
     }
-  | { protocol: typeof STREAM_DECK_PROTOCOL; type: 'pair'; clientId: string; code: string }
+  | {
+      protocol: typeof STREAM_DECK_PROTOCOL;
+      type: 'pair';
+      clientId: string;
+      code: string;
+    }
   | {
       protocol: typeof STREAM_DECK_PROTOCOL;
       type: 'authenticate';
@@ -108,7 +115,11 @@ export type BrowserToPluginMessage =
       proof: string;
     }
   | { protocol: typeof STREAM_DECK_PROTOCOL; type: 'revoke'; clientId: string }
-  | { protocol: typeof STREAM_DECK_PROTOCOL; type: 'state'; snapshot: StreamDeckSnapshot }
+  | {
+      protocol: typeof STREAM_DECK_PROTOCOL;
+      type: 'state';
+      snapshot: StreamDeckSnapshot;
+    }
   | {
       protocol: typeof STREAM_DECK_PROTOCOL;
       type: 'progress';
@@ -166,16 +177,28 @@ export const parsePluginMessage = (
   raw: string,
 ):
   | { ok: true; message: PluginToBrowserMessage }
-  | { ok: false; code: StreamDeckErrorCode | 'protocol_mismatch'; message: string } => {
+  | {
+      ok: false;
+      code: StreamDeckErrorCode | 'protocol_mismatch';
+      message: string;
+    } => {
   let value: unknown;
   try {
     value = JSON.parse(raw);
   } catch {
-    return { ok: false, code: 'invalid_command', message: 'Message is not valid JSON.' };
+    return {
+      ok: false,
+      code: 'invalid_command',
+      message: 'Message is not valid JSON.',
+    };
   }
 
   if (!isRecord(value)) {
-    return { ok: false, code: 'invalid_command', message: 'Message must be an object.' };
+    return {
+      ok: false,
+      code: 'invalid_command',
+      message: 'Message must be an object.',
+    };
   }
   if (!hasProtocol(value)) {
     return {
@@ -199,15 +222,27 @@ export const parsePluginMessage = (
 
   if (value.type === 'pairingResult' && typeof value.ok === 'boolean') {
     if (value.token !== undefined && !isCryptographicValue(value.token)) {
-      return { ok: false, code: 'invalid_command', message: 'Pairing token is invalid.' };
+      return {
+        ok: false,
+        code: 'invalid_command',
+        message: 'Pairing token is invalid.',
+      };
     }
     if (
       value.error !== undefined &&
-      !['invalid_code', 'expired_code', 'rate_limited', 'protocol_mismatch', 'unauthorized'].includes(
-        String(value.error),
-      )
+      ![
+        'invalid_code',
+        'expired_code',
+        'rate_limited',
+        'protocol_mismatch',
+        'unauthorized',
+      ].includes(String(value.error))
     ) {
-      return { ok: false, code: 'invalid_command', message: 'Pairing error is invalid.' };
+      return {
+        ok: false,
+        code: 'invalid_command',
+        message: 'Pairing error is invalid.',
+      };
     }
     return { ok: true, message: value as PluginToBrowserMessage };
   }
@@ -222,7 +257,11 @@ export const parsePluginMessage = (
     return { ok: true, message: value as PluginToBrowserMessage };
   }
 
-  return { ok: false, code: 'invalid_command', message: 'Unsupported message shape.' };
+  return {
+    ok: false,
+    code: 'invalid_command',
+    message: 'Unsupported message shape.',
+  };
 };
 
 export const isValidCommand = (value: unknown): value is StreamDeckCommand => {
@@ -241,6 +280,22 @@ export const isValidCommand = (value: unknown): value is StreamDeckCommand => {
         value.volume >= 0 &&
         value.volume <= 1
       );
+    case 'setPlaybackRate':
+      return (
+        typeof value.playbackRate === 'number' &&
+        Number.isFinite(value.playbackRate) &&
+        value.playbackRate >= 0.5 &&
+        value.playbackRate <= 2
+      );
+    case 'setPitch':
+      return (
+        typeof value.pitchSemitones === 'number' &&
+        Number.isFinite(value.pitchSemitones) &&
+        value.pitchSemitones >= -12 &&
+        value.pitchSemitones <= 12
+      );
+    case 'setPitchCorrection':
+      return typeof value.enabled === 'boolean';
     case 'seekRelative':
       return (
         typeof value.seconds === 'number' &&

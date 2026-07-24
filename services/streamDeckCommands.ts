@@ -13,6 +13,9 @@ export interface StreamDeckCommandDependencies {
   nextSong: () => void;
   prevSong: () => void;
   setVolume: (value: number) => void;
+  setPlaybackRate: (value: number) => void;
+  setPitch: (value: number) => void;
+  setPitchCorrection: (enabled: boolean) => void;
   playSong: (song: ISong, queue: ISong[]) => void;
   getPlaylist: (id: string) => Promise<IPlaylist | null>;
   audioRef: React.RefObject<HTMLAudioElement | null>;
@@ -55,6 +58,18 @@ export const createStreamDeckCommandHandler =
         dependencies.setVolume(clamp(command.volume, 0, 1));
         await waitForCommit();
         return;
+      case 'setPlaybackRate':
+        dependencies.setPlaybackRate(clamp(command.playbackRate, 0.5, 2));
+        await waitForCommit();
+        return;
+      case 'setPitch':
+        dependencies.setPitch(clamp(command.pitchSemitones, -12, 12));
+        await waitForCommit();
+        return;
+      case 'setPitchCorrection':
+        dependencies.setPitchCorrection(command.enabled);
+        await waitForCommit();
+        return;
       case 'seekRelative': {
         const audio = dependencies.audioRef.current;
         if (!audio) throw commandFailure('playback_failed', 'No active track is available.');
@@ -75,9 +90,7 @@ export const createStreamDeckCommandHandler =
         return;
       }
       case 'startPlaylist': {
-        const summary = state.playlists.find(
-          (playlist) => playlist.id === command.playlistId,
-        );
+        const summary = state.playlists.find((playlist) => playlist.id === command.playlistId);
         if (!summary) {
           throw commandFailure('stale_playlist', 'The selected playlist no longer exists.');
         }
