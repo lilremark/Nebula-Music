@@ -7,6 +7,7 @@ export interface StreamDeckCommandDependencies {
   getState: () => {
     isPlaying: boolean;
     playlists: IPlaylist[];
+    trackId?: string;
   };
   togglePlay: () => void;
   nextSong: () => void;
@@ -59,6 +60,18 @@ export const createStreamDeckCommandHandler =
         if (!audio) throw commandFailure('playback_failed', 'No active track is available.');
         const duration = Number.isFinite(audio.duration) ? audio.duration : Number.MAX_SAFE_INTEGER;
         audio.currentTime = clamp(audio.currentTime + command.seconds, 0, duration);
+        return;
+      }
+      case 'seekAbsolute': {
+        const audio = dependencies.audioRef.current;
+        if (!audio || !state.trackId) {
+          throw commandFailure('playback_failed', 'No active track is available.');
+        }
+        if (state.trackId !== command.trackId) {
+          throw commandFailure('playback_failed', 'The active track changed before seeking.');
+        }
+        const duration = Number.isFinite(audio.duration) ? audio.duration : Number.MAX_SAFE_INTEGER;
+        audio.currentTime = clamp(command.seconds, 0, duration);
         return;
       }
       case 'startPlaylist': {

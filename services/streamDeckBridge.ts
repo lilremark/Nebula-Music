@@ -238,6 +238,7 @@ export class StreamDeckBridge {
         nebulaVersion: this.options.nebulaVersion,
         visible: this.options.getSnapshot().visible,
         lastActiveAt: this.options.getSnapshot().lastActiveAt,
+        capabilities: ['seekAbsolute', 'progressVolume'],
       });
       if (this.token) {
         this.publishStatus('authenticating');
@@ -397,7 +398,7 @@ export class StreamDeckBridge {
         requestId: message.requestId,
         ok: true,
       });
-      this.notifyStateChanged(true, true);
+      this.notifyStateChanged(true);
     } catch (error) {
       const failure = failureFromUnknown(error);
       this.sendCommandError(message.requestId, failure.code, failure.message);
@@ -408,8 +409,9 @@ export class StreamDeckBridge {
     if (!this.isSocketOpen() || !this.authenticated) return;
     const snapshot = this.options.getSnapshot();
     this.lastStateSentAt = Date.now();
-    const trackChanged = snapshot.track?.id !== this.lastTrackId;
-    this.lastTrackId = snapshot.track?.id ?? null;
+    const trackId = snapshot.track?.id ?? null;
+    const trackChanged = trackId !== this.lastTrackId;
+    this.lastTrackId = trackId;
     if (trackChanged || this.forceFullState) {
       const stateSnapshot =
         !trackChanged && !this.forceArtwork && snapshot.track?.artworkDataUrl
@@ -435,6 +437,8 @@ export class StreamDeckBridge {
       positionSeconds: snapshot.positionSeconds,
       durationSeconds: snapshot.durationSeconds,
       playing: snapshot.playing,
+      volume: snapshot.volume,
+      muted: snapshot.muted,
     });
   }
 

@@ -173,6 +173,10 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
         getState: () => ({
           isPlaying: stateRef.current.isPlaying,
           playlists: stateRef.current.playlists,
+          trackId:
+            stateRef.current.currentSongIndex >= 0
+              ? stateRef.current.queue[stateRef.current.currentSongIndex]?.id
+              : undefined,
         }),
         togglePlay: () => stateRef.current.togglePlay(),
         nextSong: () => stateRef.current.nextSong(),
@@ -261,8 +265,12 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
   }, [bridge, service, song?.id]);
 
   useEffect(() => {
+    bridge.notifyStateChanged();
+  }, [bridge, isPlaying, volume]);
+
+  useEffect(() => {
     bridge.notifyStateChanged(false, true);
-  }, [bridge, isPlaying, volume, playlists]);
+  }, [bridge, playlists]);
 
   useEffect(() => {
     const audio = audioRef.current;

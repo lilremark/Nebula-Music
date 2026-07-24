@@ -15,6 +15,9 @@ describe('Stream Deck protocol', () => {
     expect(isValidCommand({ name: 'setPlayback', playing: true })).toBe(true);
     expect(isValidCommand({ name: 'setVolume', volume: 0.42 })).toBe(true);
     expect(isValidCommand({ name: 'seekRelative', seconds: -5 })).toBe(true);
+    expect(
+      isValidCommand({ name: 'seekAbsolute', seconds: 125, trackId: 'song-1' }),
+    ).toBe(true);
     expect(isValidCommand({ name: 'startPlaylist', playlistId: 'road-trip' })).toBe(
       true,
     );
@@ -25,6 +28,8 @@ describe('Stream Deck protocol', () => {
     expect(isValidCommand({ name: 'deletePlaylist', payload: {} })).toBe(false);
     expect(isValidCommand({ name: 'setVolume', volume: Number.NaN })).toBe(false);
     expect(isValidCommand({ name: 'setPlayback', playing: 'yes' })).toBe(false);
+    expect(isValidCommand({ name: 'seekAbsolute', seconds: -1, trackId: 'song-1' })).toBe(false);
+    expect(isValidCommand({ name: 'seekAbsolute', seconds: 1, trackId: '' })).toBe(false);
     expect(isValidCommand({ name: 'startPlaylist', playlistId: '' })).toBe(false);
   });
 

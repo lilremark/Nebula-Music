@@ -87,6 +87,10 @@ describe('StreamDeckBridge', () => {
     await vi.waitFor(() => expect(statuses.at(-1)?.state).toBe('connecting'));
     socket.open();
     expect(messages(socket).map((message) => message.type)).toEqual(['hello']);
+    expect(messages(socket)[0]).toMatchObject({
+      type: 'hello',
+      capabilities: ['seekAbsolute', 'progressVolume'],
+    });
     socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'authChallenge', nonce: NONCE });
     await vi.waitFor(() =>
       expect(messages(socket).at(-1)).toMatchObject({
@@ -156,6 +160,7 @@ describe('StreamDeckBridge', () => {
     socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true });
     socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'requestSnapshot' });
     await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('state'));
+    const commandMessageStart = socket.sent.length;
     socket.receive({
       protocol: STREAM_DECK_PROTOCOL,
       type: 'command',
@@ -165,6 +170,72 @@ describe('StreamDeckBridge', () => {
     await vi.waitFor(() => expect(onCommand).toHaveBeenCalledWith({ name: 'next' }));
     expect(messages(socket)).toContainEqual(
       expect.objectContaining({ type: 'commandResult', requestId: 'next-1', ok: true }),
+    );
+    await vi.waitFor(() =>
+      expect(messages(socket).slice(commandMessageStart).map((message) => message.type)).toContain(
+        'progress',
+      ),
+    );
+    expect(
+      messages(socket).slice(commandMessageStart).filter((message) => message.type === 'state'),
+    ).toHaveLength(0);
+    expect(messages(socket).at(-1)).toMatchObject({
+      type: 'progress',
+      volume: snapshot.volume,
+      muted: snapshot.muted,
+    });
+    bridge.destroy();
+  });
+
+  it('acknowledges frequent controls without resending playlist snapshots', async () => {
+    const socket = new FakeSocket();
+    const largeSnapshot: StreamDeckSnapshot = {
+      ...snapshot,
+      track: { id: 'track-1', title: 'Song', artist: 'Artist' },
+      playlists: Array.from({ length: 1000 }, (_, index) => ({
+        id: `playlist-${index}`,
+        name: `Playlist ${index}`,
+        trackCount: index,
+      })),
+    };
+    const bridge = new StreamDeckBridge({
+      sessionId: snapshot.sessionId,
+      clientId: snapshot.clientId,
+      origin: snapshot.origin,
+      nebulaVersion: snapshot.nebulaVersion,
+      tokenStore: { get: vi.fn(async () => TOKEN), set: vi.fn(), clear: vi.fn() },
+      createProof: vi.fn(async () => PROOF),
+      socketFactory: () => socket as unknown as WebSocket,
+      onStatus: vi.fn(),
+      onCommand: vi.fn(async () => undefined),
+      getSnapshot: () => largeSnapshot,
+    });
+    bridge.configure(true, 37921);
+    await Promise.resolve();
+    socket.open();
+    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'authChallenge', nonce: NONCE });
+    await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('authenticate'));
+    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'pairingResult', ok: true });
+    socket.receive({ protocol: STREAM_DECK_PROTOCOL, type: 'requestSnapshot' });
+    await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('state'));
+
+    const commandMessageStart = socket.sent.length;
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'command',
+      requestId: 'volume-1',
+      command: { name: 'setVolume', volume: 0.42 },
+    });
+    await vi.waitFor(() =>
+      expect(messages(socket).slice(commandMessageStart).map((message) => message.type)).toEqual([
+        'commandResult',
+        'progress',
+      ]),
+    );
+    const commandTraffic = socket.sent.slice(commandMessageStart);
+    expect(commandTraffic.join('')).not.toContain('"type":"state"');
+    expect(commandTraffic.reduce((bytes, message) => bytes + message.length, 0)).toBeLessThan(
+      1_000,
     );
     bridge.destroy();
   });
