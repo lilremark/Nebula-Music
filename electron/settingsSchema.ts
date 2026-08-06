@@ -15,6 +15,9 @@ export const desktopSettingsSchema = z.object({
   minimizeToTray: z.boolean().default(false),
   mediaKeysEnabled: z.boolean().default(true),
   taskbarProgressEnabled: z.boolean().default(true),
+  // Server whose credentials live in the OS vault; used to restore the session
+  // on startup. Stored here (not in the vault) so the vault stays keyed by URL.
+  lastServerUrl: z.string().url().max(2048).nullable().default(null),
   // Phase 1 is internal-only; the proxy permits plain HTTP Subsonic by default
   // and Phase 2 flips this to false with a per-server allowlist.
   permitInsecureHttp: z.boolean().default(true),
@@ -30,6 +33,7 @@ export const DESKTOP_SETTINGS_DEFAULTS: DesktopSettings = {
   minimizeToTray: false,
   mediaKeysEnabled: true,
   taskbarProgressEnabled: true,
+  lastServerUrl: null,
   permitInsecureHttp: true,
   windowBounds: null,
   updateChannel: 'stable',
