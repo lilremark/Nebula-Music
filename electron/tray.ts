@@ -6,7 +6,7 @@ import {
   type MenuItemConstructorOptions,
 } from 'electron';
 import { IPC } from './ipc';
-import { createCommandClient } from './commandClient';
+import { createCommandClient } from '../playback/commandClient';
 import type { DesktopCommand, DesktopCommandEnvelope } from '../playback/desktopProtocol';
 
 /**
@@ -22,6 +22,7 @@ interface TrayOptions {
   getWindow: () => BrowserWindow | null;
   getEpoch: () => number;
   onCommand: (envelope: DesktopCommandEnvelope) => void;
+  onToggleMiniPlayer: () => void;
   onQuit: () => void;
 }
 
@@ -51,6 +52,8 @@ export const createTray = (options: TrayOptions): Tray => {
     { label: 'Play / Pause', click: () => send({ name: 'togglePlayback' }) },
     { label: 'Next', click: () => send({ name: 'next' }) },
     { label: 'Previous', click: () => send({ name: 'previous' }) },
+    { type: 'separator' },
+    { label: 'Mini Player', click: () => options.onToggleMiniPlayer() },
     { type: 'separator' },
     { label: 'Quit', click: () => options.onQuit() },
   ];

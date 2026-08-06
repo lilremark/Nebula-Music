@@ -29,6 +29,12 @@ export const IPC = {
   playback: {
     command: 'nebula:playback:command',
     snapshot: 'nebula:playback:snapshot',
+    snapshotToClient: 'nebula:playback:snapshot-to-client',
+    clientCommand: 'nebula:playback:client-command',
+  },
+  miniPlayer: {
+    toggle: 'nebula:mini-player:toggle',
+    showMain: 'nebula:mini-player:show-main',
   },
 } as const;
 

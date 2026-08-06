@@ -36,6 +36,12 @@ export interface DesktopBridge {
   playback: {
     onCommand(handler: (envelope: DesktopCommandEnvelope) => void): () => void;
     publishSnapshot(snapshot: DesktopSnapshot): void;
+    onSnapshot(handler: (snapshot: DesktopSnapshot) => void): () => void;
+    sendCommand(envelope: DesktopCommandEnvelope): void;
+  };
+  miniPlayer: {
+    toggle(): Promise<void>;
+    showMain(): Promise<void>;
   };
 }
 

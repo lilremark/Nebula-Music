@@ -40,6 +40,7 @@ const CSP = [
 ].join('; ');
 
 let mainWindow: BrowserWindow | null = null;
+let miniPlayerWindow: BrowserWindow | null = null;
 let settingsStore: SettingsStore;
 let credentialVault: CredentialVault;
 let isQuitting = false;
@@ -47,6 +48,10 @@ let lastSnapshot: DesktopSnapshot | null = null;
 
 const forwardCommand = (envelope: DesktopCommandEnvelope): void => {
   mainWindow?.webContents.send(IPC.playback.command, envelope);
+};
+
+const broadcastSnapshotToMiniPlayer = (snapshot: DesktopSnapshot): void => {
+  miniPlayerWindow?.webContents.send(IPC.playback.snapshotToClient, snapshot);
 };
 
 const updateTaskbarProgress = (snapshot: DesktopSnapshot): void => {
@@ -228,6 +233,92 @@ const createWindow = (): BrowserWindow => {
   return win;
 };
 
+const createMiniPlayerWindow = (): BrowserWindow => {
+  const win = new BrowserWindow({
+    width: 360,
+    height: 96,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    show: false,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    backgroundColor: '#17171a',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      webSecurity: true,
+    },
+  });
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    void openExternalSafely(url);
+    return { action: 'deny' };
+  });
+
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith(PROTOCOL_URL)) event.preventDefault();
+  });
+
+  // The mini-player is a companion window: closing it hides it instead of
+  // destroying it, and never quits the app.
+  win.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      win.hide();
+    }
+  });
+
+  win.once('ready-to-show', () => win.show());
+
+  win.webContents.on('did-finish-load', () => {
+    console.log('[nebula] mini-player loaded');
+    // Seed the remote client with the latest state instead of waiting for the
+    // next snapshot publish from the owner.
+    if (lastSnapshot) broadcastSnapshotToMiniPlayer(lastSnapshot);
+  });
+  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    console.error(
+      `[nebula] mini-player failed to load (${errorCode}) ${errorDescription} ${validatedURL}`,
+    );
+  });
+  win.webContents.on('console-message', (event) => {
+    if (event.level === 'warning' || event.level === 'error') {
+      console.error(`[nebula] mini-player ${event.level}: ${event.message}`);
+    }
+  });
+
+  void win.loadURL(`${PROTOCOL_URL}mini-player.html`);
+  return win;
+};
+
+const toggleMiniPlayer = (): void => {
+  if (miniPlayerWindow) {
+    if (miniPlayerWindow.isVisible()) {
+      miniPlayerWindow.hide();
+    } else {
+      miniPlayerWindow.show();
+      miniPlayerWindow.focus();
+    }
+    return;
+  }
+  miniPlayerWindow = createMiniPlayerWindow();
+  miniPlayerWindow.on('closed', () => {
+    miniPlayerWindow = null;
+  });
+};
+
+const showMainWindow = (): void => {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+};
+
 const registerIpc = (): void => {
   ipcMain.on(IPC.app.info, (event) => {
     event.returnValue = {
@@ -310,6 +401,21 @@ const registerIpc = (): void => {
   ipcMain.on(IPC.playback.snapshot, (_event, snapshot: DesktopSnapshot) => {
     lastSnapshot = snapshot;
     updateTaskbarProgress(snapshot);
+    broadcastSnapshotToMiniPlayer(snapshot);
+  });
+
+  // Commands from the mini-player (a remote client) are validated and
+  // forwarded to the playback owner in the main window.
+  ipcMain.on(IPC.playback.clientCommand, (event, envelope: DesktopCommandEnvelope) => {
+    if (!miniPlayerWindow || event.sender !== miniPlayerWindow.webContents) return;
+    forwardCommand(envelope);
+  });
+
+  ipcMain.handle(IPC.miniPlayer.toggle, () => {
+    toggleMiniPlayer();
+  });
+  ipcMain.handle(IPC.miniPlayer.showMain, () => {
+    showMainWindow();
   });
 };
 
@@ -367,6 +473,7 @@ if (!gotLock) {
       getWindow: () => mainWindow,
       getEpoch: () => lastSnapshot?.epoch ?? 0,
       onCommand: forwardCommand,
+      onToggleMiniPlayer: toggleMiniPlayer,
       onQuit,
     });
 
@@ -388,5 +495,7 @@ if (!gotLock) {
   app.on('will-quit', () => {
     unregisterMediaKeys();
     destroyTray();
+    miniPlayerWindow?.destroy();
+    miniPlayerWindow = null;
   });
 }

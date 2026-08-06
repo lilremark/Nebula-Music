@@ -44,6 +44,20 @@ const bridge: DesktopBridge = {
       };
     },
     publishSnapshot: (snapshot) => ipcRenderer.send(IPC.playback.snapshot, snapshot),
+    onSnapshot: (handler) => {
+      const listener = (_event: Electron.IpcRendererEvent, snapshot: unknown) => {
+        handler(snapshot as Parameters<typeof handler>[0]);
+      };
+      ipcRenderer.on(IPC.playback.snapshotToClient, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC.playback.snapshotToClient, listener);
+      };
+    },
+    sendCommand: (envelope) => ipcRenderer.send(IPC.playback.clientCommand, envelope),
+  },
+  miniPlayer: {
+    toggle: () => ipcRenderer.invoke(IPC.miniPlayer.toggle),
+    showMain: () => ipcRenderer.invoke(IPC.miniPlayer.showMain),
   },
 };
 

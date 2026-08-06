@@ -1,5 +1,5 @@
 import { globalShortcut } from 'electron';
-import { createCommandClient, type CommandClient } from './commandClient';
+import { createCommandClient, type CommandClient } from '../playback/commandClient';
 import type { DesktopCommand, DesktopCommandEnvelope } from '../playback/desktopProtocol';
 
 /**

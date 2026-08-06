@@ -2,7 +2,7 @@ import {
   DESKTOP_PROTOCOL_VERSION,
   type DesktopCommand,
   type DesktopCommandEnvelope,
-} from '../playback/desktopProtocol';
+} from './desktopProtocol';
 
 /**
  * Builds monotonic command envelopes for a named remote client (tray, media

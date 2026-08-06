@@ -31,6 +31,13 @@ const noopUnsubscribe = (): void => {};
 const webPlayback: PlaybackTransport = {
   onCommand: () => noopUnsubscribe,
   publishSnapshot: () => {},
+  onSnapshot: () => noopUnsubscribe,
+  sendCommand: () => {},
+};
+
+const webMiniPlayer = {
+  toggle: async () => {},
+  showMain: async () => {},
 };
 
 const webFetchJson = async (url: string) => {
@@ -64,6 +71,7 @@ export const createWebPlatform = (): Platform => ({
   settings: webSettings,
   vault: webVault,
   playback: webPlayback,
+  miniPlayer: webMiniPlayer,
   fetchJson: webFetchJson,
   resolveMediaUrl: (url) => url,
 });

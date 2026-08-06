@@ -43,6 +43,8 @@ export const createDesktopPlatform = (): Platform => {
   const playback: PlaybackTransport = {
     onCommand: (handler) => bridge.playback.onCommand(handler),
     publishSnapshot: (snapshot) => bridge.playback.publishSnapshot(snapshot),
+    onSnapshot: (handler) => bridge.playback.onSnapshot(handler),
+    sendCommand: (envelope) => bridge.playback.sendCommand(envelope),
   };
 
   const fetchJson = (url: string) => bridge.http.fetchJson(url);
@@ -67,6 +69,10 @@ export const createDesktopPlatform = (): Platform => {
     settings,
     vault,
     playback,
+    miniPlayer: {
+      toggle: () => bridge.miniPlayer.toggle(),
+      showMain: () => bridge.miniPlayer.showMain(),
+    },
     fetchJson,
     resolveMediaUrl,
   };

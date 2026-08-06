@@ -30,13 +30,17 @@ export interface CredentialVault {
 }
 
 /**
- * Command/snapshot transport between remote clients (tray, media keys, later
- * mini-player) in the main process and the playback owner in the renderer.
- * In the web build this is a no-op.
+ * Command/snapshot transport between the playback owner and remote clients
+ * (tray, media keys, mini-player). In the main window the transport is used
+ * by the owner bridge to receive commands and publish snapshots; in the
+ * mini-player window the same transport is used in the reverse direction:
+ * subscribe to snapshots and send commands. In the web build this is a no-op.
  */
 export interface PlaybackTransport {
   onCommand(handler: (envelope: DesktopCommandEnvelope) => void): () => void;
   publishSnapshot(snapshot: DesktopSnapshot): void;
+  onSnapshot(handler: (snapshot: DesktopSnapshot) => void): () => void;
+  sendCommand(envelope: DesktopCommandEnvelope): void;
 }
 
 export interface JsonFetchResult {
@@ -44,6 +48,13 @@ export interface JsonFetchResult {
   statusText: string;
   ok: boolean;
   body: unknown;
+}
+
+export interface MiniPlayerControl {
+  /** Toggles the always-on-top mini-player window (main window only). */
+  toggle(): Promise<void>;
+  /** Shows and focuses the main Nebula window (mini-player window only). */
+  showMain(): Promise<void>;
 }
 
 /**
@@ -58,6 +69,7 @@ export interface Platform {
   readonly settings: DesktopSettingsApi;
   readonly vault: CredentialVault;
   readonly playback: PlaybackTransport;
+  readonly miniPlayer: MiniPlayerControl;
   /** JSON fetch routed through the main process on desktop (bypasses CORS and
    * mixed-content policy for Subsonic servers). Web build uses global fetch. */
   fetchJson(url: string): Promise<JsonFetchResult>;
