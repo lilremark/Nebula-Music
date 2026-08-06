@@ -13,6 +13,8 @@ export const desktopSettingsSchema = z.object({
   schemaVersion: z.number().int().min(1).default(1),
   trayOnClose: z.boolean().default(true),
   minimizeToTray: z.boolean().default(false),
+  mediaKeysEnabled: z.boolean().default(true),
+  taskbarProgressEnabled: z.boolean().default(true),
   // Phase 1 is internal-only; the proxy permits plain HTTP Subsonic by default
   // and Phase 2 flips this to false with a per-server allowlist.
   permitInsecureHttp: z.boolean().default(true),
@@ -26,6 +28,8 @@ export const DESKTOP_SETTINGS_DEFAULTS: DesktopSettings = {
   schemaVersion: 1,
   trayOnClose: true,
   minimizeToTray: false,
+  mediaKeysEnabled: true,
+  taskbarProgressEnabled: true,
   permitInsecureHttp: true,
   windowBounds: null,
   updateChannel: 'stable',

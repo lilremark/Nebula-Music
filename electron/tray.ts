@@ -6,11 +6,8 @@ import {
   type MenuItemConstructorOptions,
 } from 'electron';
 import { IPC } from './ipc';
-import {
-  DESKTOP_PROTOCOL_VERSION,
-  type DesktopCommand,
-  type DesktopCommandEnvelope,
-} from '../playback/desktopProtocol';
+import { createCommandClient } from './commandClient';
+import type { DesktopCommand, DesktopCommandEnvelope } from '../playback/desktopProtocol';
 
 /**
  * Tray icon: a 32x32 violet dot (embedding the base64 avoids runtime asset-path
@@ -20,7 +17,6 @@ const TRAY_ICON_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJnSURBVFhH7ZfPSxRhHMZFQuwUHaKIiIgwJDwskUgEQaf+AAVxHUc9KAReUhAFGyq23W1ndtWLguXPKY/d+gM6dfLkvWNXf+zszDuCE8/IivP0zjjv5CXqgQ8Lu+/7PDPv+32/M9vS8l9/owwjaC2NBVcYfM9jL1SF/sPrNc3rNAcbj02t8UQGfn+vBzd47h8Jd2dq9RyHJaI7D4sDe1fZS1nlUefmb+YKVAfcu+yZWqa238GGWagOiQfK9VHKO7fYiFmedEc+TLsT+OTfmFreu88ZscLesUGTpZeNvF0U37YrfsDYRfF9Zcod5zlNUhdnXMFtvBKFzxUhOJix3/pb1WH3Gc+3hvxu42lwifMiwlXyRLA+55oclMTWO/8Le4Ca7t7hzIisYdHFk7Dsae6cQX2wF44nZ54KyyNrMnbpaIfN0/CpLH6yF7B6jy9zdqiThhMdjL1kYxWWJrxe9kRH5exQhZGDazwYVc2mKqzOejPsiSPO2aFkBahafMzGG2+VPee1xm3ODoWl4cEfZ7xJNlUBR5c9Yy9AVgMLL9znbKqCrEvG1oCh/2jnwQDVzMZpwNFlL4Ab5exTybpg1m1Ye+0tsxe6IWdGhP3hSWCzIL5yQBJ22d9ljxP2OzgzIjQjXCVPRC3gYcNBMhAuO/9ocrFN6KySXkLCB1JZHHIowJ7Llr2J0stJ+O4nMWmCPr9ueIs45/iU9v0I9ZzSSwkGywoyC5W88wgnjDPOVVgPkqejGvVcpvCzwjNc9pQ8D2tw757SsifJ6NttwxGydKeHgyKhutOD979U1Z5V6GToF8yF/A/45/QLOk1/1X2nGUgAAAAASUVORK5CYII=';
 
 let tray: Tray | null = null;
-let nextSeq = 0;
 
 interface TrayOptions {
   getWindow: () => BrowserWindow | null;
@@ -29,15 +25,6 @@ interface TrayOptions {
   onQuit: () => void;
 }
 
-const makeEnvelope = (epoch: number, command: DesktopCommand): DesktopCommandEnvelope => ({
-  v: DESKTOP_PROTOCOL_VERSION,
-  clientId: 'nebula-tray',
-  epoch,
-  seq: ++nextSeq,
-  issuedAt: Date.now(),
-  command,
-});
-
 export const createTray = (options: TrayOptions): Tray => {
   if (tray) return tray;
 
@@ -45,8 +32,9 @@ export const createTray = (options: TrayOptions): Tray => {
   tray = new Tray(icon);
   tray.setToolTip('Nebula');
 
+  const commands = createCommandClient('nebula-tray', options.getEpoch);
   const send = (command: DesktopCommand): void => {
-    options.onCommand(makeEnvelope(options.getEpoch(), command));
+    options.onCommand(commands.send(command));
   };
 
   const showWindow = (): void => {

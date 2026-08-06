@@ -13,7 +13,8 @@ import { isAllowedExternalUrl } from './links';
 import { SettingsStore } from './settingsStore';
 import { CredentialVault } from './credentialVault';
 import { createTray, destroyTray } from './tray';
-import type { DesktopSnapshot } from '../playback/desktopProtocol';
+import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
+import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 
 const SCHEME = 'app';
 const PROTOCOL_URL = 'app://nebula/';
@@ -42,6 +43,19 @@ let settingsStore: SettingsStore;
 let credentialVault: CredentialVault;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
+
+const forwardCommand = (envelope: DesktopCommandEnvelope): void => {
+  mainWindow?.webContents.send(IPC.playback.command, envelope);
+};
+
+const updateTaskbarProgress = (snapshot: DesktopSnapshot): void => {
+  if (!mainWindow || settingsStore.get('taskbarProgressEnabled') !== true) return;
+  if (snapshot.playing && snapshot.durationSeconds > 0) {
+    mainWindow.setProgressBar(Math.min(1, snapshot.positionSeconds / snapshot.durationSeconds));
+  } else {
+    mainWindow.setProgressBar(-1);
+  }
+};
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -270,6 +284,7 @@ const registerIpc = (): void => {
 
   ipcMain.on(IPC.playback.snapshot, (_event, snapshot: DesktopSnapshot) => {
     lastSnapshot = snapshot;
+    updateTaskbarProgress(snapshot);
   });
 };
 
@@ -313,10 +328,17 @@ if (!gotLock) {
 
     mainWindow = createWindow();
 
+    if (settingsStore.get('mediaKeysEnabled') === true) {
+      registerMediaKeys({
+        getEpoch: () => lastSnapshot?.epoch ?? 0,
+        onCommand: forwardCommand,
+      });
+    }
+
     createTray({
       getWindow: () => mainWindow,
       getEpoch: () => lastSnapshot?.epoch ?? 0,
-      onCommand: (command) => mainWindow?.webContents.send(IPC.playback.command, command),
+      onCommand: forwardCommand,
       onQuit,
     });
 
@@ -336,6 +358,7 @@ if (!gotLock) {
   });
 
   app.on('will-quit', () => {
+    unregisterMediaKeys();
     destroyTray();
   });
 }
