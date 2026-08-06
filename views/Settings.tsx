@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
+import { usePlatform } from '../platform/PlatformContext';
 import { VISUALIZER_MODES } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { CustomDropdown } from '../components/CustomDropdown';
@@ -135,6 +136,74 @@ const OptionRow = ({ label, description, options, value, onChange }: {
         </div>
     </div>
 );
+
+const DesktopSettingsPanel = () => {
+    const platform = usePlatform();
+    const [values, setValues] = useState<Record<string, boolean>>({});
+    const [loaded, setLoaded] = useState(false);
+
+    useEffect(() => {
+        if (!platform || platform.info.kind !== 'desktop') return;
+        let cancelled = false;
+        Promise.all([
+            platform.settings.get('trayOnClose'),
+            platform.settings.get('minimizeToTray'),
+            platform.settings.get('mediaKeysEnabled'),
+            platform.settings.get('taskbarProgressEnabled'),
+        ]).then(([trayOnClose, minimizeToTray, mediaKeysEnabled, taskbarProgressEnabled]) => {
+            if (cancelled) return;
+            setValues({
+                trayOnClose: trayOnClose !== false,
+                minimizeToTray: minimizeToTray === true,
+                mediaKeysEnabled: mediaKeysEnabled !== false,
+                taskbarProgressEnabled: taskbarProgressEnabled !== false,
+            });
+            setLoaded(true);
+        }).catch(() => {});
+        return () => { cancelled = true; };
+    }, [platform]);
+
+    if (!platform || platform.info.kind !== 'desktop') return null;
+
+    const setValue = async (key: string, value: boolean) => {
+        setValues(prev => ({ ...prev, [key]: value }));
+        try {
+            await platform.settings.set(key, value);
+        } catch (error) {
+            console.warn('[nebula] failed to persist desktop setting', key, error);
+            setValues(prev => ({ ...prev, [key]: !value }));
+        }
+    };
+
+    return (
+        <SettingPanel icon={Monitor} title="Desktop Integration">
+            <ToggleRow
+                label="Close to Tray"
+                description="Closing the window keeps Nebula running in the system tray."
+                checked={loaded ? values.trayOnClose ?? true : true}
+                onChange={(v) => setValue('trayOnClose', v)}
+            />
+            <ToggleRow
+                label="Minimize to Tray"
+                description="Minimizing hides the window to the tray instead of the taskbar."
+                checked={loaded ? values.minimizeToTray ?? false : false}
+                onChange={(v) => setValue('minimizeToTray', v)}
+            />
+            <ToggleRow
+                label="Global Media Keys"
+                description="Control playback with your keyboard's media keys even when Nebula is in the background."
+                checked={loaded ? values.mediaKeysEnabled ?? true : true}
+                onChange={(v) => setValue('mediaKeysEnabled', v)}
+            />
+            <ToggleRow
+                label="Taskbar Progress"
+                description="Show playback progress in the Windows taskbar."
+                checked={loaded ? values.taskbarProgressEnabled ?? true : true}
+                onChange={(v) => setValue('taskbarProgressEnabled', v)}
+            />
+        </SettingPanel>
+    );
+};
 
 export const SettingsView: React.FC = () => {
     const { settings, updateSettings, connectToSubsonic, isDemoMode, credentials, visualizerMode, setVisualizerMode, disconnect } = useStore();
@@ -828,6 +897,8 @@ export const SettingsView: React.FC = () => {
                             <ShortcutRow id="zen" label="Toggle Zen Mode" value={settings.shortcuts.zen} editingKey={editingKey} setEditingKey={setEditingKey} />
                             <ShortcutRow id="visualizer" label="Cycle Visualizer" value={settings.shortcuts.visualizer} editingKey={editingKey} setEditingKey={setEditingKey} />
                         </SettingPanel>
+
+                        <DesktopSettingsPanel />
                 </div>
             </div>
         </div>

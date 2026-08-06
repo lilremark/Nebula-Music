@@ -192,7 +192,18 @@ const createWindow = (): BrowserWindow => {
 
   win.on('close', (event) => {
     if (!isQuitting) {
+      if (settingsStore.get('trayOnClose') === false) {
+        isQuitting = true;
+        app.quit();
+        return;
+      }
       event.preventDefault();
+      win.hide();
+    }
+  });
+
+  win.on('minimize', () => {
+    if (!isQuitting && settingsStore.get('minimizeToTray') === true) {
       win.hide();
     }
   });
@@ -257,6 +268,19 @@ const registerIpc = (): void => {
   ipcMain.handle(IPC.settings.set, async (_event, key: unknown, value: unknown) => {
     if (typeof key !== 'string') return;
     await settingsStore.set(key, value);
+    if (key === 'mediaKeysEnabled') {
+      if (value === true) {
+        registerMediaKeys({
+          getEpoch: () => lastSnapshot?.epoch ?? 0,
+          onCommand: forwardCommand,
+        });
+      } else {
+        unregisterMediaKeys();
+      }
+    } else if (key === 'taskbarProgressEnabled') {
+      if (value === true && lastSnapshot) updateTaskbarProgress(lastSnapshot);
+      else mainWindow?.setProgressBar(-1);
+    }
   });
 
   ipcMain.handle(IPC.vault.get, (_event, serverUrl: unknown) => {
