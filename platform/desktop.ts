@@ -82,6 +82,9 @@ export const createDesktopPlatform = (): Platform => {
       installAndRestart: () => bridge.updater.installAndRestart(),
       onStatus: (handler) => bridge.updater.onStatus(handler),
     },
+    titleBar: {
+      setTheme: (mode) => bridge.titleBar.setTheme(mode),
+    },
     fetchJson,
     resolveMediaUrl,
   };
