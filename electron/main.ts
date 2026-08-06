@@ -12,6 +12,7 @@ import { IPC } from './ipc';
 import { isAllowedExternalUrl } from './links';
 import { SettingsStore } from './settingsStore';
 import { CredentialVault } from './credentialVault';
+import { createSafeStorageCipher } from './safeStorageCipher';
 import { createTray, destroyTray } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
@@ -321,7 +322,10 @@ if (!gotLock) {
 
   app.whenReady().then(async () => {
     settingsStore = await SettingsStore.open(path.join(app.getPath('userData'), 'settings.json'));
-    credentialVault = await CredentialVault.open(path.join(app.getPath('userData'), 'vault.json'));
+    credentialVault = await CredentialVault.open(
+      path.join(app.getPath('userData'), 'vault.json'),
+      createSafeStorageCipher(),
+    );
 
     registerProtocol();
     registerIpc();
