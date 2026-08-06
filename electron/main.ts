@@ -17,7 +17,6 @@ import { createSafeStorageCipher } from './safeStorageCipher';
 import { createTray, destroyTray } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
-import { DEFAULT_TITLE_BAR, isTitleBarMode, titleBarThemeFor } from './titleBarTheme';
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 
 const SCHEME = 'app';
@@ -47,7 +46,6 @@ let miniPlayerWindow: BrowserWindow | null = null;
 let settingsStore: SettingsStore;
 let credentialVault: CredentialVault;
 let updater: Updater;
-let titleBarColors = DEFAULT_TITLE_BAR;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
 
@@ -180,9 +178,7 @@ const createWindow = (): BrowserWindow => {
     height: 800,
     minWidth: WINDOW_MIN.width,
     minHeight: WINDOW_MIN.height,
-    ...(process.platform === 'win32'
-      ? { titleBarStyle: 'hidden' as const, titleBarOverlay: { ...titleBarColors } }
-      : {}),
+    ...(process.platform === 'win32' ? { frame: false } : {}),
     show: false,
     backgroundColor: '#0b0b12',
     webPreferences: {
@@ -219,6 +215,13 @@ const createWindow = (): BrowserWindow => {
     if (!isQuitting && settingsStore.get('minimizeToTray') === true) {
       win.hide();
     }
+  });
+
+  win.on('maximize', () => {
+    win.webContents.send(IPC.window.maximizeChanged, true);
+  });
+  win.on('unmaximize', () => {
+    win.webContents.send(IPC.window.maximizeChanged, false);
   });
 
   win.once('ready-to-show', () => win.show());
@@ -359,13 +362,6 @@ const registerIpc = (): void => {
   ipcMain.handle(IPC.window.isFullScreen, (event) =>
     BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false,
   );
-
-  ipcMain.on(IPC.titleBar.setTheme, (_event, mode: unknown) => {
-    if (process.platform !== 'win32') return;
-    if (!isTitleBarMode(mode)) return;
-    titleBarColors = titleBarThemeFor(mode);
-    mainWindow?.setTitleBarOverlay({ ...titleBarColors });
-  });
 
   ipcMain.handle(IPC.settings.get, (_event, key: unknown) => {
     if (typeof key !== 'string') return null;
