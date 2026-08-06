@@ -39,6 +39,12 @@ export const IPC = {
     toggle: 'nebula:mini-player:toggle',
     showMain: 'nebula:mini-player:show-main',
   },
+  updater: {
+    getState: 'nebula:updater:get-state',
+    check: 'nebula:updater:check',
+    installAndRestart: 'nebula:updater:install-and-restart',
+    status: 'nebula:updater:status',
+  },
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC][keyof (typeof IPC)[keyof typeof IPC]];

@@ -76,6 +76,12 @@ export const createDesktopPlatform = (): Platform => {
       toggle: () => bridge.miniPlayer.toggle(),
       showMain: () => bridge.miniPlayer.showMain(),
     },
+    updater: {
+      getState: () => bridge.updater.getState(),
+      check: () => bridge.updater.check(),
+      installAndRestart: () => bridge.updater.installAndRestart(),
+      onStatus: (handler) => bridge.updater.onStatus(handler),
+    },
     fetchJson,
     resolveMediaUrl,
   };

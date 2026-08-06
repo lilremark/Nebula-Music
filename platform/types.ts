@@ -1,5 +1,6 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
+import type { UpdaterState } from '../electron/updater';
 
 export type PlatformKind = 'web' | 'desktop';
 
@@ -61,6 +62,17 @@ export interface MiniPlayerControl {
   showMain(): Promise<void>;
 }
 
+/** Auto-update surface. Inert (enabled: false) in the web build and in dev. */
+export interface UpdaterApi {
+  getState(): Promise<UpdaterState>;
+  /** Returns true when an update check was initiated. */
+  check(): Promise<boolean>;
+  /** Installs the downloaded update and restarts (no-op until downloaded). */
+  installAndRestart(): Promise<void>;
+  /** Subscribes to state pushes; returns an unsubscribe function. */
+  onStatus(handler: (state: UpdaterState) => void): () => void;
+}
+
 /**
  * Platform is the boundary between the renderer and the host. The web build
  * uses `web.ts`; the Electron build uses `desktop.ts` on top of the preload
@@ -74,6 +86,7 @@ export interface Platform {
   readonly vault: CredentialVault;
   readonly playback: PlaybackTransport;
   readonly miniPlayer: MiniPlayerControl;
+  readonly updater: UpdaterApi;
   /** JSON fetch routed through the main process on desktop (bypasses CORS and
    * mixed-content policy for Subsonic servers). Web build uses global fetch. */
   fetchJson(url: string): Promise<JsonFetchResult>;

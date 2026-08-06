@@ -4,6 +4,7 @@ import type {
   PlaybackTransport,
   Platform,
   PlatformInfo,
+  UpdaterApi,
   WindowControl,
 } from './types';
 
@@ -43,6 +44,20 @@ const webMiniPlayer = {
   showMain: async () => {},
 };
 
+const webUpdater: UpdaterApi = {
+  getState: async () => ({
+    enabled: false,
+    phase: 'idle',
+    currentVersion: null,
+    newVersion: null,
+    progress: null,
+    message: null,
+  }),
+  check: async () => false,
+  installAndRestart: async () => {},
+  onStatus: () => noopUnsubscribe,
+};
+
 const webFetchJson = async (url: string) => {
   const response = await fetch(url);
   const body = await response.json().catch(() => null);
@@ -75,6 +90,7 @@ export const createWebPlatform = (): Platform => ({
   vault: webVault,
   playback: webPlayback,
   miniPlayer: webMiniPlayer,
+  updater: webUpdater,
   fetchJson: webFetchJson,
   resolveMediaUrl: (url) => url,
 });

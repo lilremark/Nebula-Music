@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC } from './ipc';
 import type { DesktopBridge } from '../platform/desktopBridge';
+import type { UpdaterState } from './updater';
 
 const info = ipcRenderer.sendSync(IPC.app.info) as DesktopBridge['info'];
 
@@ -62,6 +63,20 @@ const bridge: DesktopBridge = {
   miniPlayer: {
     toggle: () => ipcRenderer.invoke(IPC.miniPlayer.toggle),
     showMain: () => ipcRenderer.invoke(IPC.miniPlayer.showMain),
+  },
+  updater: {
+    getState: () => ipcRenderer.invoke(IPC.updater.getState) as Promise<UpdaterState>,
+    check: () => ipcRenderer.invoke(IPC.updater.check) as Promise<boolean>,
+    installAndRestart: () => ipcRenderer.invoke(IPC.updater.installAndRestart),
+    onStatus: (handler: (state: UpdaterState) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, state: unknown) => {
+        handler(state as UpdaterState);
+      };
+      ipcRenderer.on(IPC.updater.status, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC.updater.status, listener);
+      };
+    },
   },
 };
 

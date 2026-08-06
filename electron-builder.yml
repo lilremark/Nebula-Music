@@ -16,3 +16,7 @@ win:
 nsis:
   oneClick: true
   perMachine: false
+publish:
+  provider: github
+  owner: lilremark
+  repo: Nebula-Music

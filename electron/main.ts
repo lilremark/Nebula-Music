@@ -8,6 +8,7 @@ import {
 } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { autoUpdater } from 'electron-updater';
 import { IPC } from './ipc';
 import { isAllowedExternalUrl } from './links';
 import { SettingsStore } from './settingsStore';
@@ -15,6 +16,7 @@ import { CredentialVault } from './credentialVault';
 import { createSafeStorageCipher } from './safeStorageCipher';
 import { createTray, destroyTray } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
+import { createUpdater, type Updater } from './updater';
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 
 const SCHEME = 'app';
@@ -43,6 +45,7 @@ let mainWindow: BrowserWindow | null = null;
 let miniPlayerWindow: BrowserWindow | null = null;
 let settingsStore: SettingsStore;
 let credentialVault: CredentialVault;
+let updater: Updater;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
 
@@ -371,6 +374,8 @@ const registerIpc = (): void => {
     } else if (key === 'taskbarProgressEnabled') {
       if (value === true && lastSnapshot) updateTaskbarProgress(lastSnapshot);
       else mainWindow?.setProgressBar(-1);
+    } else if (key === 'updateChannel' && typeof value === 'string') {
+      updater.setChannel(value);
     }
   });
 
@@ -428,6 +433,12 @@ const registerIpc = (): void => {
   ipcMain.handle(IPC.miniPlayer.showMain, () => {
     showMainWindow();
   });
+
+  ipcMain.handle(IPC.updater.getState, () => updater.getState());
+  ipcMain.handle(IPC.updater.check, () => updater.check());
+  ipcMain.handle(IPC.updater.installAndRestart, () => {
+    updater.installAndRestart();
+  });
 };
 
 const onQuit = (): void => {
@@ -468,6 +479,20 @@ if (!gotLock) {
       createSafeStorageCipher(),
     );
 
+    // Auto-update only runs in installed builds; dev launches use the web
+    // bundle over `npm run dev` and must never attempt a check.
+    updater = createUpdater({
+      driver: autoUpdater,
+      enabled: app.isPackaged,
+      getCurrentVersion: () => app.getVersion(),
+      getChannel: () => settingsStore.get('updateChannel') ?? 'stable',
+      broadcast: (state) => {
+        for (const win of BrowserWindow.getAllWindows()) {
+          win.webContents.send(IPC.updater.status, state);
+        }
+      },
+    });
+
     registerProtocol();
     registerIpc();
 
@@ -488,6 +513,13 @@ if (!gotLock) {
       onQuit,
     });
 
+    // Check shortly after startup so the first launch isn't slowed down.
+    if (app.isPackaged) {
+      setTimeout(() => {
+        void updater.check();
+      }, 10_000);
+    }
+
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
       else mainWindow?.show();
@@ -506,6 +538,7 @@ if (!gotLock) {
   app.on('will-quit', () => {
     unregisterMediaKeys();
     destroyTray();
+    updater?.dispose();
     miniPlayerWindow?.destroy();
     miniPlayerWindow = null;
   });

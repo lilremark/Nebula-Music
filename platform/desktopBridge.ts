@@ -1,5 +1,6 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
+import type { UpdaterState } from '../electron/updater';
 
 /**
  * The shape of the `window.desktop` bridge exposed by the Electron preload
@@ -45,6 +46,12 @@ export interface DesktopBridge {
   miniPlayer: {
     toggle(): Promise<void>;
     showMain(): Promise<void>;
+  };
+  updater: {
+    getState(): Promise<UpdaterState>;
+    check(): Promise<boolean>;
+    installAndRestart(): Promise<void>;
+    onStatus(handler: (state: UpdaterState) => void): () => void;
   };
 }
 

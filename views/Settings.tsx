@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Activity, AlertCircle, Cable, CheckCircle, Headphones, Keyboard, Layout, Loader2, LogOut, Monitor,
+    Activity, AlertCircle, Cable, CheckCircle, Download, Headphones, Keyboard, Layout, Loader2, LogOut, Monitor,
     Moon, Palette, RefreshCw, Search, Server, ShieldAlert, Sliders, Sun, Unplug, X
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
 import { usePlatform } from '../platform/PlatformContext';
+import type { UpdaterState } from '../electron/updater';
 import { VISUALIZER_MODES } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { CustomDropdown } from '../components/CustomDropdown';
@@ -201,6 +202,118 @@ const DesktopSettingsPanel = () => {
                 checked={loaded ? values.taskbarProgressEnabled ?? true : true}
                 onChange={(v) => setValue('taskbarProgressEnabled', v)}
             />
+        </SettingPanel>
+    );
+};
+
+const DesktopUpdatesPanel = () => {
+    const platform = usePlatform();
+    const [channel, setChannel] = useState('stable');
+    const [updateState, setUpdateState] = useState<UpdaterState | null>(null);
+
+    useEffect(() => {
+        if (!platform || platform.info.kind !== 'desktop') return;
+        let cancelled = false;
+        Promise.all([
+            platform.settings.get('updateChannel'),
+            platform.updater.getState(),
+        ]).then(([storedChannel, state]) => {
+            if (cancelled) return;
+            setChannel(typeof storedChannel === 'string' ? storedChannel : 'stable');
+            setUpdateState(state);
+        }).catch(() => {});
+        const unsubscribe = platform.updater.onStatus((state) => setUpdateState(state));
+        return () => { cancelled = true; unsubscribe(); };
+    }, [platform]);
+
+    if (!platform || platform.info.kind !== 'desktop') return null;
+
+    const changeChannel = async (value: string) => {
+        const previous = channel;
+        setChannel(value);
+        try {
+            await platform.settings.set('updateChannel', value);
+        } catch (error) {
+            console.warn('[nebula] failed to persist update channel', error);
+            setChannel(previous);
+        }
+    };
+
+    const phase = updateState?.phase ?? 'idle';
+    const enabled = updateState?.enabled ?? false;
+    const busy = phase === 'checking' || phase === 'downloading';
+    const readyToInstall = phase === 'downloaded';
+    const currentVersion = updateState?.currentVersion ?? platform.info.appVersion;
+
+    const badgeClass = phase === 'downloaded'
+        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+        : phase === 'error'
+            ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+            : phase === 'not-available' || phase === 'idle'
+                ? 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/50'
+                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
+
+    return (
+        <SettingPanel icon={Download} title="Updates">
+            <div className="px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                        <span className="block text-sm font-semibold text-neutral-900 dark:text-white">
+                            {currentVersion ? `Nebula ${currentVersion}` : 'Nebula'}
+                        </span>
+                        <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+                            {updateState?.message ?? 'Updates are checked against GitHub Releases.'}
+                        </span>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${badgeClass}`}>
+                        {phase.replace('-', ' ')}
+                    </span>
+                </div>
+            </div>
+            <div className="grid gap-px divide-y divide-neutral-200 dark:divide-white/10 md:grid-cols-2 md:divide-x md:divide-y-0">
+                <div className="px-5 py-4">
+                    <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Update channel</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+                        Beta delivers pre-release builds from the beta channel.
+                    </span>
+                    <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-white/5">
+                        {[{ value: 'stable', label: 'Stable' }, { value: 'beta', label: 'Beta' }].map(option => (
+                            <button
+                                type="button"
+                                key={option.value}
+                                onClick={() => changeChannel(option.value)}
+                                className={`rounded-md px-3 py-2.5 text-xs font-bold transition-all ${channel === option.value
+                                    ? 'bg-white text-neutral-950 shadow-xs dark:bg-white dark:text-black'
+                                    : 'text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
+                                    }`}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 px-5 py-4">
+                    <button
+                        type="button"
+                        onClick={() => platform.updater.check()}
+                        disabled={!enabled || busy}
+                        className="flex items-center gap-2 rounded-lg bg-neutral-200 px-4 py-2 text-xs font-bold text-neutral-800 transition hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+                    >
+                        <RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} />
+                        {busy ? 'Checking\u2026' : 'Check for updates'}
+                    </button>
+                    {readyToInstall && (
+                        <button
+                            type="button"
+                            onClick={() => platform.updater.installAndRestart()}
+                            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-black transition hover:brightness-110"
+                        >
+                            <Download className="h-3.5 w-3.5" />
+                            Restart &amp; Install
+                        </button>
+                    )}
+                </div>
+            </div>
         </SettingPanel>
     );
 };
@@ -899,6 +1012,7 @@ export const SettingsView: React.FC = () => {
                         </SettingPanel>
 
                         <DesktopSettingsPanel />
+                        <DesktopUpdatesPanel />
                 </div>
             </div>
         </div>
