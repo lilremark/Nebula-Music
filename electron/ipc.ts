@@ -13,6 +13,7 @@ export const IPC = {
     close: 'nebula:window:close',
     isMaximized: 'nebula:window:is-maximized',
     isFullScreen: 'nebula:window:is-full-screen',
+    maximizeChanged: 'nebula:window:maximize-changed',
   },
   settings: {
     get: 'nebula:settings:get',

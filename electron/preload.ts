@@ -19,6 +19,15 @@ const bridge: DesktopBridge = {
     },
     isMaximized: () => ipcRenderer.invoke(IPC.window.isMaximized),
     isFullScreen: () => ipcRenderer.invoke(IPC.window.isFullScreen),
+    onMaximizeChanged: (handler) => {
+      const listener = (_event: Electron.IpcRendererEvent, maximized: unknown) => {
+        handler(Boolean(maximized));
+      };
+      ipcRenderer.on(IPC.window.maximizeChanged, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC.window.maximizeChanged, listener);
+      };
+    },
   },
   openExternal: (url: string) => ipcRenderer.invoke(IPC.app.openExternal, url),
   settings: {

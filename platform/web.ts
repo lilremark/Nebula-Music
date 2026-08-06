@@ -14,6 +14,7 @@ const webWindow: WindowControl = {
   close: async () => {},
   isMaximized: async () => false,
   isFullScreen: async () => false,
+  onMaximizeChanged: () => () => {},
 };
 
 const webSettings: DesktopSettingsApi = {

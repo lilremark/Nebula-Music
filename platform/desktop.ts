@@ -27,6 +27,7 @@ export const createDesktopPlatform = (): Platform => {
     close: () => bridge.window.close(),
     isMaximized: () => bridge.window.isMaximized(),
     isFullScreen: () => bridge.window.isFullScreen(),
+    onMaximizeChanged: (handler) => bridge.window.onMaximizeChanged(handler),
   };
 
   const settings: DesktopSettingsApi = {

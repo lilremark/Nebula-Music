@@ -20,6 +20,7 @@ export interface DesktopBridge {
     close(): Promise<void>;
     isMaximized(): Promise<boolean>;
     isFullScreen(): Promise<boolean>;
+    onMaximizeChanged(handler: (maximized: boolean) => void): () => void;
   };
   openExternal(url: string): Promise<boolean>;
   settings: {
