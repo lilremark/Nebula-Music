@@ -1,0 +1,69 @@
+import type {
+  CredentialVault,
+  DesktopSettingsApi,
+  PlaybackTransport,
+  Platform,
+  PlatformInfo,
+  WindowControl,
+} from './types';
+
+const webWindow: WindowControl = {
+  minimize: async () => {},
+  toggleMaximize: async () => {},
+  close: async () => {},
+  isMaximized: async () => false,
+  isFullScreen: async () => false,
+};
+
+const webSettings: DesktopSettingsApi = {
+  get: async () => null,
+  set: async () => {},
+};
+
+const webVault: CredentialVault = {
+  get: async () => null,
+  set: async () => {},
+  clear: async () => {},
+};
+
+const noopUnsubscribe = (): void => {};
+
+const webPlayback: PlaybackTransport = {
+  onCommand: () => noopUnsubscribe,
+  publishSnapshot: () => {},
+};
+
+const webFetchJson = async (url: string) => {
+  const response = await fetch(url);
+  const body = await response.json().catch(() => null);
+  return { status: response.status, statusText: response.statusText, ok: response.ok, body };
+};
+
+const webInfo: PlatformInfo = {
+  kind: 'web',
+  os: 'web',
+  appName: null,
+  appVersion: null,
+};
+
+/**
+ * The in-browser platform. All desktop-only capabilities are inert so the web
+ * build behaves exactly as before.
+ */
+export const createWebPlatform = (): Platform => ({
+  info: webInfo,
+  window: webWindow,
+  openExternal: (url) => {
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return Promise.resolve(true);
+    } catch {
+      return Promise.resolve(false);
+    }
+  },
+  settings: webSettings,
+  vault: webVault,
+  playback: webPlayback,
+  fetchJson: webFetchJson,
+  resolveMediaUrl: (url) => url,
+});

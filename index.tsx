@@ -2,6 +2,7 @@ import React, { ErrorInfo, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from './context/ThemeContext';
+import { PlatformProvider } from './platform/PlatformContext';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -73,9 +74,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
+      <PlatformProvider>
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
+      </PlatformProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

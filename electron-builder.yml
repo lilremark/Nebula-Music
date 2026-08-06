@@ -1,0 +1,18 @@
+appId: com.nebula.desktop
+productName: Nebula
+directories:
+  output: release
+files:
+  - dist/**/*
+  - electron/dist/**/*
+  - package.json
+asar: true
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${productName}-${version}-setup.${ext}
+nsis:
+  oneClick: true
+  perMachine: false

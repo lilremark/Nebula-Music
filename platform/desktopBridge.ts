@@ -1,0 +1,46 @@
+import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
+import type { SubsonicCredentials } from '../types';
+
+/**
+ * The shape of the `window.desktop` bridge exposed by the Electron preload
+ * script. This is the *only* place the renderer references a host global.
+ * The web build never imports this module and never sees `window.desktop`.
+ */
+export interface DesktopBridge {
+  info: {
+    os: string;
+    appName: string;
+    appVersion: string;
+  };
+  window: {
+    minimize(): Promise<void>;
+    toggleMaximize(): Promise<void>;
+    close(): Promise<void>;
+    isMaximized(): Promise<boolean>;
+    isFullScreen(): Promise<boolean>;
+  };
+  openExternal(url: string): Promise<boolean>;
+  settings: {
+    get(key: string): Promise<unknown>;
+    set(key: string, value: unknown): Promise<void>;
+  };
+  vault: {
+    get(serverUrl: string): Promise<SubsonicCredentials | null>;
+    set(credentials: SubsonicCredentials): Promise<void>;
+    clear(serverUrl: string): Promise<void>;
+  };
+  http: {
+    fetchJson(url: string): Promise<{ status: number; statusText: string; ok: boolean; body: unknown }>;
+    proxyUrl(url: string): string;
+  };
+  playback: {
+    onCommand(handler: (envelope: DesktopCommandEnvelope) => void): () => void;
+    publishSnapshot(snapshot: DesktopSnapshot): void;
+  };
+}
+
+declare global {
+  interface Window {
+    desktop?: DesktopBridge;
+  }
+}

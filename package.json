@@ -2,6 +2,9 @@
   "name": "nebula-music",
   "private": true,
   "version": "2.2.0",
+  "description": "Subsonic music player for the desktop.",
+  "author": "Nebula",
+  "main": "electron/dist/main.cjs",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
@@ -12,7 +15,11 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:main": "node esbuild.config.mjs",
+    "build:electron": "node esbuild.config.mjs && vite build",
+    "start:electron": "node esbuild.config.mjs && vite build && electron .",
+    "preview": "vite preview",
+    "dist:win": "node esbuild.config.mjs && vite build && electron-builder --win --publish never"
   },
   "dependencies": {
     "blueimp-md5": "^2.19.0",
@@ -23,7 +30,8 @@
     "lucide-react": "^1.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
@@ -33,6 +41,10 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "@vitest/coverage-v8": "^4.0.18",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
+    "electron-updater": "^6.8.9",
+    "esbuild": "^0.28.1",
     "postcss": "^8.5.23",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",

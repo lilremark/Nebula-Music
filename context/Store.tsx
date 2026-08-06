@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, ISong, View, SubsonicCredentials, AppSettings, IPlaylist, VisualizerMode, RepeatMode, IArtist, IAlbum, HomeData, NavigationTarget, IRadioStation, IRadioMetadata } from '../types';
 import { SubsonicService } from '../services/subsonicService';
+import { createDesktopSubsonicTransport } from '../services/subsonicTransport';
+import { usePlatform } from '../platform/PlatformContext';
 import { MOCK_PLAYLISTS } from '../constants';
 import { db } from '../services/db';
 
@@ -24,6 +26,7 @@ interface StoreContextType extends AppState {
   setPitchCorrection: (enabled: boolean) => void;
   setVisualizerMode: (mode: VisualizerMode) => void;
   toggleRepeat: () => void;
+  setRepeatMode: (mode: RepeatMode) => void;
   toggleLike: (song: ISong) => void;
   connectToSubsonic: (url: string, user: string, secret: string, authMode?: 'password' | 'apiKey') => Promise<boolean>;
   disconnect: () => void;
@@ -271,7 +274,13 @@ const parsePlayHistory = (raw: string | null): PlayHistoryMap => {
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const platform = usePlatform();
   const [service] = useState(() => new SubsonicService(null));
+
+  useEffect(() => {
+    if (!platform) return;
+    service.setTransport(createDesktopSubsonicTransport(platform));
+  }, [service, platform]);
   const [currentView, setCurrentView] = useState<View>('HOME');
   const [viewData, setViewData] = useState<any>(undefined);
   const [navigationStack, setNavigationStack] = useState<NavigationTarget[]>([]);
@@ -2127,6 +2136,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, radioPitch, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
       credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
       playSong, playRadioStation, toggleRadioPlay, stopRadio, setRadioPitch, togglePlay, nextSong, prevSong, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
+      setRepeatMode,
       connectToSubsonic, disconnect, enableDemoMode, addToQueue, updateSettings,
       openPlaylistModal, closePlaylistModal, createPlaylist, savePlaylist, addSongToPlaylist, deletePlaylist, reorderPlaylist, addRadioStation, updateRadioStation, deleteRadioStation,
       performSearch, searchResults, isSearching, lastSearchQuery, isSearchModalOpen, openSearchModal, closeSearchModal,
