@@ -130,4 +130,67 @@ describe('CredentialVault', () => {
     expect(raw).not.toContain('"storage": "plaintext"');
     expect(raw).not.toContain('testuser');
   });
+
+  it('round-trips secrets through ciphertext', async () => {
+    const file = path.join(dir, 'vault.json');
+    const vault = await CredentialVault.open(file, fakeCipher(true));
+    const token = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8';
+    await vault.setSecret('stream_deck_pairing_token', token);
+    expect(await vault.getSecret('stream_deck_pairing_token')).toBe(token);
+    const raw = await readFile(file, 'utf8');
+    expect(raw).not.toContain(token);
+  });
+
+  it('persists secrets across vault instances', async () => {
+    const file = path.join(dir, 'vault.json');
+    await (await CredentialVault.open(file, fakeCipher(true))).setSecret('token', 'secret-value');
+    const reopened = await CredentialVault.open(file, fakeCipher(true));
+    expect(await reopened.getSecret('token')).toBe('secret-value');
+  });
+
+  it('clears a single secret without affecting others', async () => {
+    const file = path.join(dir, 'vault.json');
+    const vault = await CredentialVault.open(file, fakeCipher(true));
+    await vault.setSecret('one', 'value-one');
+    await vault.setSecret('two', 'value-two');
+    await vault.clearSecret('one');
+    expect(await vault.getSecret('one')).toBeNull();
+    expect(await vault.getSecret('two')).toBe('value-two');
+  });
+
+  it('refuses to write secrets when encryption is unavailable', async () => {
+    const file = path.join(dir, 'vault.json');
+    const vault = await CredentialVault.open(file, fakeCipher(false));
+    await expect(vault.setSecret('token', 'value')).rejects.toThrow(
+      'Secure credential storage is unavailable',
+    );
+  });
+
+  it('rejects invalid secret keys and values', async () => {
+    const file = path.join(dir, 'vault.json');
+    const vault = await CredentialVault.open(file, fakeCipher(true));
+    await expect(vault.setSecret('', 'value')).rejects.toThrow('Invalid secret');
+    await expect(vault.setSecret('ok', '')).rejects.toThrow('Invalid secret');
+    await expect(vault.setSecret('ok', 'x'.repeat(65_537))).rejects.toThrow('Invalid secret');
+    expect(await vault.getSecret('')).toBeNull();
+    expect(await vault.getSecret('missing')).toBeNull();
+  });
+
+  it('ignores undecryptable secrets on load', async () => {
+    const file = path.join(dir, 'vault.json');
+    const first = await CredentialVault.open(file, fakeCipher(true));
+    await first.setSecret('good', 'good-value');
+    const second = await CredentialVault.open(file, fakeCipher(true));
+    await second.setSecret('bad', 'bad-value');
+    const raw = await readFile(file, 'utf8');
+    const tampered = raw.replace(
+      Buffer.from(JSON.stringify('bad-value'), 'utf8').toString('base64'),
+      'YmFk',
+    );
+    const { writeFile } = await import('node:fs/promises');
+    await writeFile(file, tampered, 'utf8');
+    const reopened = await CredentialVault.open(file, fakeCipher(true));
+    expect(await reopened.getSecret('good')).toBe('good-value');
+    expect(await reopened.getSecret('bad')).toBeNull();
+  });
 });

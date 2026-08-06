@@ -38,6 +38,9 @@ export const createDesktopPlatform = (): Platform => {
     get: (serverUrl) => bridge.vault.get(serverUrl),
     set: (credentials) => bridge.vault.set(credentials),
     clear: (serverUrl) => bridge.vault.clear(serverUrl),
+    getSecret: (key) => bridge.vault.getSecret(key),
+    setSecret: (key, value) => bridge.vault.setSecret(key, value),
+    clearSecret: (key) => bridge.vault.clearSecret(key),
   };
 
   const playback: PlaybackTransport = {

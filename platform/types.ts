@@ -27,6 +27,10 @@ export interface CredentialVault {
   get(serverUrl: string): Promise<SubsonicCredentials | null>;
   set(credentials: SubsonicCredentials): Promise<void>;
   clear(serverUrl: string): Promise<void>;
+  /** Generic OS-safeStorage-backed secret storage for non-credential secrets. */
+  getSecret(key: string): Promise<string | null>;
+  setSecret(key: string, value: string): Promise<void>;
+  clearSecret(key: string): Promise<void>;
 }
 
 /**

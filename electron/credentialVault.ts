@@ -20,10 +20,20 @@ type StoredRecord =
   | { version: typeof VAULT_VERSION; storage: 'encrypted'; ciphertext: string }
   | { version: typeof VAULT_VERSION; storage: 'plaintext'; serverUrl: string; credentials: SubsonicCredentials };
 
+interface StoredSecret {
+  version: typeof VAULT_VERSION;
+  storage: 'encrypted';
+  ciphertext: string;
+}
+
 interface VaultFile {
   version: typeof VAULT_VERSION;
   records: Record<string, StoredRecord>;
+  secrets: Record<string, StoredSecret>;
 }
+
+const isValidSecretKey = (key: unknown): key is string =>
+  typeof key === 'string' && key.length > 0 && key.length <= 256;
 
 const isSubsonicCredentials = (value: unknown): value is SubsonicCredentials => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
@@ -39,6 +49,7 @@ const isSubsonicCredentials = (value: unknown): value is SubsonicCredentials => 
 
 export class CredentialVault {
   private records = new Map<string, SubsonicCredentials>();
+  private secrets = new Map<string, string>();
 
   private constructor(
     private readonly filePath: string,
@@ -64,8 +75,8 @@ export class CredentialVault {
     try {
       const raw = await readFile(this.filePath, 'utf8');
       const parsed = JSON.parse(raw) as Partial<VaultFile>;
-      if (parsed.version !== VAULT_VERSION || !parsed.records) return hasPlaintext;
-      for (const [serverUrl, record] of Object.entries(parsed.records)) {
+      if (parsed.version !== VAULT_VERSION) return hasPlaintext;
+      for (const [serverUrl, record] of Object.entries(parsed.records ?? {})) {
         if (record.storage === 'encrypted') {
           const decrypted = this.decrypt(record.ciphertext);
           if (decrypted && isSubsonicCredentials(decrypted) && decrypted.serverUrl === serverUrl) {
@@ -75,6 +86,11 @@ export class CredentialVault {
           this.records.set(serverUrl, record.credentials);
           hasPlaintext = true;
         }
+      }
+      for (const [key, secret] of Object.entries(parsed.secrets ?? {})) {
+        if (secret.storage !== 'encrypted') continue;
+        const decrypted = this.decryptSecret(secret.ciphertext);
+        if (decrypted !== null) this.secrets.set(key, decrypted);
       }
     } catch {
       // Missing/corrupt file means no stored credentials.
@@ -87,6 +103,16 @@ export class CredentialVault {
     try {
       const parsed = JSON.parse(this.cipher.decryptString(Buffer.from(ciphertext, 'base64')));
       return isSubsonicCredentials(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private decryptSecret(ciphertext: string): string | null {
+    if (!this.cipher.isEncryptionAvailable()) return null;
+    try {
+      const parsed = JSON.parse(this.cipher.decryptString(Buffer.from(ciphertext, 'base64')));
+      return typeof parsed === 'string' ? parsed : null;
     } catch {
       return null;
     }
@@ -115,6 +141,27 @@ export class CredentialVault {
     await this.persist();
   }
 
+  async getSecret(key: string): Promise<string | null> {
+    if (!isValidSecretKey(key)) return null;
+    return this.secrets.get(key) ?? null;
+  }
+
+  async setSecret(key: string, value: string): Promise<void> {
+    if (!isValidSecretKey(key) || typeof value !== 'string' || value.length === 0 || value.length > 65_536) {
+      throw new Error('Invalid secret.');
+    }
+    if (!this.cipher.isEncryptionAvailable()) {
+      throw new Error('Secure credential storage is unavailable on this device.');
+    }
+    this.secrets.set(key, value);
+    await this.persist();
+  }
+
+  async clearSecret(key: string): Promise<void> {
+    this.secrets.delete(key);
+    await this.persist();
+  }
+
   private async persist(): Promise<void> {
     await mkdir(path.dirname(this.filePath), { recursive: true });
     if (!this.cipher.isEncryptionAvailable()) {
@@ -129,6 +176,16 @@ export class CredentialVault {
             version: VAULT_VERSION,
             storage: 'encrypted',
             ciphertext: this.cipher.encryptString(JSON.stringify(credentials)).toString('base64'),
+          },
+        ]),
+      ),
+      secrets: Object.fromEntries(
+        [...this.secrets.entries()].map(([key, value]) => [
+          key,
+          {
+            version: VAULT_VERSION,
+            storage: 'encrypted',
+            ciphertext: this.cipher.encryptString(JSON.stringify(value)).toString('base64'),
           },
         ]),
       ),

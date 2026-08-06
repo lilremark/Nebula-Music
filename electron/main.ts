@@ -384,6 +384,17 @@ const registerIpc = (): void => {
   ipcMain.handle(IPC.vault.clear, async (_event, serverUrl: unknown) => {
     if (typeof serverUrl === 'string') await credentialVault.clear(serverUrl);
   });
+  ipcMain.handle(IPC.vault.getSecret, (_event, key: unknown) => {
+    if (typeof key !== 'string') return null;
+    return credentialVault.getSecret(key);
+  });
+  ipcMain.handle(IPC.vault.setSecret, async (_event, key: unknown, value: unknown) => {
+    if (typeof key !== 'string' || typeof value !== 'string') return;
+    await credentialVault.setSecret(key, value);
+  });
+  ipcMain.handle(IPC.vault.clearSecret, async (_event, key: unknown) => {
+    if (typeof key === 'string') await credentialVault.clearSecret(key);
+  });
 
   ipcMain.handle(IPC.http.fetchJson, async (_event, url: unknown) => {
     if (typeof url !== 'string' || !isTrustedProxyTarget(url)) {

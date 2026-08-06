@@ -28,6 +28,10 @@ const bridge: DesktopBridge = {
     get: (serverUrl: string) => ipcRenderer.invoke(IPC.vault.get, serverUrl),
     set: (credentials) => ipcRenderer.invoke(IPC.vault.set, credentials),
     clear: (serverUrl: string) => ipcRenderer.invoke(IPC.vault.clear, serverUrl),
+    getSecret: (key: string) => ipcRenderer.invoke(IPC.vault.getSecret, key),
+    setSecret: (key: string, value: string) =>
+      ipcRenderer.invoke(IPC.vault.setSecret, key, value),
+    clearSecret: (key: string) => ipcRenderer.invoke(IPC.vault.clearSecret, key),
   },
   http: {
     fetchJson: (url: string) => ipcRenderer.invoke(IPC.http.fetchJson, url),

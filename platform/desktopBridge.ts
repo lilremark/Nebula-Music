@@ -28,6 +28,9 @@ export interface DesktopBridge {
     get(serverUrl: string): Promise<SubsonicCredentials | null>;
     set(credentials: SubsonicCredentials): Promise<void>;
     clear(serverUrl: string): Promise<void>;
+    getSecret(key: string): Promise<string | null>;
+    setSecret(key: string, value: string): Promise<void>;
+    clearSecret(key: string): Promise<void>;
   };
   http: {
     fetchJson(url: string): Promise<{ status: number; statusText: string; ok: boolean; body: unknown }>;

@@ -24,6 +24,9 @@ const webVault: CredentialVault = {
   get: async () => null,
   set: async () => {},
   clear: async () => {},
+  getSecret: async () => null,
+  setSecret: async () => {},
+  clearSecret: async () => {},
 };
 
 const noopUnsubscribe = (): void => {};

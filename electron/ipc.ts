@@ -22,6 +22,9 @@ export const IPC = {
     get: 'nebula:vault:get',
     set: 'nebula:vault:set',
     clear: 'nebula:vault:clear',
+    getSecret: 'nebula:vault:get-secret',
+    setSecret: 'nebula:vault:set-secret',
+    clearSecret: 'nebula:vault:clear-secret',
   },
   http: {
     fetchJson: 'nebula:http:fetch-json',
