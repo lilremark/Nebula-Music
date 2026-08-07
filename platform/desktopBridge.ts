@@ -1,7 +1,6 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
 import type { UpdaterState } from '../electron/updater';
-import type { TitleBarMode } from '../electron/titleBarTheme';
 
 /**
  * The shape of the `window.desktop` bridge exposed by the Electron preload
@@ -54,9 +53,6 @@ export interface DesktopBridge {
     check(): Promise<boolean>;
     installAndRestart(): Promise<void>;
     onStatus(handler: (state: UpdaterState) => void): () => void;
-  };
-  titleBar: {
-    setTheme(mode: TitleBarMode): void;
   };
 }
 

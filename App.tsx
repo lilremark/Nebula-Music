@@ -23,8 +23,6 @@ import { MobilePlayerBar } from './components/MobilePlayerBar';
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
-import { usePlatform } from './platform/PlatformContext';
-import { useTheme } from './context/ThemeContext';
 
 const AppContent: React.FC = () => {
   const {
@@ -39,13 +37,6 @@ const AppContent: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
-
-  const platform = usePlatform();
-  const theme = useTheme();
-
-  useEffect(() => {
-    if (platform) platform.titleBar.setTheme(theme.mode);
-  }, [platform, theme.mode]);
 
   const handleGlobalShortcuts = useCallback((e: KeyboardEvent) => {
     if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;

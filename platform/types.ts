@@ -1,7 +1,6 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
 import type { UpdaterState } from '../electron/updater';
-import type { TitleBarMode } from '../electron/titleBarTheme';
 
 export type PlatformKind = 'web' | 'desktop';
 
@@ -89,8 +88,6 @@ export interface Platform {
   readonly playback: PlaybackTransport;
   readonly miniPlayer: MiniPlayerControl;
   readonly updater: UpdaterApi;
-  /** Syncs the Windows overlay controls to the app theme (no-op on web). */
-  readonly titleBar: { setTheme(mode: TitleBarMode): void };
   /** JSON fetch routed through the main process on desktop (bypasses CORS and
    * mixed-content policy for Subsonic servers). Web build uses global fetch. */
   fetchJson(url: string): Promise<JsonFetchResult>;

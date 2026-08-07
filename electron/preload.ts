@@ -87,11 +87,6 @@ const bridge: DesktopBridge = {
       };
     },
   },
-  titleBar: {
-    setTheme: (mode) => {
-      ipcRenderer.send(IPC.titleBar.setTheme, mode);
-    },
-  },
 };
 
 contextBridge.exposeInMainWorld('desktop', bridge);

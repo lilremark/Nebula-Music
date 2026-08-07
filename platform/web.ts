@@ -59,10 +59,6 @@ const webUpdater: UpdaterApi = {
   onStatus: () => noopUnsubscribe,
 };
 
-const webTitleBar = {
-  setTheme: (): void => {},
-};
-
 const webFetchJson = async (url: string) => {
   const response = await fetch(url);
   const body = await response.json().catch(() => null);
@@ -96,7 +92,6 @@ export const createWebPlatform = (): Platform => ({
   playback: webPlayback,
   miniPlayer: webMiniPlayer,
   updater: webUpdater,
-  titleBar: webTitleBar,
   fetchJson: webFetchJson,
   resolveMediaUrl: (url) => url,
 });

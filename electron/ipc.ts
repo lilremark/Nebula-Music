@@ -46,9 +46,6 @@ export const IPC = {
     installAndRestart: 'nebula:updater:install-and-restart',
     status: 'nebula:updater:status',
   },
-  titleBar: {
-    setTheme: 'nebula:title-bar:set-theme',
-  },
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC][keyof (typeof IPC)[keyof typeof IPC]];
