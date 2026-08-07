@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import type { CSSProperties } from 'react';
-import { Copy, Menu, Minus, Search, Settings, Square, X } from 'lucide-react';
+import { Menu, Search, Settings } from 'lucide-react';
+import { WindowControls } from '../window/WindowControls';
 import { useStore } from '../../context/Store';
-import { usePlatform } from '../../platform/PlatformContext';
 
 const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
     ({ WebkitAppRegion: region }) as CSSProperties;
@@ -13,16 +13,6 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
     const { openSearchModal, setView, currentView } = useStore();
-    const platform = usePlatform();
-    const [isMaximized, setIsMaximized] = useState(false);
-
-    const isWindows = platform?.info.os === 'win32';
-
-    useEffect(() => {
-        if (!isWindows) return;
-        void platform.window.isMaximized().then(setIsMaximized);
-        return platform.window.onMaximizeChanged(setIsMaximized);
-    }, [platform, isWindows]);
 
     // Get current page title
     const getPageTitle = () => {
@@ -108,34 +98,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
                 </button>
 
                 {/* Custom window controls (Windows only), directly after Settings, no divider */}
-                {isWindows && (
-                    <>
-                        <button
-                            onClick={() => void platform.window.minimize()}
-                            className="p-2.5 rounded-xl hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-all duration-200 active:scale-95"
-                            aria-label="Minimize"
-                            style={appRegion('no-drag')}
-                        >
-                            <Minus className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => void platform.window.toggleMaximize()}
-                            className="p-2.5 rounded-xl hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-all duration-200 active:scale-95"
-                            aria-label={isMaximized ? 'Restore' : 'Maximize'}
-                            style={appRegion('no-drag')}
-                        >
-                            {isMaximized ? <Copy className="w-5 h-5" /> : <Square className="w-5 h-5" />}
-                        </button>
-                        <button
-                            onClick={() => void platform.window.close()}
-                            className="p-2.5 rounded-xl hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-all duration-200 active:scale-95"
-                            aria-label="Close"
-                            style={appRegion('no-drag')}
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-                    </>
-                )}
+                <WindowControls />
             </div>
         </header>
     );
