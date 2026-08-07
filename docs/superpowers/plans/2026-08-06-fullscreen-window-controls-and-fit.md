@@ -198,7 +198,7 @@ The album-art outer wrapper is:
 <div className="relative w-full max-w-[380px] lg:max-w-[480px] shrink-0">
 ```
 
-Keep it as-is. Change only the existing inner square element so the art cannot exceed roughly 42% of the viewport height. The inner element is:
+Keep it as-is. Change only the existing inner square element so the art cannot exceed roughly 55% of the viewport height. The inner element is:
 
 ```tsx
 <div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
@@ -207,10 +207,10 @@ Keep it as-is. Change only the existing inner square element so the art cannot e
 Change it to:
 
 ```tsx
-<div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 w-full max-w-[min(42vh,480px)] ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
+<div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 w-full max-w-[min(55vh,480px)] ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
 ```
 
-(The `max-w-[380px] lg:max-w-[480px]` on the outer wrapper still bounds width at large sizes; the inner `max-w-[min(42vh,480px)]` caps the width so `aspect-square` derives a height that fits within ~42% of the viewport height, keeping art + text + controls within a 600px-tall window while preserving the square ratio. A `max-h` cap would NOT work here: `w-full` gives a definite width, and `max-height` then clamps height without re-deriving width, breaking the square ratio and center-cropping the art.)
+(The `max-w-[380px] lg:max-w-[480px]` on the outer wrapper still bounds width at large sizes; the inner `max-w-[min(55vh,480px)]` caps the width so `aspect-square` derives a height that fits within ~55% of the viewport height, keeping art + text + controls within a 600px-tall window while preserving the square ratio. Verified: at a 940x600 window the art renders ~330px wide, at 1280x800 ~440px wide, and it caps at 480px once the viewport height exceeds ~873px. A `max-h` cap would NOT work here: `w-full` gives a definite width, and `max-height` then clamps height without re-deriving width, breaking the square ratio and center-cropping the art.)
 
 - [ ] **Step 4: Make the now-playing tab scroll internally**
 
