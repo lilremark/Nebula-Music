@@ -83,6 +83,17 @@ export class LocalDB {
     });
   }
 
+  async remove(storeName: string, key: string): Promise<void> {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      const req = store.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   // Helper Methods
   async saveCredentials(creds: any) { return this.set(STORE_SETTINGS, 'credentials', creds); }
   async getCredentials() { return this.get(STORE_SETTINGS, 'credentials'); }

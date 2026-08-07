@@ -22,6 +22,7 @@ import { WhatsNewModal } from './components/WhatsNewModal';
 import { MobilePlayerBar } from './components/MobilePlayerBar';
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
+import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
 
 const AppContent: React.FC = () => {
   const {
@@ -222,9 +223,11 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <StoreProvider>
-      <StreamDeckBridgeProvider>
-        <AppContent />
-      </StreamDeckBridgeProvider>
+      <DesktopOwnerBridgeProvider>
+        <StreamDeckBridgeProvider>
+          <AppContent />
+        </StreamDeckBridgeProvider>
+      </DesktopOwnerBridgeProvider>
     </StoreProvider>
   );
 };

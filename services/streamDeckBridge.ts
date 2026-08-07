@@ -93,6 +93,8 @@ export class StreamDeckBridge {
   private socket: WebSocket | null = null;
   private enabled = false;
   private authenticated = false;
+  private challengeReceived = false;
+  private proofSent = false;
   private port = 37921;
   private token: string | null = null;
   private retryAttempt = 0;
@@ -231,6 +233,8 @@ export class StreamDeckBridge {
     socket.addEventListener('open', () => {
       if (socket !== this.socket) return;
       this.retryAttempt = 0;
+      this.challengeReceived = false;
+      this.proofSent = false;
       this.options.onSocketOpen?.(Date.now());
       this.send({
         protocol: STREAM_DECK_PROTOCOL,
@@ -264,6 +268,8 @@ export class StreamDeckBridge {
       if (socket !== this.socket) return;
       this.socket = null;
       this.authenticated = false;
+      this.challengeReceived = false;
+      this.proofSent = false;
       this.lastTrackId = null;
       this.forceFullState = true;
       this.forceArtwork = true;
@@ -308,6 +314,11 @@ export class StreamDeckBridge {
         this.publishStatus('pairing-required');
         return;
       }
+      // Honor only the first challenge per connection: a replayed challenge
+      // must not trigger a second authenticate exchange, so the proof stays
+      // bound to the single nonce the plugin actually issued.
+      if (this.challengeReceived) return;
+      this.challengeReceived = true;
       this.publishStatus('authenticating');
       const token = this.token;
       const proof = await this.createProof(
@@ -317,6 +328,7 @@ export class StreamDeckBridge {
         message.nonce,
       );
       if (socket !== this.socket || token !== this.token) return;
+      this.proofSent = true;
       this.send({
         protocol: STREAM_DECK_PROTOCOL,
         type: 'authenticate',
@@ -371,6 +383,13 @@ export class StreamDeckBridge {
         await this.options.tokenStore.set(message.token);
         if (socket !== this.socket) return;
         this.publishStatus('authenticating');
+        return;
+      }
+      // A success without a token confirms the authenticate proof. Never mark
+      // the connection authenticated unless we actually proved possession of
+      // the token (i.e. a challenge was issued and answered on this socket).
+      if (!this.proofSent) {
+        this.publishStatus('pairing-required', 'Pairing or authentication failed.');
         return;
       }
       this.authenticated = true;
@@ -502,6 +521,8 @@ export class StreamDeckBridge {
     const socket = this.socket;
     this.socket = null;
     this.authenticated = false;
+    this.challengeReceived = false;
+    this.proofSent = false;
     this.lastTrackId = null;
     this.forceFullState = true;
     this.forceArtwork = true;

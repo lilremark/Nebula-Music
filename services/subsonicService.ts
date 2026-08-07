@@ -3,6 +3,7 @@ import { SubsonicCredentials, ISong, IAlbum, IArtist, IPlaylist } from '../types
 import { MOCK_ALBUMS, MOCK_ARTISTS, MOCK_SONGS, MOCK_PLAYLISTS } from '../constants';
 import { db } from './db';
 import md5 from 'blueimp-md5';
+import { webSubsonicTransport, type SubsonicTransport } from './subsonicTransport';
 
 const SUBSONIC_API_VERSION = '1.16.1';
 const SUBSONIC_PROTOCOL_FALLBACKS = [SUBSONIC_API_VERSION, '1.15.0', '1.14.0'] as const;
@@ -50,10 +51,16 @@ export class SubsonicService {
   private serverInfo: Pick<SubsonicResponse, 'version' | 'type' | 'serverVersion' | 'openSubsonic'> = {};
   private protocolVersion = SUBSONIC_API_VERSION;
   private readonly maxUrlCacheEntries = 500;
+  private transport: SubsonicTransport;
 
   constructor(creds: SubsonicCredentials | null) {
     this.creds = creds;
     this.isDemo = !creds;
+    this.transport = webSubsonicTransport;
+  }
+
+  public setTransport(transport: SubsonicTransport) {
+    this.transport = transport;
   }
 
   public setCredentials(creds: SubsonicCredentials | null) {
@@ -115,13 +122,13 @@ export class SubsonicService {
     const url = this.buildUrl(method, params);
     if (!url) throw new Error('Subsonic credentials are not configured.');
 
-    const res = await fetch(url);
+    const res = await this.transport.fetchJson(url);
     if (!res.ok) {
       throw new Error(`Subsonic request failed (${res.status} ${res.statusText}).`);
     }
 
-    const data = await res.json();
-    const response = data?.['subsonic-response'] as SubsonicResponse | undefined;
+    const data = res.body as { 'subsonic-response'?: SubsonicResponse } | null;
+    const response = data?.['subsonic-response'];
     if (!response) throw new Error('Subsonic server returned an invalid response.');
 
     if (response.status !== 'ok') {
@@ -703,7 +710,7 @@ export class SubsonicService {
         'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3',
       ];
       const index = songId.charCodeAt(songId.length - 1) % samples.length;
-      const sampleUrl = samples[index];
+      const sampleUrl = this.transport.resolveMediaUrl(samples[index]);
       this.setCachedUrl(this.streamUrlCache, cacheKey, sampleUrl);
       return sampleUrl;
     }
@@ -730,14 +737,14 @@ export class SubsonicService {
       }
     }
 
-    const streamUrl = this.buildUrl('stream.view', params);
+    const streamUrl = this.transport.resolveMediaUrl(this.buildUrl('stream.view', params));
     this.setCachedUrl(this.streamUrlCache, cacheKey, streamUrl);
     return streamUrl;
   }
 
   getCoverArtUrl(id: string, size: number = 300): string {
-    if (!id) return 'https://picsum.photos/300/300?grayscale';
-    if (id.startsWith('http') || id.startsWith('/')) return id;
+    if (!id) return this.transport.resolveMediaUrl('https://picsum.photos/300/300?grayscale');
+    if (id.startsWith('http') || id.startsWith('/')) return this.transport.resolveMediaUrl(id);
     const cacheKey = `${id}:${size}:${this.creds?.serverUrl || 'demo'}`;
     const cached = this.coverArtUrlCache.get(cacheKey);
     if (cached) return cached;
@@ -748,10 +755,11 @@ export class SubsonicService {
       const artist = MOCK_ARTISTS.find(a => a.id === id);
       const url = song?.coverArt || album?.coverArt || artist?.coverArt;
       const coverUrl = url && url.startsWith('http') ? url : 'https://picsum.photos/300/300';
-      this.setCachedUrl(this.coverArtUrlCache, cacheKey, coverUrl);
-      return coverUrl;
+      const resolved = this.transport.resolveMediaUrl(coverUrl);
+      this.setCachedUrl(this.coverArtUrlCache, cacheKey, resolved);
+      return resolved;
     }
-    const coverUrl = this.buildUrl('getCoverArt.view', { id, size: size.toString() });
+    const coverUrl = this.transport.resolveMediaUrl(this.buildUrl('getCoverArt.view', { id, size: size.toString() }));
     this.setCachedUrl(this.coverArtUrlCache, cacheKey, coverUrl);
     return coverUrl;
   }

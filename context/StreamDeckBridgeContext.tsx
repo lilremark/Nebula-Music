@@ -8,9 +8,15 @@ import React, {
   useState,
 } from 'react';
 import { useStore } from './Store';
+import { usePlatform } from '../platform/PlatformContext';
+import type { Platform } from '../platform/types';
 import { db } from '../services/db';
 import { createSanitizedArtwork } from '../services/streamDeckArtwork';
-import { StreamDeckBridge, type StreamDeckBridgeStatus } from '../services/streamDeckBridge';
+import {
+  StreamDeckBridge,
+  type StreamDeckBridgeStatus,
+  type StreamDeckTokenStore,
+} from '../services/streamDeckBridge';
 import { createStreamDeckCommandHandler } from '../services/streamDeckCommands';
 import {
   STREAM_DECK_DEFAULT_PORT,
@@ -57,7 +63,36 @@ const getClientId = (): string => {
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
+/**
+ * Stream Deck token storage. On desktop the token lives in the OS-backed
+ * credential vault; the IndexedDB `settings` store is kept as a fallback for
+ * the web build and as the migration source for tokens paired by older
+ * desktop builds. The token is the 32-byte pairing secret, so it must never
+ * be written to a store that is not encrypted at rest.
+ */
+const createTokenStore = (platform: Platform | null): StreamDeckTokenStore => {
+  const vault = platform !== null && platform.info.kind === 'desktop' ? platform.vault : null;
+  return {
+    get: async () => {
+      if (vault) {
+        const stored = await vault.getSecret(TOKEN_KEY);
+        if (stored) return stored;
+      }
+      const legacy = (await db.get('settings', TOKEN_KEY)) ?? null;
+      if (vault && legacy) {
+        await vault.setSecret(TOKEN_KEY, legacy);
+        await db.set('settings', TOKEN_KEY, null);
+      }
+      return legacy;
+    },
+    set: (token) =>
+      vault ? vault.setSecret(TOKEN_KEY, token) : db.set('settings', TOKEN_KEY, token),
+    clear: () => (vault ? vault.clearSecret(TOKEN_KEY) : db.set('settings', TOKEN_KEY, null)),
+  };
+};
+
 export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const platform = usePlatform();
   const {
     settings,
     queue,
@@ -233,6 +268,8 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
     [audioRef],
   );
 
+  const tokenStore = useMemo(() => createTokenStore(platform), [platform]);
+
   const bridge = useMemo(
     () =>
       new StreamDeckBridge({
@@ -240,11 +277,7 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
         clientId: clientIdRef.current,
         origin: window.location.origin,
         nebulaVersion: NEBULA_VERSION,
-        tokenStore: {
-          get: async () => (await db.get('settings', TOKEN_KEY)) ?? null,
-          set: (token) => db.set('settings', TOKEN_KEY, token),
-          clear: () => db.set('settings', TOKEN_KEY, null),
-        },
+        tokenStore,
         onSocketOpen: (connectedAt) => {
           connectedAtRef.current = connectedAt;
         },
@@ -255,7 +288,7 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
           return snapshotRef.current;
         },
       }),
-    [buildSnapshot, executeCommand],
+    [buildSnapshot, executeCommand, tokenStore],
   );
 
   const streamDeckSettings = settings.streamDeck ?? {

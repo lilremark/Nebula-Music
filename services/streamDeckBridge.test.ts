@@ -118,6 +118,103 @@ describe('StreamDeckBridge', () => {
     bridge.destroy();
   });
 
+  it('honors only the first auth challenge on a connection', async () => {
+    const socket = new FakeSocket();
+    const createProof = vi.fn(async () => PROOF);
+    const bridge = new StreamDeckBridge({
+      sessionId: snapshot.sessionId,
+      clientId: snapshot.clientId,
+      origin: snapshot.origin,
+      nebulaVersion: snapshot.nebulaVersion,
+      tokenStore: {
+        get: vi.fn(async () => TOKEN),
+        set: vi.fn(),
+        clear: vi.fn(),
+      },
+      createProof,
+      socketFactory: () => socket as unknown as WebSocket,
+      onStatus: vi.fn(),
+      onCommand: vi.fn(),
+      getSnapshot: () => snapshot,
+    });
+    bridge.configure(true, 37921);
+    await Promise.resolve();
+    socket.open();
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: NONCE,
+    });
+    await vi.waitFor(() => expect(messages(socket).at(-1)?.type).toBe('authenticate'));
+    const answeredChallenges = messages(socket).filter(
+      (message) => message.type === 'authenticate',
+    ).length;
+    expect(createProof).toHaveBeenCalledTimes(answeredChallenges);
+    // A replayed challenge with a fresh nonce must not trigger a second exchange.
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'authChallenge',
+      nonce: 'B'.repeat(43),
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(
+      messages(socket).filter((message) => message.type === 'authenticate'),
+    ).toHaveLength(answeredChallenges);
+    expect(createProof).toHaveBeenCalledTimes(answeredChallenges);
+    bridge.destroy();
+  });
+
+  it('rejects a tokenless pairing success without a prior challenge', async () => {
+    const socket = new FakeSocket();
+    const onCommand = vi.fn();
+    const bridge = new StreamDeckBridge({
+      sessionId: snapshot.sessionId,
+      clientId: snapshot.clientId,
+      origin: snapshot.origin,
+      nebulaVersion: snapshot.nebulaVersion,
+      tokenStore: {
+        get: vi.fn(async () => TOKEN),
+        set: vi.fn(),
+        clear: vi.fn(),
+      },
+      createProof: vi.fn(async () => PROOF),
+      socketFactory: () => socket as unknown as WebSocket,
+      onStatus: vi.fn(),
+      onCommand,
+      getSnapshot: () => snapshot,
+    });
+    bridge.configure(true, 37921);
+    await Promise.resolve();
+    socket.open();
+    // The plugin claims success without ever issuing a challenge.
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'pairingResult',
+      ok: true,
+    });
+    await Promise.resolve();
+    expect(messages(socket).some((message) => message.type === 'authenticate')).toBe(false);
+    socket.receive({
+      protocol: STREAM_DECK_PROTOCOL,
+      type: 'command',
+      requestId: 'no-auth',
+      command: { name: 'next' },
+    });
+    await vi.waitFor(() =>
+      expect(messages(socket)).toContainEqual(
+        expect.objectContaining({
+          type: 'commandResult',
+          requestId: 'no-auth',
+          ok: false,
+          error: expect.objectContaining({ code: 'unauthorized' }),
+        }),
+      ),
+    );
+    expect(onCommand).not.toHaveBeenCalled();
+    bridge.destroy();
+  });
+
   it('pairs a new browser, persists the token, and executes authenticated commands', async () => {
     const socket = new FakeSocket();
     const order: string[] = [];
