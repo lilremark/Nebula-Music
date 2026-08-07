@@ -255,28 +255,55 @@ const DesktopUpdatesPanel = () => {
 
     return (
         <SettingPanel icon={Download} title="Updates">
-            <div className="px-5 py-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                        <span className="block text-sm font-semibold text-neutral-900 dark:text-white">
-                            {currentVersion ? `Nebula ${currentVersion}` : 'Nebula'}
-                        </span>
-                        <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-                            {updateState?.message ?? 'Updates are checked against GitHub Releases.'}
-                        </span>
-                    </div>
+            <div className="px-5 py-6">
+                <div className="flex flex-col items-center text-center">
                     <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${badgeClass}`}>
                         {phase.replace('-', ' ')}
                     </span>
+                    <span className="mt-3 block text-lg font-bold text-neutral-900 dark:text-white">
+                        {currentVersion ? `Nebula ${currentVersion}` : 'Nebula'}
+                    </span>
+                    <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+                        {updateState?.message ?? 'Updates are checked against GitHub Releases.'}
+                    </span>
+
+                    {phase === 'downloaded' ? (
+                        <button
+                            type="button"
+                            onClick={() => platform.updater.installAndRestart()}
+                            className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110"
+                        >
+                            <Download className="h-4 w-4" />
+                            Restart &amp; Install
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => platform.updater.check()}
+                            disabled={!enabled || busy}
+                            className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
+                            {busy ? (phase === 'downloading' ? `Downloading\u2026 ${updateState?.progress ?? 0}%` : 'Checking\u2026') : 'Check for updates'}
+                        </button>
+                    )}
+
+                    {phase === 'downloading' && (
+                        <div className="mt-3 h-1.5 w-56 overflow-hidden rounded-full bg-white/10">
+                            <div
+                                className="h-full rounded-full bg-primary transition-all"
+                                style={{ width: `${updateState?.progress ?? 0}%` }}
+                            />
+                        </div>
+                    )}
                 </div>
-            </div>
-            <div className="grid gap-px divide-y divide-neutral-200 dark:divide-white/10 md:grid-cols-2 md:divide-x md:divide-y-0">
-                <div className="px-5 py-4">
+
+                <div className="mt-6 flex flex-col items-center">
                     <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Update channel</span>
                     <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
                         Beta delivers pre-release builds from the beta channel.
                     </span>
-                    <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-white/5">
+                    <div className={`mt-3 grid w-48 grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-white/5 ${enabled ? '' : 'pointer-events-none opacity-50'}`}>
                         {[{ value: 'stable', label: 'Stable' }, { value: 'beta', label: 'Beta' }].map(option => (
                             <button
                                 type="button"
@@ -291,27 +318,6 @@ const DesktopUpdatesPanel = () => {
                             </button>
                         ))}
                     </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 px-5 py-4">
-                    <button
-                        type="button"
-                        onClick={() => platform.updater.check()}
-                        disabled={!enabled || busy}
-                        className="flex items-center gap-2 rounded-lg bg-neutral-200 px-4 py-2 text-xs font-bold text-neutral-800 transition hover:bg-neutral-300 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
-                    >
-                        <RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} />
-                        {busy ? 'Checking\u2026' : 'Check for updates'}
-                    </button>
-                    {readyToInstall && (
-                        <button
-                            type="button"
-                            onClick={() => platform.updater.installAndRestart()}
-                            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-black transition hover:brightness-110"
-                        >
-                            <Download className="h-3.5 w-3.5" />
-                            Restart &amp; Install
-                        </button>
-                    )}
                 </div>
             </div>
         </SettingPanel>

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 import {
   AlertCircle,
   ArrowRight,
@@ -12,6 +13,10 @@ import { useStore } from '../context/Store';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
+import { WindowControls } from './window/WindowControls';
+
+const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
+  ({ WebkitAppRegion: region }) as CSSProperties;
 
 export const SetupScreen: React.FC = () => {
   const { connectToSubsonic, enableDemoMode } = useStore();
@@ -42,6 +47,14 @@ export const SetupScreen: React.FC = () => {
 
   return (
     <div className="fixed inset-0 overflow-auto bg-neutral-100 text-neutral-900 dark:bg-[#0a0a0a] dark:text-white">
+      {/* Drag region so the frameless window can be moved from the sign-in screen */}
+      <div className="absolute top-0 inset-x-0 h-10" style={appRegion('drag')} />
+
+      {/* Window controls (Windows only) */}
+      <div className="absolute top-2 right-4 z-10" style={appRegion('no-drag')}>
+        <WindowControls />
+      </div>
+
       <div
         className="absolute inset-0 pointer-events-none opacity-25"
         style={{
@@ -54,7 +67,7 @@ export const SetupScreen: React.FC = () => {
         style={{ backgroundColor: 'rgb(var(--color-primary))' }}
       />
 
-      <div className="relative flex min-h-screen items-center justify-center px-5 py-8">
+      <div className="relative flex min-h-screen items-center justify-center px-5 py-6">
         <div className="w-full max-w-md">
           <Card
             elevation={4}
@@ -62,7 +75,7 @@ export const SetupScreen: React.FC = () => {
             padding="lg"
             className="border-neutral-200/70 bg-white/90 dark:border-white/10 dark:bg-neutral-950/82"
           >
-            <div className="mb-8 text-center">
+            <div className="mb-6 text-center">
               <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-black shadow-[0_10px_30px_rgba(0,0,0,0.18)] dark:bg-white">
                 <svg viewBox="0 0 24 24" className="h-7 w-7 stroke-current" fill="none" strokeWidth="2.6" strokeLinecap="round">
                   <path d="M4 10v4" className="opacity-40" />
@@ -79,7 +92,7 @@ export const SetupScreen: React.FC = () => {
               </p>
             </div>
 
-            <form onSubmit={handleConnect} className="space-y-4">
+            <form onSubmit={handleConnect} className="space-y-3">
               <div className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-white/5">
                 {([
                   ['password', 'Password'],
@@ -203,7 +216,7 @@ export const SetupScreen: React.FC = () => {
             elevation={2}
             hover={false}
             padding="md"
-            className="mt-4 border-neutral-200/70 bg-white/75 dark:border-white/10 dark:bg-neutral-950/60"
+            className="mt-3 border-neutral-200/70 bg-white/75 dark:border-white/10 dark:bg-neutral-950/60"
           >
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
               About Nebula
