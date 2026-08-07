@@ -12,6 +12,7 @@ import { useTrackWaveform } from '../hooks/useTrackWaveform';
 import { PlaybackProgress } from './player/PlaybackProgress';
 import { VISUALIZER_MODES } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import { WindowControls } from './window/WindowControls';
 
 interface SyncedLine {
     time: number;
@@ -304,6 +305,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                     >
                         {isZenMode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
+                    <WindowControls />
                 </div>
             </header>
 
@@ -312,10 +314,10 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
                 {/* Now Playing Tab */}
                 {activeTab === 'playing' && !isZenMode && (
-                    <div className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 px-6 md:px-12 pb-8">
+                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 px-6 md:px-12 pb-8">
                         {/* Album Art */}
                         <div className="relative w-full max-w-[380px] lg:max-w-[480px] shrink-0">
-                            <div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
+                            <div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 w-full max-w-full max-h-[min(42vh,480px)] ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
                                 <img
                                     src={coverArt}
                                     alt={currentSong.title}
