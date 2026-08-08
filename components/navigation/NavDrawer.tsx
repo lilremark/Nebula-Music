@@ -1,7 +1,11 @@
 import React, { useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { Home, Compass, Mic2, Disc, Music, ListMusic, Heart, Star, Settings, X, Radio } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { View } from '../../types';
+
+const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
+    ({ WebkitAppRegion: region }) as CSSProperties;
 
 interface NavDrawerProps {
     isOpen: boolean;
@@ -88,7 +92,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                 aria-label="Main navigation"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-neutral-200 dark:border-white/10">
+                <div className="flex items-center justify-between p-5 border-b border-neutral-200 dark:border-white/10" style={appRegion('no-drag')}>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
                             <svg viewBox="0 0 24 24" className="w-5 h-5 text-black stroke-current" fill="none" strokeWidth="3" strokeLinecap="round">
@@ -109,6 +113,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                         onClick={onClose}
                         className="p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-colors"
                         aria-label="Close menu"
+                        style={appRegion('no-drag')}
                     >
                         <X className="w-5 h-5" />
                     </button>
