@@ -276,10 +276,12 @@ const parsePlayHistory = (raw: string | null): PlayHistoryMap => {
   return trimPlayHistory(parsed as PlayHistoryMap);
 };
 
+const canonicalServerUrl = (url: string): string => sanitizeServerUrlForSettings(url);
+
 const loadDesktopCredentials = async (platform: Platform): Promise<SubsonicCredentials | null> => {
   const lastServerUrl = await platform.settings.get('lastServerUrl');
   if (typeof lastServerUrl !== 'string' || lastServerUrl.length === 0) return null;
-  return platform.vault.get(lastServerUrl);
+  return platform.vault.get(canonicalServerUrl(lastServerUrl));
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -294,8 +296,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!platform) return;
     try {
       if (platform.info.kind === 'desktop') {
-        await platform.vault.set(creds);
-        await platform.settings.set('lastServerUrl', sanitizeServerUrlForSettings(creds.serverUrl));
+        const storedUrl = canonicalServerUrl(creds.serverUrl);
+        await platform.vault.set({ ...creds, serverUrl: storedUrl });
+        await platform.settings.set('lastServerUrl', storedUrl);
         // Purge any plaintext credentials left in IndexedDB by the Phase 1 build.
         await db.remove('settings', 'credentials');
       } else {
@@ -312,7 +315,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (platform.info.kind === 'desktop') {
         const lastServerUrl = await platform.settings.get('lastServerUrl');
         if (typeof lastServerUrl === 'string' && lastServerUrl.length > 0) {
-          await platform.vault.clear(lastServerUrl);
+          await platform.vault.clear(canonicalServerUrl(lastServerUrl));
         }
         await platform.settings.set('lastServerUrl', null);
       } else {
@@ -640,8 +643,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const legacy = await db.getCredentials();
         if (legacy) {
           try {
-            await platform.vault.set(legacy);
-            await platform.settings.set('lastServerUrl', legacy.serverUrl);
+            const storedUrl = canonicalServerUrl(legacy.serverUrl);
+            await platform.vault.set({ ...legacy, serverUrl: storedUrl });
+            await platform.settings.set('lastServerUrl', storedUrl);
             await db.remove('settings', 'credentials');
             savedCreds = legacy;
           } catch (error) {

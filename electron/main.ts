@@ -55,6 +55,8 @@ let updater: Updater;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
 
+const thumbarClient = createCommandClient('nebula-thumbar', () => lastSnapshot?.epoch ?? 0);
+
 const forwardCommand = (envelope: DesktopCommandEnvelope): void => {
   mainWindow?.webContents.send(IPC.playback.command, envelope);
 };
@@ -78,8 +80,7 @@ const updateThumbarButtons = (snapshot: DesktopSnapshot | null): void => {
     mainWindow.setThumbarButtons([]);
     return;
   }
-  const client = createCommandClient('nebula-thumbar', () => snapshot.epoch);
-  const send = (command: DesktopCommand): void => forwardCommand(client.send(command));
+  const send = (command: DesktopCommand): void => forwardCommand(thumbarClient.send(command));
   const playIcon = snapshot.playing
     ? nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-pause.png'))
     : nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-play.png'));

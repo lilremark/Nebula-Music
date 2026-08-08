@@ -141,7 +141,11 @@ describe('createUpdater', () => {
   });
 
   it('clears newVersion and progress on error', async () => {
-    const harness = makeHarness(true);
+    const harness = makeHarness();
+    harness.emit('update-available', { version: '3.0.0' });
+    harness.emit('update-downloaded', { version: '3.0.0' });
+    expect(harness.getState().newVersion).toBe('3.0.0');
+    expect(harness.getState().progress).toBe(100);
     harness.checkForUpdates.mockRejectedValueOnce(new Error('boom'));
     await harness.updater.check();
     const state = harness.getState();
