@@ -247,7 +247,7 @@ const SongRow: React.FC<SongRowProps> = ({ song, onClick, getCoverArtUrl }) => (
     </div>
 );
 
-export const HomeView: React.FC<{ sidebarVisible?: boolean }> = ({ sidebarVisible = true }) => {
+export const HomeView: React.FC = () => {
     const { service, playSong, setView, getMostPlayedSongs, homeData, refreshHomeData, refreshQuickPicks, refreshDiscovery, isInitialized } = useStore();
     const [loadingExplore, setLoadingExplore] = useState(false);
     const [loadingQuickPicks, setLoadingQuickPicks] = useState(false);
@@ -274,9 +274,9 @@ export const HomeView: React.FC<{ sidebarVisible?: boolean }> = ({ sidebarVisibl
             <HeroSection songs={randomSongs} />
 
             {/* Quick Picks & Most Played */}
-            <div className={`grid grid-cols-1 gap-6 mb-12 ${sidebarVisible ? '@3xl:grid-cols-3' : ''}`}>
+            <div className="grid grid-cols-1 gap-6 mb-12">
                 {/* Quick Picks Grid */}
-                <div className={sidebarVisible ? '@3xl:col-span-2' : ''}>
+                <div>
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <Flame className="w-5 h-5 text-orange-500" />
