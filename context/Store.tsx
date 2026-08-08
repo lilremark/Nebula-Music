@@ -7,6 +7,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import type { Platform } from '../platform/types';
 import { MOCK_PLAYLISTS } from '../constants';
 import { db } from '../services/db';
+import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 
 interface StoreContextType extends AppState {
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
@@ -359,6 +360,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const lastPlayedSongIdRef = useRef<string | null>(null);
   const hasScrobbledRef = useRef(false);
   const lastLogTimeRef = useRef(0);
+  const currentSongIndexRef = useRef(currentSongIndex);
+  currentSongIndexRef.current = currentSongIndex;
 
   // Caching State
   const [homeData, setHomeData] = useState<HomeData>({
@@ -1853,16 +1856,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!('mediaSession' in navigator)) return;
     if (currentSongIndex >= 0 && queue[currentSongIndex]) {
       const song = queue[currentSongIndex];
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: song.title,
-        artist: song.artist,
-        album: song.album,
-        artwork: [
-          { src: service.getCoverArtUrl(song.id, 96),  sizes: '96x96',   type: 'image/jpeg' },
-          { src: service.getCoverArtUrl(song.id, 128), sizes: '128x128', type: 'image/jpeg' },
-          { src: service.getCoverArtUrl(song.id, 256), sizes: '256x256', type: 'image/jpeg' },
-          { src: service.getCoverArtUrl(song.id, 512), sizes: '512x512', type: 'image/jpeg' },
-        ]
+      const artId = song.coverArt || song.id;
+      void toDataUrlArtwork([
+        { src: service.getCoverArtUrl(artId, 96),  sizes: '96x96',   type: 'image/jpeg' },
+        { src: service.getCoverArtUrl(artId, 128), sizes: '128x128', type: 'image/jpeg' },
+        { src: service.getCoverArtUrl(artId, 256), sizes: '256x256', type: 'image/jpeg' },
+        { src: service.getCoverArtUrl(artId, 512), sizes: '512x512', type: 'image/jpeg' },
+      ]).then((artwork) => {
+        const current = queue[currentSongIndexRef.current];
+        if (!current || current.id !== song.id) return;
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.title,
+          artist: song.artist,
+          album: song.album,
+          artwork: artwork.map(({ src, sizes, type }) => ({ src, sizes, type })),
+        });
       });
     } else { navigator.mediaSession.metadata = null; }
 
@@ -1879,7 +1887,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     navigator.mediaSession.setActionHandler('seekforward', (details) => {
       if (audioRef.current) audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + (details.seekOffset ?? 10));
     });
-  }, [currentSongIndex, queue, service, isPlaying, initAudioContext]);
+  }, [currentSongIndex, queue, service, isPlaying, initAudioContext, currentSongIndexRef]);
 
   useEffect(() => {
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
