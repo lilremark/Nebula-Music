@@ -3,36 +3,6 @@ import React, { useEffect, useRef } from 'react';
 import { useStore } from '../context/Store';
 import { clamp, getBandForPosition, getFrequencyBin, getFrequencyBands } from './visualizerBands';
 
-interface Point3D { x: number, y: number, z: number }
-
-interface Particle {
-  x: number;
-  y: number;
-  z: number;
-  speed: number;
-  size: number;
-}
-
-function rotateX(point: Point3D, angle: number): Point3D {
-  const y = point.y * Math.cos(angle) - point.z * Math.sin(angle);
-  const z = point.y * Math.sin(angle) + point.z * Math.cos(angle);
-  return { ...point, y, z };
-}
-
-function rotateY(point: Point3D, angle: number): Point3D {
-  const x = point.x * Math.cos(angle) + point.z * Math.sin(angle);
-  const z = -point.x * Math.sin(angle) + point.z * Math.cos(angle);
-  return { ...point, x, z };
-}
-
-function project(point: Point3D, width: number, height: number, fov: number = 300) {
-  const depth = Math.max(1, fov + point.z);
-  const scale = fov / depth;
-  const x = point.x * scale + width / 2;
-  const y = point.y * scale + height / 2;
-  return { x, y, scale };
-}
-
 const withAlpha = (color: string, alpha: number) => {
   const safeAlpha = clamp(alpha);
 
@@ -142,10 +112,6 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
 
   const stateRef = useRef({
     angle: 0,
-    gridOffset: 0,
-    particles: [] as Particle[],
-    rotationX: 0,
-    rotationY: 0,
     smoothedBandSets: {} as Record<number, number[]>,
     lastWidth: 0,
     lastHeight: 0,
@@ -206,7 +172,6 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
         const height = canvas.height;
         const resized = stateRef.current.lastWidth !== width || stateRef.current.lastHeight !== height;
         if (resized) {
-          stateRef.current.particles = [];
           stateRef.current.lastWidth = width;
           stateRef.current.lastHeight = height;
         }
@@ -243,8 +208,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
         stateRef.current.peak = Math.max(energy, stateRef.current.peak * 0.94);
         const peak = stateRef.current.peak;
 
-        stateRef.current.angle += 0.004 + bass * 0.022 + highEnergy * 0.018;
-        stateRef.current.gridOffset = (stateRef.current.gridOffset + 1.4 + energy * 8) % 100;
+          stateRef.current.angle += 0.004 + bass * 0.022 + highEnergy * 0.018;
 
         if (visualizerMode === 'BARS') {
           const barWidth = width / bars72.length;
@@ -351,164 +315,6 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           ctx.fillStyle = withAlpha(primaryColor, 0.5);
           ctx.fillRect(0, height - Math.max(2 * dpr, height * bass * 0.08), width, Math.max(2 * dpr, height * bass * 0.08));
           ctx.globalAlpha = 1;
-        }
-        else if (visualizerMode === 'PARTICLES') {
-          if (stateRef.current.particles.length === 0) {
-            for(let i = 0; i < 170; i++) {
-              stateRef.current.particles.push({
-                x: (Math.random() - 0.5) * width,
-                y: (Math.random() - 0.5) * height,
-                z: Math.random() * width,
-                speed: Math.random() * 4 + 1.6,
-                size: Math.random() * 2 + 0.8,
-              });
-            }
-          }
-
-          const speedMultiplier = 0.85 + energy * 7;
-          stateRef.current.particles.forEach((p, index) => {
-            p.z -= p.speed * speedMultiplier;
-            if (p.z <= 1) {
-              p.z = width;
-              p.x = (Math.random() - 0.5) * width;
-              p.y = (Math.random() - 0.5) * height;
-            }
-
-            const projection = project(p, width, height, width * 0.82);
-            const band = bars72[getBandForPosition(clamp((p.x / width + 0.5) / 2 + 0.25, 0, 1), bars72.length)] || 0;
-            const size = (p.size + band * 5 + bass * 3) * dpr * clamp(1 - p.z / width, 0.25, 1.8);
-            const alpha = clamp(0.18 + band * 0.64 + (1 - p.z / width) * 0.4);
-
-            ctx.fillStyle = withAlpha(index % 2 === 0 ? primaryColor : secondaryColor, alpha);
-            ctx.beginPath();
-            ctx.arc(projection.x, projection.y, Math.max(0.8 * dpr, size), 0, Math.PI * 2);
-            ctx.fill();
-          });
-        }
-        else if (visualizerMode === 'HEXAGON') {
-          const cx = width / 2;
-          const cy = height / 2;
-          const base = Math.min(width, height) * 0.2;
-          const rings = 4;
-
-          for(let ring = 0; ring < rings; ring++) {
-            const ringEnergy = ring === 0 ? bass : ring === 1 ? lowMid : ring === 2 ? mid : highEnergy;
-            const radius = base * (1 + ring * 0.22 + ringEnergy * 0.42);
-            ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-              const angle = (i * 2 * Math.PI) / 6 + stateRef.current.angle * (ring % 2 === 0 ? 1 : -0.7);
-              const band = bars72[getBandForPosition((ring * 6 + i) / (rings * 6), bars72.length)] || 0;
-              const x = cx + (radius + band * base * 0.34) * Math.cos(angle);
-              const y = cy + (radius + band * base * 0.34) * Math.sin(angle);
-              if (i === 0) ctx.moveTo(x, y);
-              else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-            ctx.lineWidth = (1.5 + ringEnergy * 12) * dpr;
-            ctx.strokeStyle = ring % 2 === 0 ? gradient : withAlpha(secondaryColor, 0.82);
-            ctx.stroke();
-          }
-        }
-        else if (visualizerMode === 'CUBE') {
-          const size = Math.min(width, height) * (0.18 + energy * 0.08);
-          const vertices = [
-            {x: -1, y: -1, z: -1}, {x: 1, y: -1, z: -1}, {x: 1, y: 1, z: -1}, {x: -1, y: 1, z: -1},
-            {x: -1, y: -1, z: 1}, {x: 1, y: -1, z: 1}, {x: 1, y: 1, z: 1}, {x: -1, y: 1, z: 1},
-          ].map(v => ({ x: v.x * size, y: v.y * size, z: v.z * size }));
-
-          const edges = [
-            [0,1], [1,2], [2,3], [3,0],
-            [4,5], [5,6], [6,7], [7,4],
-            [0,4], [1,5], [2,6], [3,7],
-          ];
-
-          stateRef.current.rotationX += 0.006 + mid * 0.018;
-          stateRef.current.rotationY += 0.008 + highEnergy * 0.024;
-
-          const projectedVertices = vertices.map(v => {
-            let rotated = rotateY(v, stateRef.current.rotationY);
-            rotated = rotateX(rotated, stateRef.current.rotationX);
-            rotated.z += 380;
-            return project(rotated, width, height, 390);
-          });
-
-          edges.forEach((edge, edgeIndex) => {
-            const v1 = projectedVertices[edge[0]];
-            const v2 = projectedVertices[edge[1]];
-            const band = bars72[getBandForPosition(edgeIndex / edges.length, bars72.length)] || 0;
-            ctx.beginPath();
-            ctx.moveTo(v1.x, v1.y);
-            ctx.lineTo(v2.x, v2.y);
-            ctx.strokeStyle = withAlpha(secondaryColor, 0.72 + band * 0.24);
-            ctx.lineWidth = (1.5 + band * 8 + energy * 6) * dpr;
-            ctx.stroke();
-          });
-
-          projectedVertices.forEach((v, index) => {
-            const band = bars72[getBandForPosition(index / projectedVertices.length, bars72.length)] || 0;
-            ctx.fillStyle = index % 2 === 0 ? gradient : withAlpha(primaryColor, 0.9);
-            ctx.beginPath();
-            ctx.arc(v.x, v.y, (3 + band * 10) * dpr * v.scale, 0, Math.PI * 2);
-            ctx.fill();
-          });
-        }
-        else if (visualizerMode === 'GRID') {
-          const fov = 310;
-          const gridSize = 92 * dpr;
-          const cols = 22;
-          const rows = 22;
-          const horizonY = height * (0.34 + highEnergy * 0.05);
-
-          ctx.strokeStyle = withAlpha(secondaryColor, 0.72 + energy * 0.2);
-          ctx.lineWidth = (0.8 + energy * 1.8) * dpr;
-
-          for (let i = -cols / 2; i <= cols / 2; i++) {
-            const band = bars72[getBandForPosition(Math.abs(i) / (cols / 2), bars72.length)] || 0;
-            ctx.beginPath();
-            let started = false;
-            for (let j = 0; j < rows; j++) {
-              const z = j * gridSize - (stateRef.current.gridOffset * dpr) + 110;
-              if (z <= 10) continue;
-
-              const x = i * gridSize;
-              const y = 215 * dpr - band * 220 * dpr * (1 - j / rows) - bass * 35 * dpr;
-              const p = project({x, y, z}, width, height, fov);
-              if (p.y < horizonY) continue;
-
-              if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-              else ctx.lineTo(p.x, p.y);
-            }
-            if (started) ctx.stroke();
-          }
-
-          for (let j = 0; j < rows; j++) {
-            const z = j * gridSize - (stateRef.current.gridOffset * dpr) + 110;
-            if (z <= 10) continue;
-
-            ctx.beginPath();
-            let started = false;
-            for (let i = -cols / 2; i <= cols / 2; i++) {
-              const band = bars72[getBandForPosition(Math.abs(i) / (cols / 2), bars72.length)] || 0;
-              const x = i * gridSize;
-              const y = 215 * dpr - band * 220 * dpr * (1 - j / rows) - bass * 35 * dpr;
-              const p = project({x, y, z}, width, height, fov);
-              if (p.y < horizonY) continue;
-
-              if (!started) { ctx.moveTo(p.x, p.y); started = true; }
-              else ctx.lineTo(p.x, p.y);
-            }
-            if(started) ctx.stroke();
-          }
-
-          const glow = ctx.createLinearGradient(0, horizonY, 0, height);
-          try {
-            glow.addColorStop(0, withAlpha(primaryColor, 0.26 + bass * 0.28));
-            glow.addColorStop(0.55, 'transparent');
-            ctx.fillStyle = glow;
-            ctx.fillRect(0, horizonY, width, height - horizonY);
-          } catch {
-            // Ignore color parsing failures; the grid itself has already rendered.
-          }
         }
         else {
           drawSpectrum(width, height, bars72, gradient, dpr);

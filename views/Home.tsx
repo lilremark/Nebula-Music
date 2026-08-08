@@ -274,9 +274,9 @@ export const HomeView: React.FC = () => {
             <HeroSection songs={randomSongs} />
 
             {/* Quick Picks & Most Played */}
-            <div className="grid grid-cols-1 gap-6 mb-12">
+            <div className="grid grid-cols-1 @3xl:grid-cols-3 gap-6 mb-12">
                 {/* Quick Picks Grid */}
-                <div>
+                <div className="@3xl:col-span-2">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <Flame className="w-5 h-5 text-orange-500" />

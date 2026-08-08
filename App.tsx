@@ -184,7 +184,7 @@ const AppContent: React.FC = () => {
         {/* Scrollable Content */}
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto custom-scrollbar"
+          className="flex-1 overflow-y-auto custom-scrollbar @container"
         >
           <div className={`min-h-full ${isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
             <ViewComponent />
