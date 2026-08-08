@@ -221,7 +221,7 @@ docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml down
 ```
 
-Compose uses `latest` by default. Set `NEBULA_VERSION=2.2.0` to pin the current
+Compose uses `latest` by default. Set `NEBULA_VERSION=2.3.0` to pin the current
 release. See [docker/README.md](./docker/README.md) for local-build commands and
 additional deployment details.
 
@@ -352,11 +352,12 @@ permitted by the music server's CORS policy.
 - **Nebula is now a native Windows desktop app** with a custom frameless title bar, window controls, and a system tray.
 - Added automatic updates from GitHub Releases with an in-app Restart & Install banner and a tray notification.
 - Added Windows taskbar integration: playback progress, thumbnail transport buttons (previous, play/pause, next), and global media keys.
-- Added a native always-on-top mini-player window and secure credential storage via the OS credential vault.
+- Added a native always-on-top mini-player window and secure credential storage via the OS credential vault (Windows DPAPI).
 - Reworked the sign-in screen into a split view with a looping cover-flow animation.
 - Redesigned the Settings updates panel as a centered hero with phase-aware controls.
 - Made full-screen player tabs and the sidebar close button clickable; pinned Zen-mode controls and refined the title marquee.
 - Improved visualizer accuracy (pre-DSP sampling), aligned the waveform ticker, and smoothed mini-player progress.
+- Home layout stacks Quick Picks and Most Played/For You responsively.
 - Added a signed NSIS installer plus an unsigned appx package and set the Nebula logo as the app/taskbar icon.
 
 ### v2.2.0 — July 24, 2026
