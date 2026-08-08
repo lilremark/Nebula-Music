@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const COVER_GRADIENTS: [string, string][] = [
     ['#06b6d4', '#8b5cf6'], // cyan -> violet
@@ -29,6 +29,21 @@ const SPACING = 110;
 
 export const CoverFlow: React.FC = () => {
     const [progress, setProgress] = useState(0);
+    const [size, setSize] = useState(COVER_SIZE);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        const measure = () => {
+            const height = container.clientHeight;
+            if (height > 0) setSize(Math.max(140, Math.round(height * 0.42)));
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         let raf = 0;
@@ -44,16 +59,17 @@ export const CoverFlow: React.FC = () => {
     }, []);
 
     const N = COVERS.length;
+    const spacing = Math.round(size * 0.92);
 
     return (
-        <div className="relative h-full w-full overflow-hidden" style={{ perspective: '1200px' }}>
+        <div ref={containerRef} className="relative h-full w-full overflow-hidden" style={{ perspective: '1200px' }}>
             <div className="absolute inset-0 flex items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
                 {COVERS.map((cover, i) => {
                     let rel = i - (progress % N);
                     if (rel > N / 2) rel -= N;
                     if (rel < -N / 2) rel += N;
                     const abs = Math.abs(rel);
-                    const tx = rel * SPACING;
+                    const tx = rel * spacing;
                     const rotY = rel * -18;
                     const scale = Math.max(0.55, 1 - abs * 0.07);
                     const opacity = Math.max(0.25, 1 - abs * 0.12);
@@ -62,8 +78,8 @@ export const CoverFlow: React.FC = () => {
                             key={cover.id}
                             className="absolute rounded-xl shadow-2xl"
                             style={{
-                                width: COVER_SIZE,
-                                height: COVER_SIZE,
+                                width: size,
+                                height: size,
                                 background: cover.background,
                                 transform: `translateX(${tx}px) rotateY(${rotY}deg) scale(${scale})`,
                                 opacity,
