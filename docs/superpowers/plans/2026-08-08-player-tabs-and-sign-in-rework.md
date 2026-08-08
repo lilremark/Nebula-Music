@@ -550,7 +550,7 @@ console.log('done');
 Expected:
 - `1280x800`: `hasForm: true`, `coverCount >= 16`, `aboutPresent: false`, `scrollHeight == clientHeight` (no vertical scroll), `hScroll <= 0`, `rootOverflow == "hidden"`.
 - `940x600`: same, no scrollbar.
-- `700x600`: `hasForm: true`, `coverCount: 0` (cover flow hidden below `lg`), no scrollbar, form centered.
+- `700x600`: `hasForm: true`, cover-flow wrapper computes to `display: none` (the covers stay in the DOM because the wrapper uses `hidden lg:block`, so a raw DOM `div[style*="linear-gradient"]` count will still return 16 — assert the wrapper's computed `display` instead of a cover count of 0), no scrollbar, form centered.
 
 Also verify visually: at 1280×800 the cover flow renders on the left with covers animating (rolling), the form is centered on the right, and the About card is gone. Confirm the window is still draggable from the top drag strip and closable via WindowControls (real clicks).
 
