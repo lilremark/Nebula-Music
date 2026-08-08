@@ -310,6 +310,21 @@ permitted by the music server's CORS policy.
 
 ## Changelog
 
+### v2.3.0  — August 8, 2026
+
+  - Native Windows desktop app — custom frameless title bar, window controls, and a system tray.
+  - Automatic updates — Nebula checks GitHub Releases and notifies you via an in-app Restart & Install banner and a tray notification when a new version is ready.
+  - Windows taskbar integration — playback progress, thumbnail transport buttons (previous, play/pause, next), and global media keys.
+  - Native always-on-top mini-player window.
+  - Secure credential storage via the OS credential vault (Windows DPAPI).
+  - The Nebula logo as the app and taskbar icon.
+  - Reworked the sign-in screen into a split view with a looping cover-flow animation.
+  - Redesigned the Settings updates panel as a centered hero.
+  - Made full-screen player tabs and the sidebar close button clickable; pinned Zen-mode controls and refined the title marquee.
+  - Improved visualizer accuracy (pre-DSP sampling), aligned the waveform ticker, and smoothed mini-player progress.
+  - Home layout stacks Quick Picks and Most Played/For You responsively.
+
+
 ### v2.2.0 — July 24, 2026
 
 - Added an opt-in, authenticated localhost bridge for the
