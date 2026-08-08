@@ -14,15 +14,14 @@ win:
     - target: nsis
       arch:
         - x64
-    - target: msix
+    - target: appx
       arch:
         - x64
   artifactName: ${productName}-${version}-setup.${ext}
 nsis:
   oneClick: true
   perMachine: false
-msix:
-  createDesktopShortcut: always
+appx:
   identityName: com.nebula.desktop
   publisherDisplayName: Nebula
   publisher: CN=Nebula
