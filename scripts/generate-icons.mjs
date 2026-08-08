@@ -2,10 +2,16 @@ import sharp from 'sharp';
 import toIco from 'png-to-ico';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(process.cwd());
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const svg = path.join(root, 'logo.svg');
-const outDir = path.join(root, 'build');
+const outDir = path.join(root, 'electron', 'assets');
+
+if (!fs.existsSync(svg)) {
+  throw new Error(`logo.svg not found at ${svg}`);
+}
+
 fs.mkdirSync(outDir, { recursive: true });
 
 // 512x512 PNG (electron-builder / window icon source, and the largest frame)
@@ -21,4 +27,4 @@ for (const size of sizes) {
 const ico = await toIco(frames);
 await fs.promises.writeFile(path.join(outDir, 'icon.ico'), ico);
 
-console.log(`generated build/icon.png (512x512) and build/icon.ico (${sizes.join(',')}px)`);
+console.log(`generated electron/assets/icon.png (512x512) and electron/assets/icon.ico (${sizes.join(',')}px)`);

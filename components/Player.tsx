@@ -211,6 +211,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const toggleSpeedPitch = () => {
         if (showSpeedPitchModal) {
             setShowSpeedPitchModal(false);
+            setSpeedPitchPos(null);
             return;
         }
         const r = speedPitchButtonRef.current?.getBoundingClientRect();
@@ -482,6 +483,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <button
                                 onClick={toggleSpeedPitch}
                                 ref={speedPitchButtonRef}
+                                aria-expanded={showSpeedPitchModal}
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all ${showSpeedPitchModal || playbackRate !== 1.0 || pitch !== 0 || settings.magicCrossfade
                                     ? 'bg-neutral-100 text-neutral-900 dark:bg-white/10 dark:text-white'
                                     : 'bg-neutral-50 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 dark:bg-white/5 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
@@ -504,7 +506,11 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 <>
                                     <div
                                         className="fixed inset-0 z-[100]"
-                                        onClick={() => setShowSpeedPitchModal(false)}
+                                        aria-hidden="true"
+                                        onClick={() => {
+                                            setShowSpeedPitchModal(false);
+                                            setSpeedPitchPos(null);
+                                        }}
                                     />
                                     <div
                                         className="fixed z-[100] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-950/95"
@@ -516,7 +522,10 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Speed & Pitch</h3>
                                             </div>
                                             <button
-                                                onClick={() => setShowSpeedPitchModal(false)}
+                                                onClick={() => {
+                                                    setShowSpeedPitchModal(false);
+                                                    setSpeedPitchPos(null);
+                                                }}
                                                 className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 transition-all dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10"
                                                 aria-label="Close playback settings"
                                             >
