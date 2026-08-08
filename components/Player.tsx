@@ -301,7 +301,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`w-24 py-2 rounded-md text-xs font-semibold uppercase tracking-wide transition-all ${activeTab === tab
+                                className={`w-20 md:w-24 py-2 rounded-md text-xs font-semibold uppercase tracking-wide transition-all ${activeTab === tab
                                     ? 'bg-white text-black'
                                     : 'text-neutral-600 dark:text-white/50 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5'
                                     }`}
