@@ -14,10 +14,18 @@ win:
     - target: nsis
       arch:
         - x64
+    - target: msix
+      arch:
+        - x64
   artifactName: ${productName}-${version}-setup.${ext}
 nsis:
   oneClick: true
   perMachine: false
+msix:
+  createDesktopShortcut: always
+  identityName: com.nebula.desktop
+  publisherDisplayName: Nebula
+  publisher: CN=Nebula
 publish:
   provider: github
   owner: lilremark
