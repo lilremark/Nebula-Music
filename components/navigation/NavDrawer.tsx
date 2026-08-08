@@ -77,6 +77,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                     ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
                 `}
                 onClick={onClose}
+                style={appRegion('no-drag')}
             />
 
             {/* Drawer */}
@@ -90,6 +91,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                     ${isOpen ? 'translate-x-0' : '-translate-x-full'}
                 `}
                 aria-label="Main navigation"
+                style={appRegion('no-drag')}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-5 border-b border-neutral-200 dark:border-white/10" style={appRegion('no-drag')}>

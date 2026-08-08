@@ -123,6 +123,8 @@ const AppContent: React.FC = () => {
   const useSidebarPlayer = settings.miniPlayerMode === 'sidebar';
   const useFloatingPlayer = settings.miniPlayerMode === 'floating';
 
+  const showSidebar = isPlayerVisible && !isSidebarCollapsed && !useFloatingPlayer && useSidebarPlayer;
+
   // Dynamic background style based on settings
   const bgStyle = {
     backgroundColor: settings.theme.backgroundColor || '#000000',
@@ -187,7 +189,11 @@ const AppContent: React.FC = () => {
           className="flex-1 overflow-y-auto custom-scrollbar @container"
         >
           <div className={`min-h-full ${isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
-            <ViewComponent />
+            {currentView === 'HOME' ? (
+              <HomeView sidebarVisible={showSidebar} />
+            ) : (
+              <ViewComponent />
+            )}
           </div>
         </main>
 

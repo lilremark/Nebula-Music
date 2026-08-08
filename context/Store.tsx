@@ -119,7 +119,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   miniPlayerMode: 'sidebar',
   progressVisualization: 'bar',
   magicCrossfade: false,
-  alwaysShowZenControls: false,
   streamDeck: {
     enabled: false,
     port: 37921,

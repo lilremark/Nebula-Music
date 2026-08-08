@@ -168,7 +168,6 @@ export interface AppSettings {
   miniPlayerMode: 'floating' | 'sidebar'; // which mini-player style to show
   progressVisualization: 'bar' | 'waveform';
   magicCrossfade: boolean;
-  alwaysShowZenControls: boolean;
   streamDeck: {
     enabled: boolean;
     port: number;

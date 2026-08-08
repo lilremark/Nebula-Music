@@ -169,23 +169,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     };
 
     useEffect(() => {
-        if (!isZenMode) {
-            setShowZenControls(false);
-            return;
-        }
-
-        if (settings.alwaysShowZenControls) {
-            setShowZenControls(true);
-            return;
-        }
-
-        const handleMouseMove = (event: MouseEvent) => {
-            setShowZenControls(window.innerHeight - event.clientY < 190);
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-        return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, [isZenMode, settings.alwaysShowZenControls]);
+        setShowZenControls(isZenMode);
+    }, [isZenMode]);
 
     if (!currentSong) return null;
 
@@ -738,10 +723,14 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     </div>
                                     <div className="min-w-0 text-left">
                                         <div className="relative max-w-full overflow-hidden">
-                                            <h2 className="zen-title-marquee text-lg font-black text-white md:text-2xl">
-                                                <span>{currentSong.title}</span>
-                                                <span aria-hidden="true">{currentSong.title}</span>
-                                            </h2>
+                                            {currentSong.title.length > 34 ? (
+                                                <h2 className="zen-title-marquee text-lg font-black text-white md:text-2xl">
+                                                    <span>{currentSong.title}</span>
+                                                    <span aria-hidden="true">{currentSong.title}</span>
+                                                </h2>
+                                            ) : (
+                                                <h2 className="truncate text-lg font-black text-white md:text-2xl">{currentSong.title}</h2>
+                                            )}
                                         </div>
                                         <p className="mt-1 truncate text-sm font-medium text-white/55 md:text-base">{currentSong.artist}</p>
                                     </div>
