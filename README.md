@@ -53,7 +53,7 @@
 
 ### Listening Experience
 
-- Web Audio visualizers including Bars, Wave, Circle, Mirror, Spectrum, Particles, Hexagon, Cube, and Grid
+- Web Audio visualizers including Bars, Wave, Circle, Mirror, Spectrum, Particles
 - Expandable full-screen player, desktop sidebar player, floating mini-player, and mobile player bar
 - Structured and synchronized lyrics with fallback lyric providers
 - AutoEq headphone calibration profile search and application
@@ -184,7 +184,7 @@ docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml down
 ```
 
-Compose uses `latest` by default. Set `NEBULA_VERSION=2.2.0` to pin the current
+Compose uses `latest` by default. Set `NEBULA_VERSION=2.3.0` to pin the current
 release. See [docker/README.md](./docker/README.md) for local-build commands and
 additional deployment details.
 
