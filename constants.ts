@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.3.0';
+export const APP_VERSION = '2.3.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,16 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.3.1',
+    date: '2026-08-08',
+    title: 'Update Fixes and Polish',
+    changes: [
+      'Fixed automatic updates — the updater now reads the published latest.yml (stable) and uses prerelease detection for the beta channel.',
+      'Replaced the tray indicator with the Nebula logo.',
+      'Made the Home Most Played / For You section a collapsible dropdown so it no longer scrolls when stacked under Quick Picks.'
+    ]
+  },
   {
     version: '2.3.0',
     date: '2026-08-08',

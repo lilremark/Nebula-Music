@@ -40,6 +40,7 @@ export interface UpdateDownloadProgress {
  */
 export interface UpdaterDriver {
   channel: string | null;
+  allowPrerelease: boolean;
   autoDownload: boolean;
   autoInstallOnAppQuit: boolean;
   checkForUpdates(): Promise<unknown>;
@@ -93,7 +94,10 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
   };
 
   if (enabled) {
-    driver.channel = getChannel();
+    // Leave `channel` at its default (latest) so the GitHub provider reads the
+    // `latest.yml` file electron-builder publishes. The stable/beta toggle maps
+    // to whether prerelease releases are allowed, not to a channel filename.
+    driver.allowPrerelease = getChannel() === 'beta';
     driver.autoDownload = true;
     driver.autoInstallOnAppQuit = true;
   }
@@ -138,7 +142,7 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
   };
 
   const setChannel = (channel: string): void => {
-    if (enabled) driver.channel = channel;
+    if (enabled) driver.allowPrerelease = channel === 'beta';
   };
 
   const installAndRestart = (): void => {
