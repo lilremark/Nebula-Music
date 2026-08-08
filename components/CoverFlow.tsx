@@ -59,10 +59,15 @@ export const CoverFlow: React.FC = () => {
     }, []);
 
     const N = COVERS.length;
-    const spacing = Math.round(size * 0.92);
+    const spacing = Math.round(size * 1.12);
+    const fadeMask = 'linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)';
 
     return (
-        <div ref={containerRef} className="relative h-full w-full overflow-hidden" style={{ perspective: '1200px' }}>
+        <div
+            ref={containerRef}
+            className="relative h-full w-full overflow-hidden"
+            style={{ perspective: '1200px', WebkitMaskImage: fadeMask, maskImage: fadeMask }}
+        >
             <div className="absolute inset-0 flex items-center justify-center" style={{ transformStyle: 'preserve-3d' }}>
                 {COVERS.map((cover, i) => {
                     let rel = i - (progress % N);
