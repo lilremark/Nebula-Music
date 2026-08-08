@@ -10,6 +10,7 @@ import {
   LockKeyhole,
 } from 'lucide-react';
 import { useStore } from '../context/Store';
+import { CoverFlow } from './CoverFlow';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
@@ -46,12 +47,12 @@ export const SetupScreen: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 overflow-auto bg-neutral-100 text-neutral-900 dark:bg-[#0a0a0a] dark:text-white">
+    <div className="fixed inset-0 overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#0a0a0a] dark:text-white">
       {/* Drag region so the frameless window can be moved from the sign-in screen */}
-      <div className="absolute top-0 inset-x-0 h-10" style={appRegion('drag')} />
+      <div className="absolute top-0 inset-x-0 h-10 z-30" style={appRegion('drag')} />
 
       {/* Window controls (Windows only) */}
-      <div className="absolute top-2 right-4 z-10" style={appRegion('no-drag')}>
+      <div className="absolute top-2 right-4 z-40" style={appRegion('no-drag')}>
         <WindowControls />
       </div>
 
@@ -67,8 +68,14 @@ export const SetupScreen: React.FC = () => {
         style={{ backgroundColor: 'rgb(var(--color-primary))' }}
       />
 
-      <div className="relative flex min-h-screen items-center justify-center px-5 py-6">
-        <div className="w-full max-w-md">
+      {/* Left: cover flow (hidden below lg) */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-[55%] lg:block">
+        <CoverFlow />
+      </div>
+
+      {/* Right: sign-in form */}
+      <div className="absolute inset-y-0 right-0 flex w-full items-center justify-center px-5 py-8 lg:w-[45%]">
+        <div className="w-full max-w-sm">
           <Card
             elevation={4}
             hover={false}
@@ -210,21 +217,6 @@ export const SetupScreen: React.FC = () => {
                 </Button>
               </div>
             </form>
-          </Card>
-
-          <Card
-            elevation={2}
-            hover={false}
-            padding="md"
-            className="mt-3 border-neutral-200/70 bg-white/75 dark:border-white/10 dark:bg-neutral-950/60"
-          >
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
-              About Nebula
-            </p>
-            <p className="mt-3 text-sm leading-6 text-neutral-600 dark:text-white/60">
-              Nebula is a Subsonic-compatible music player built around focused playback, waveform progress, adaptive color,
-              and a cleaner listening-first interface.
-            </p>
           </Card>
         </div>
       </div>
