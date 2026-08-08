@@ -370,6 +370,11 @@ const showMainWindow = (): void => {
   mainWindow.focus();
 };
 
+const isTrustedSender = (webContents: Electron.WebContents): boolean => {
+  const win = BrowserWindow.fromWebContents(webContents);
+  return !!win && (win === mainWindow || win === miniPlayerWindow);
+};
+
 const registerIpc = (): void => {
   ipcMain.on(IPC.app.info, (event) => {
     event.returnValue = {
@@ -427,25 +432,31 @@ const registerIpc = (): void => {
     }
   });
 
-  ipcMain.handle(IPC.vault.get, (_event, serverUrl: unknown) => {
+  ipcMain.handle(IPC.vault.get, (event, serverUrl: unknown) => {
+    if (!isTrustedSender(event.sender)) return null;
     if (typeof serverUrl !== 'string') return null;
     return credentialVault.get(serverUrl);
   });
-  ipcMain.handle(IPC.vault.set, async (_event, credentials: unknown) => {
+  ipcMain.handle(IPC.vault.set, async (event, credentials: unknown) => {
+    if (!isTrustedSender(event.sender)) return;
     await credentialVault.set(credentials as Parameters<CredentialVault['set']>[0]);
   });
-  ipcMain.handle(IPC.vault.clear, async (_event, serverUrl: unknown) => {
+  ipcMain.handle(IPC.vault.clear, async (event, serverUrl: unknown) => {
+    if (!isTrustedSender(event.sender)) return;
     if (typeof serverUrl === 'string') await credentialVault.clear(serverUrl);
   });
-  ipcMain.handle(IPC.vault.getSecret, (_event, key: unknown) => {
+  ipcMain.handle(IPC.vault.getSecret, (event, key: unknown) => {
+    if (!isTrustedSender(event.sender)) return null;
     if (typeof key !== 'string') return null;
     return credentialVault.getSecret(key);
   });
-  ipcMain.handle(IPC.vault.setSecret, async (_event, key: unknown, value: unknown) => {
+  ipcMain.handle(IPC.vault.setSecret, async (event, key: unknown, value: unknown) => {
+    if (!isTrustedSender(event.sender)) return;
     if (typeof key !== 'string' || typeof value !== 'string') return;
     await credentialVault.setSecret(key, value);
   });
-  ipcMain.handle(IPC.vault.clearSecret, async (_event, key: unknown) => {
+  ipcMain.handle(IPC.vault.clearSecret, async (event, key: unknown) => {
+    if (!isTrustedSender(event.sender)) return;
     if (typeof key === 'string') await credentialVault.clearSecret(key);
   });
 

@@ -8,6 +8,7 @@ import type { Platform } from '../platform/types';
 import { MOCK_PLAYLISTS } from '../constants';
 import { db } from '../services/db';
 import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
+import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
 
 interface StoreContextType extends AppState {
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
@@ -294,7 +295,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       if (platform.info.kind === 'desktop') {
         await platform.vault.set(creds);
-        await platform.settings.set('lastServerUrl', creds.serverUrl);
+        await platform.settings.set('lastServerUrl', sanitizeServerUrlForSettings(creds.serverUrl));
         // Purge any plaintext credentials left in IndexedDB by the Phase 1 build.
         await db.remove('settings', 'credentials');
       } else {
