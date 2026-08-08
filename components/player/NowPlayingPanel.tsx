@@ -64,18 +64,23 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
-        const updateTime = () => {
+        let raf = 0;
+        const tick = () => {
             setCurrentTime(audio.currentTime);
             setDuration(audio.duration || 0);
+            raf = requestAnimationFrame(tick);
         };
-        audio.addEventListener('timeupdate', updateTime);
-        audio.addEventListener('loadedmetadata', updateTime);
-        // Sync immediately on mount
-        updateTime();
-        return () => {
-            audio.removeEventListener('timeupdate', updateTime);
-            audio.removeEventListener('loadedmetadata', updateTime);
-        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [audioRef]);
+
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        const syncDuration = () => setDuration(audio.duration || 0);
+        audio.addEventListener('loadedmetadata', syncDuration);
+        syncDuration();
+        return () => audio.removeEventListener('loadedmetadata', syncDuration);
     }, [audioRef]);
 
     useEffect(() => {

@@ -31,6 +31,25 @@ const MiniPlayerContent: React.FC = () => {
     return platform.playback.onSnapshot(setSnapshot);
   }, [platform]);
 
+  const [displayProgress, setDisplayProgress] = useState(0);
+
+  useEffect(() => {
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      const target =
+        snapshot && snapshot.durationSeconds > 0
+          ? Math.min(100, (snapshot.positionSeconds / snapshot.durationSeconds) * 100)
+          : 0;
+      setDisplayProgress((prev) => prev + (target - prev) * Math.min(1, dt * 6));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [snapshot]);
+
   const send = (name: 'togglePlayback' | 'next' | 'previous' | 'setPlayback') => {
     platform?.playback.sendCommand(
       clientRef.current.send(
@@ -40,10 +59,6 @@ const MiniPlayerContent: React.FC = () => {
   };
 
   const track = snapshot?.track ?? null;
-  const progress =
-    snapshot && snapshot.durationSeconds > 0
-      ? Math.min(100, (snapshot.positionSeconds / snapshot.durationSeconds) * 100)
-      : 0;
 
   return (
     <div
@@ -60,8 +75,8 @@ const MiniPlayerContent: React.FC = () => {
         </p>
         <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-cyan-500 transition-[width] duration-500"
-            style={{ width: `${progress}%` }}
+            className="h-full rounded-full bg-cyan-500 transition-[width] duration-200"
+            style={{ width: `${displayProgress}%` }}
           />
         </div>
       </div>

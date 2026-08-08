@@ -21,7 +21,7 @@ import {
 } from './desktopProtocol';
 
 const OWNER_ID = 'nebula-desktop-owner';
-const SNAPSHOT_INTERVAL_MS = 2_000;
+const SNAPSHOT_INTERVAL_MS = 1_000;
 
 interface DesktopOwnerBridgeContextValue {
   snapshotEpoch: number;
