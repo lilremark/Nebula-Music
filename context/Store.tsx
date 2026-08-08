@@ -2008,9 +2008,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setHomeData({ randomSongs: [], recentAlbums: [], newestAlbums: [], exploreAlbums: [], recommendedTracks: [], lastFetched: 0 });
       setCachedArtists([]);
       setMostPlayed([]);
+      localStorage.removeItem('nebula_explore_data');
+      localStorage.removeItem('nebula_explore_date');
+      localStorage.removeItem(PLAY_HISTORY_KEY);
+      setPlayHistory({});
+      setSearchResults({ artists: [], albums: [], songs: [] });
+      setRadioStations([]);
+      setPlaylists([]);
+      navigationStackRef.current = [];
+      setNavigationStack([]);
+      setViewData(null);
       // Fetch real playlists from server
       await saveCredentials(creds);
-      service.getPlaylists().then(setPlaylists);
+      service.getPlaylists().then(setPlaylists).catch(() => {});
       fetchArtists(true);
       return true;
     }
