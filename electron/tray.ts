@@ -17,6 +17,7 @@ const TRAY_ICON_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJnSURBVFhH7ZfPSxRhHMZFQuwUHaKIiIgwJDwskUgEQaf+AAVxHUc9KAReUhAFGyq23W1ndtWLguXPKY/d+gM6dfLkvWNXf+zszDuCE8/IivP0zjjv5CXqgQ8Lu+/7PDPv+32/M9vS8l9/owwjaC2NBVcYfM9jL1SF/sPrNc3rNAcbj02t8UQGfn+vBzd47h8Jd2dq9RyHJaI7D4sDe1fZS1nlUefmb+YKVAfcu+yZWqa238GGWagOiQfK9VHKO7fYiFmedEc+TLsT+OTfmFreu88ZscLesUGTpZeNvF0U37YrfsDYRfF9Zcod5zlNUhdnXMFtvBKFzxUhOJix3/pb1WH3Gc+3hvxu42lwifMiwlXyRLA+55oclMTWO/8Le4Ca7t7hzIisYdHFk7Dsae6cQX2wF44nZ54KyyNrMnbpaIfN0/CpLH6yF7B6jy9zdqiThhMdjL1kYxWWJrxe9kRH5exQhZGDazwYVc2mKqzOejPsiSPO2aFkBahafMzGG2+VPee1xm3ODoWl4cEfZ7xJNlUBR5c9Yy9AVgMLL9znbKqCrEvG1oCh/2jnwQDVzMZpwNFlL4Ab5exTybpg1m1Ye+0tsxe6IWdGhP3hSWCzIL5yQBJ22d9ljxP2OzgzIjQjXCVPRC3gYcNBMhAuO/9ocrFN6KySXkLCB1JZHHIowJ7Llr2J0stJ+O4nMWmCPr9ueIs45/iU9v0I9ZzSSwkGywoyC5W88wgnjDPOVVgPkqejGvVcpvCzwjNc9pQ8D2tw757SsifJ6NttwxGydKeHgyKhutOD979U1Z5V6GToF8yF/A/45/QLOk1/1X2nGUgAAAAASUVORK5CYII=';
 
 let tray: Tray | null = null;
+let updateClickHandler: (() => void) | null = null;
 
 interface TrayOptions {
   getWindow: () => BrowserWindow | null;
@@ -24,10 +25,12 @@ interface TrayOptions {
   onCommand: (envelope: DesktopCommandEnvelope) => void;
   onToggleMiniPlayer: () => void;
   onQuit: () => void;
+  onUpdateClick: () => void;
 }
 
 export const createTray = (options: TrayOptions): Tray => {
   if (tray) return tray;
+  updateClickHandler = options.onUpdateClick;
 
   const icon = nativeImage.createFromDataURL(TRAY_ICON_PNG);
   tray = new Tray(icon);
@@ -60,8 +63,17 @@ export const createTray = (options: TrayOptions): Tray => {
 
   tray.setContextMenu(Menu.buildFromTemplate(menu));
   tray.on('click', showWindow);
+  tray.on('balloon-click', () => { updateClickHandler?.(); showWindow(); });
 
   return tray;
+};
+
+export const showUpdateBalloon = (version: string): void => {
+  if (!tray) return;
+  tray.displayBalloon({
+    title: 'Nebula update ready',
+    content: `Version ${version} is downloaded. Click to install.`,
+  });
 };
 
 export const destroyTray = (): void => {

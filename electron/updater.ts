@@ -61,6 +61,7 @@ export interface UpdaterOptions {
   getChannel: () => string;
   /** Pushes every state change to listeners (windows, etc.). */
   broadcast: (state: UpdaterState) => void;
+  onDownloaded?: (info: { version: string }) => void;
 }
 
 export interface Updater {
@@ -75,7 +76,7 @@ export interface Updater {
 const DISABLED_MESSAGE = 'Automatic updates are only available in installed builds.';
 
 export const createUpdater = (options: UpdaterOptions): Updater => {
-  const { driver, enabled, getCurrentVersion, getChannel, broadcast } = options;
+  const { driver, enabled, getCurrentVersion, getChannel, broadcast, onDownloaded: onDownloadedOption } = options;
 
   let state: UpdaterState = {
     enabled,
@@ -103,16 +104,18 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
   const onNotAvailable = (): void =>
     emit({ phase: 'not-available', newVersion: null, message: 'Nebula is up to date.' });
   const onError = (error: Error): void =>
-    emit({ phase: 'error', message: error?.message ?? 'Update check failed.' });
+    emit({ phase: 'error', newVersion: null, progress: null, message: error?.message ?? 'Update check failed.' });
   const onProgress = (progress: UpdateDownloadProgress): void =>
     emit({ phase: 'downloading', progress: progress.percent, message: 'Downloading update\u2026' });
-  const onDownloaded = (info: { version: string }): void =>
+  const onDownloaded = (info: { version: string }): void => {
     emit({
       phase: 'downloaded',
       newVersion: info.version,
       progress: 100,
       message: 'Restart Nebula to finish installing the update.',
     });
+    onDownloadedOption?.(info);
+  };
 
   driver.on('checking-for-update', onChecking);
   driver.on('update-available', onAvailable);
@@ -123,6 +126,7 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
 
   const check = async (): Promise<boolean> => {
     if (!enabled) return false;
+    if (state.phase === 'checking' || state.phase === 'downloading') return false;
     emit({ phase: 'checking', message: 'Checking for updates\u2026' });
     try {
       await driver.checkForUpdates();

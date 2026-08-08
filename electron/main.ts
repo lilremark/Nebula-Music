@@ -14,7 +14,7 @@ import { isAllowedExternalUrl } from './links';
 import { SettingsStore } from './settingsStore';
 import { CredentialVault } from './credentialVault';
 import { createSafeStorageCipher } from './safeStorageCipher';
-import { createTray, destroyTray } from './tray';
+import { createTray, destroyTray, showUpdateBalloon } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
@@ -501,6 +501,7 @@ if (!gotLock) {
           win.webContents.send(IPC.updater.status, state);
         }
       },
+      onDownloaded: (info) => showUpdateBalloon(info.version),
     });
 
     registerProtocol();
@@ -521,6 +522,7 @@ if (!gotLock) {
       onCommand: forwardCommand,
       onToggleMiniPlayer: toggleMiniPlayer,
       onQuit,
+      onUpdateClick: () => updater.installAndRestart(),
     });
 
     // Check shortly after startup so the first launch isn't slowed down.

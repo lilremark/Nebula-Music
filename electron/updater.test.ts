@@ -127,6 +127,29 @@ describe('createUpdater', () => {
     expect(harness.getState()).toMatchObject({ phase: 'error', message: 'offline' });
   });
 
+  it('ignores re-entrant check() while checking', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const harness = makeHarness(true);
+    harness.checkForUpdates.mockImplementation(async () => { await gate; });
+    const first = harness.updater.check();
+    const second = await harness.updater.check();
+    expect(second).toBe(false);
+    release();
+    await first;
+    expect(harness.checkForUpdates).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears newVersion and progress on error', async () => {
+    const harness = makeHarness(true);
+    harness.checkForUpdates.mockRejectedValueOnce(new Error('boom'));
+    await harness.updater.check();
+    const state = harness.getState();
+    expect(state.phase).toBe('error');
+    expect(state.newVersion).toBeNull();
+    expect(state.progress).toBeNull();
+  });
+
   it('only installs after the update is downloaded', () => {
     const harness = makeHarness(true);
     harness.updater.installAndRestart();

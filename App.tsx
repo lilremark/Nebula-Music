@@ -20,6 +20,7 @@ import { SearchModal } from './components/SearchModal';
 import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { MobilePlayerBar } from './components/MobilePlayerBar';
+import { UpdateBanner } from './components/UpdateBanner';
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
@@ -131,6 +132,9 @@ const AppContent: React.FC = () => {
     <div className="relative h-screen overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
       {/* Navigation Drawer */}
       <NavDrawer isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
+
+      {/* Top-level update banner (desktop only) */}
+      <UpdateBanner />
 
       {/* Split Screen Layout */}
       <SplitLayout
