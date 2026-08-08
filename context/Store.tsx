@@ -811,9 +811,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const ana = ctx.createAnalyser();
     ana.fftSize = 2048;
-    ana.smoothingTimeConstant = 0.85;
-    compressor.connect(ana);
-    ana.connect(ctx.destination);
+    ana.smoothingTimeConstant = 0.5;
+    dspInputRef.current.connect(ana);
+    compressor.connect(ctx.destination);
 
     analyserRef.current = ana;
     setAnalyser(ana);

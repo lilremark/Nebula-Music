@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useStore } from '../context/Store';
+import { clamp, getBandForPosition, getFrequencyBin, getFrequencyBands } from './visualizerBands';
 
 interface Point3D { x: number, y: number, z: number }
 
@@ -31,8 +32,6 @@ function project(point: Point3D, width: number, height: number, fov: number = 30
   const y = point.y * scale + height / 2;
   return { x, y, scale };
 }
-
-const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
 const withAlpha = (color: string, alpha: number) => {
   const safeAlpha = clamp(alpha);
@@ -113,11 +112,6 @@ const fillRoundedRect = (
   ctx.fill();
 };
 
-const getFrequencyBin = (frequency: number, sampleRate: number, binCount: number) => {
-  const nyquist = sampleRate / 2;
-  return Math.min(binCount - 1, Math.max(0, Math.floor((frequency / nyquist) * binCount)));
-};
-
 const averageFrequencyRange = (data: Uint8Array, sampleRate: number, startHz: number, endHz: number) => {
   const start = getFrequencyBin(startHz, sampleRate, data.length);
   const end = Math.min(data.length, Math.max(start + 1, getFrequencyBin(endHz, sampleRate, data.length) + 1));
@@ -125,33 +119,6 @@ const averageFrequencyRange = (data: Uint8Array, sampleRate: number, startHz: nu
 
   for (let i = start; i < end; i++) sum += data[i];
   return sum / (end - start) / 255;
-};
-
-const getFrequencyBands = (data: Uint8Array, count: number, previous: number[], sampleRate: number) => {
-  const bands = new Array(count);
-  const minHz = 28;
-  const maxHz = Math.min(20000, sampleRate * 0.48);
-  const minLog = Math.log(minHz);
-  const maxLog = Math.log(maxHz);
-
-  for (let i = 0; i < count; i++) {
-    const startHz = Math.exp(minLog + (i / count) * (maxLog - minLog));
-    const endHz = Math.exp(minLog + ((i + 1) / count) * (maxLog - minLog));
-    const start = getFrequencyBin(startHz, sampleRate, data.length);
-    const end = Math.min(data.length, Math.max(start + 1, getFrequencyBin(endHz, sampleRate, data.length) + 1));
-    let sum = 0;
-
-    for (let bin = start; bin < end; bin++) sum += data[bin];
-
-    const raw = sum / (end - start) / 255;
-    const highFrequencyLift = 1 + (i / Math.max(1, count - 1)) * 0.5;
-    const boosted = clamp(Math.pow(raw, 0.58) * highFrequencyLift);
-    const oldValue = previous[i] ?? 0;
-    const smoothing = boosted > oldValue ? 0.5 : 0.24;
-    bands[i] = oldValue + (boosted - oldValue) * smoothing;
-  }
-
-  return bands;
 };
 
 const getWaveRms = (data: Uint8Array) => {
@@ -191,9 +158,6 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
 
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
-
-    analyser.fftSize = Math.max(analyser.fftSize, 4096);
-    analyser.smoothingTimeConstant = 0.68;
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
@@ -411,7 +375,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
             }
 
             const projection = project(p, width, height, width * 0.82);
-            const band = bars72[index % bars72.length] || 0;
+            const band = bars72[getBandForPosition(clamp((p.x / width + 0.5) / 2 + 0.25, 0, 1), bars72.length)] || 0;
             const size = (p.size + band * 5 + bass * 3) * dpr * clamp(1 - p.z / width, 0.25, 1.8);
             const alpha = clamp(0.18 + band * 0.64 + (1 - p.z / width) * 0.4);
 
@@ -433,7 +397,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
             ctx.beginPath();
             for (let i = 0; i < 6; i++) {
               const angle = (i * 2 * Math.PI) / 6 + stateRef.current.angle * (ring % 2 === 0 ? 1 : -0.7);
-              const band = bars72[(ring * 12 + i * 8) % bars72.length] || 0;
+              const band = bars72[getBandForPosition((ring * 6 + i) / (rings * 6), bars72.length)] || 0;
               const x = cx + (radius + band * base * 0.34) * Math.cos(angle);
               const y = cy + (radius + band * base * 0.34) * Math.sin(angle);
               if (i === 0) ctx.moveTo(x, y);
@@ -468,19 +432,20 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
             return project(rotated, width, height, 390);
           });
 
-          ctx.strokeStyle = withAlpha(secondaryColor, 0.72 + peak * 0.24);
-          ctx.lineWidth = (1.5 + energy * 6) * dpr;
-          edges.forEach(edge => {
+          edges.forEach((edge, edgeIndex) => {
             const v1 = projectedVertices[edge[0]];
             const v2 = projectedVertices[edge[1]];
+            const band = bars72[getBandForPosition(edgeIndex / edges.length, bars72.length)] || 0;
             ctx.beginPath();
             ctx.moveTo(v1.x, v1.y);
             ctx.lineTo(v2.x, v2.y);
+            ctx.strokeStyle = withAlpha(secondaryColor, 0.72 + band * 0.24);
+            ctx.lineWidth = (1.5 + band * 8 + energy * 6) * dpr;
             ctx.stroke();
           });
 
           projectedVertices.forEach((v, index) => {
-            const band = bars72[(index * 8) % bars72.length] || 0;
+            const band = bars72[getBandForPosition(index / projectedVertices.length, bars72.length)] || 0;
             ctx.fillStyle = index % 2 === 0 ? gradient : withAlpha(primaryColor, 0.9);
             ctx.beginPath();
             ctx.arc(v.x, v.y, (3 + band * 10) * dpr * v.scale, 0, Math.PI * 2);
@@ -498,7 +463,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
           ctx.lineWidth = (0.8 + energy * 1.8) * dpr;
 
           for (let i = -cols / 2; i <= cols / 2; i++) {
-            const band = bars72[Math.min(bars72.length - 1, Math.floor((Math.abs(i) / (cols / 2)) * (bars72.length - 1)))] || 0;
+            const band = bars72[getBandForPosition(Math.abs(i) / (cols / 2), bars72.length)] || 0;
             ctx.beginPath();
             let started = false;
             for (let j = 0; j < rows; j++) {
@@ -523,8 +488,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
             ctx.beginPath();
             let started = false;
             for (let i = -cols / 2; i <= cols / 2; i++) {
-              const index = Math.min(bars72.length - 1, Math.floor((Math.abs(i) / (cols / 2)) * (bars72.length - 1)));
-              const band = bars72[index] || 0;
+              const band = bars72[getBandForPosition(Math.abs(i) / (cols / 2), bars72.length)] || 0;
               const x = i * gridSize;
               const y = 215 * dpr - band * 220 * dpr * (1 - j / rows) - bass * 35 * dpr;
               const p = project({x, y, z}, width, height, fov);
