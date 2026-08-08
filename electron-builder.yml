@@ -5,9 +5,11 @@ directories:
 files:
   - dist/**/*
   - electron/dist/**/*
+  - electron/assets/**/*
   - package.json
 asar: true
 win:
+  icon: electron/assets/icon.ico
   target:
     - target: nsis
       arch:

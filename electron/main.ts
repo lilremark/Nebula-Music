@@ -181,6 +181,7 @@ const createWindow = (): BrowserWindow => {
     ...(process.platform === 'win32' ? { frame: false } : {}),
     show: false,
     backgroundColor: '#0b0b12',
+    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -257,6 +258,7 @@ const createMiniPlayerWindow = (): BrowserWindow => {
     alwaysOnTop: true,
     skipTaskbar: true,
     backgroundColor: '#17171a',
+    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

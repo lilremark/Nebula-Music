@@ -62,6 +62,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [showSpeedPitchModal, setShowSpeedPitchModal] = useState(false);
+    const speedPitchButtonRef = useRef<HTMLButtonElement>(null);
+    const [speedPitchPos, setSpeedPitchPos] = useState<{ left: number; bottom: number } | null>(null);
     const [visualProgress, setVisualProgress] = useState(0); // For immediate visual feedback
     const [showZenControls, setShowZenControls] = useState(false);
 
@@ -204,6 +206,19 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
     const toggleProgressMode = () => {
         updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' });
+    };
+
+    const toggleSpeedPitch = () => {
+        if (showSpeedPitchModal) {
+            setShowSpeedPitchModal(false);
+            setSpeedPitchPos(null);
+            return;
+        }
+        const r = speedPitchButtonRef.current?.getBoundingClientRect();
+        if (r) {
+            setSpeedPitchPos({ left: r.left + r.width / 2, bottom: window.innerHeight - r.top + 12 });
+        }
+        setShowSpeedPitchModal(true);
     };
 
     const playerBackground = isLightMode
@@ -466,7 +481,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
                             {/* Speed & Pitch Toggle Button */}
                             <button
-                                onClick={() => setShowSpeedPitchModal(!showSpeedPitchModal)}
+                                onClick={toggleSpeedPitch}
+                                ref={speedPitchButtonRef}
+                                aria-expanded={showSpeedPitchModal}
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all ${showSpeedPitchModal || playbackRate !== 1.0 || pitch !== 0 || settings.magicCrossfade
                                     ? 'bg-neutral-100 text-neutral-900 dark:bg-white/10 dark:text-white'
                                     : 'bg-neutral-50 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 dark:bg-white/5 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
@@ -485,138 +502,128 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 )}
                             </button>
 
-                            {/* Speed & Pitch Modal - Centered Overlay */}
-                            {showSpeedPitchModal && (
-                                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-900/40 dark:bg-black/80 backdrop-blur-md"
-                                    onClick={() => setShowSpeedPitchModal(false)}
-                                >
+                            {showSpeedPitchModal && speedPitchPos && (
+                                <>
                                     <div
-                                        className="relative w-full max-w-sm bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.5)] p-6 transform transition-all scale-100 opacity-100"
-                                        onClick={(e) => e.stopPropagation()}
+                                        className="fixed inset-0 z-[100]"
+                                        aria-hidden="true"
+                                        onClick={() => {
+                                            setShowSpeedPitchModal(false);
+                                            setSpeedPitchPos(null);
+                                        }}
+                                    />
+                                    <div
+                                        className="fixed z-[100] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-950/95"
+                                        style={{ left: speedPitchPos.left, bottom: speedPitchPos.bottom }}
                                     >
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Playback Settings</h3>
+                                        <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+                                            <div>
+                                                <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-white/45">Playback</p>
+                                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Speed & Pitch</h3>
+                                            </div>
                                             <button
-                                                onClick={() => setShowSpeedPitchModal(false)}
-                                                className="p-2 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 transition-all dark:text-white/60 dark:hover:text-white dark:hover:bg-white/10"
+                                                onClick={() => {
+                                                    setShowSpeedPitchModal(false);
+                                                    setSpeedPitchPos(null);
+                                                }}
+                                                className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 transition-all dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10"
                                                 aria-label="Close playback settings"
                                             >
-                                                <X className="w-5 h-5" />
+                                                <X className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
 
-                                        {/* Speed Control */}
-                                        <div className="mb-6">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <label className="text-xs font-semibold text-neutral-500 dark:text-white/60 uppercase tracking-wide">Speed</label>
-                                                <span className="text-xs font-mono text-neutral-600 dark:text-white/60">{playbackRate.toFixed(1)}x</span>
-                                            </div>
-                                            <div className="flex items-center justify-between bg-neutral-200 dark:bg-black/30 rounded-xl p-1">
-                                                <button
-                                                    onClick={() => {
-                                                        const newSpeed = Math.max(0.5, Math.round((playbackRate - 0.1) * 10) / 10);
-                                                        setPlaybackRate(newSpeed);
-                                                    }}
-                                                    className="w-10 h-10 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-300 rounded-lg transition-all dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10"
-                                                    aria-label="Decrease speed"
-                                                >
-                                                    <Minus className="w-5 h-5" />
-                                                </button>
-                                                <div className="h-4 w-[1px] bg-neutral-300 dark:bg-white/10" />
-                                                <button
-                                                    onClick={() => {
-                                                        const newSpeed = Math.min(2.0, Math.round((playbackRate + 0.1) * 10) / 10);
-                                                        setPlaybackRate(newSpeed);
-                                                    }}
-                                                    className="w-10 h-10 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-300 rounded-lg transition-all dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10"
-                                                    aria-label="Increase speed"
-                                                >
-                                                    <Plus className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Pitch Control */}
-                                        <div className="mb-6">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <label className="text-xs font-semibold text-neutral-500 dark:text-white/60 uppercase tracking-wide">Pitch</label>
-                                                <span className="text-xs font-mono text-neutral-600 dark:text-white/60">{pitch > 0 ? '+' : ''}{pitch}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between bg-neutral-200 dark:bg-black/30 rounded-xl p-1">
-                                                <button
-                                                    onClick={() => setPitch(Math.max(-12, pitch - 1))}
-                                                    className="w-10 h-10 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-300 rounded-lg transition-all dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10"
-                                                    aria-label="Decrease pitch"
-                                                >
-                                                    <Minus className="w-5 h-5" />
-                                                </button>
-                                                <div className="h-4 w-[1px] bg-neutral-300 dark:bg-white/10" />
-                                                <button
-                                                    onClick={() => setPitch(Math.min(12, pitch + 1))}
-                                                    className="w-10 h-10 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-neutral-300 rounded-lg transition-all dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10"
-                                                    aria-label="Increase pitch"
-                                                >
-                                                    <Plus className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Mode Toggle */}
-                                        <div className="mb-6 p-1 bg-neutral-200 dark:bg-black/30 rounded-xl flex">
-                                            <button
-                                                onClick={() => setPitchCorrection(true)}
-                                                className={`flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all ${pitchCorrection
-                                                    ? 'bg-white text-black shadow-lg'
-                                                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-300 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/5'
-                                                    }`}
-                                            >
-                                                Digital
-                                            </button>
-                                            <button
-                                                onClick={() => setPitchCorrection(false)}
-                                                className={`flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all ${!pitchCorrection
-                                                    ? 'bg-white text-black shadow-lg'
-                                                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-300 dark:text-white/60 dark:hover:text-white dark:hover:bg-white/5'
-                                                    }`}
-                                            >
-                                                Analogue
-                                            </button>
-                                        </div>
-                                        <div className="text-center mb-6">
-                                            <p className="text-xs text-neutral-500 dark:text-white/60">
-                                                {pitchCorrection ? 'Independent speed & pitch control' : 'Speed affects pitch (like vinyl)'}
-                                            </p>
-                                        </div>
-
-                                        {/* Magic Crossfade Toggle */}
-                                        <div className="mb-6">
-                                            <button
-                                                onClick={() => updateSettings({ magicCrossfade: !settings.magicCrossfade })}
-                                                className="w-full flex items-center justify-between rounded-xl bg-neutral-200 p-4 text-left transition-all hover:bg-neutral-300 dark:bg-black/30 dark:hover:bg-white/10"
-                                                aria-pressed={settings.magicCrossfade}
-                                            >
-                                                <div>
-                                                    <div className="text-xs font-semibold text-neutral-500 dark:text-white/60 uppercase tracking-wide">Magic Crossfade</div>
-                                                    <p className="mt-1 text-xs text-neutral-600 dark:text-white/60">Detects the ending and fades into the preloaded next track.</p>
+                                        <div className="space-y-4 p-4">
+                                            {/* Speed Control */}
+                                            <div>
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Speed</label>
+                                                    <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">{playbackRate.toFixed(1)}x</span>
                                                 </div>
-                                                <div className={`ml-4 h-7 w-12 shrink-0 rounded-full p-1 transition-all ${settings.magicCrossfade ? 'bg-primary' : 'bg-neutral-300 dark:bg-white/20'}`}>
-                                                    <div className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${settings.magicCrossfade ? 'translate-x-5' : 'translate-x-0'}`} />
+                                                <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
+                                                    <button
+                                                        onClick={() => { setPlaybackRate(Math.max(0.5, Math.round((playbackRate - 0.1) * 10) / 10)); }}
+                                                        className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
+                                                        aria-label="Decrease speed"
+                                                    >
+                                                        <Minus className="w-4 h-4" />
+                                                    </button>
+                                                    <span className="min-w-16 text-center text-base font-mono text-neutral-900 dark:text-white font-bold tabular-nums">{playbackRate.toFixed(1)}x</span>
+                                                    <button
+                                                        onClick={() => { setPlaybackRate(Math.min(2.0, Math.round((playbackRate + 0.1) * 10) / 10)); }}
+                                                        className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
+                                                        aria-label="Increase speed"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </button>
                                                 </div>
+                                            </div>
+
+                                            {/* Pitch Control */}
+                                            <div>
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Pitch</label>
+                                                    <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">semitones</span>
+                                                </div>
+                                                <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
+                                                    <button
+                                                        onClick={() => setPitch(Math.max(-12, pitch - 1))}
+                                                        className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
+                                                        aria-label="Decrease pitch"
+                                                    >
+                                                        <Minus className="w-4 h-4" />
+                                                    </button>
+                                                    <span className="min-w-16 text-center text-base font-mono text-neutral-900 dark:text-white font-bold tabular-nums">{pitch > 0 ? '+' : ''}{pitch}</span>
+                                                    <button
+                                                        onClick={() => setPitch(Math.min(12, pitch + 1))}
+                                                        className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
+                                                        aria-label="Increase pitch"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Mode Toggle */}
+                                            <div className="border-t border-neutral-200 pt-4 dark:border-white/10">
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Pitch Mode</label>
+                                                    <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">{pitchCorrection ? 'locked' : 'linked'}</span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-1 rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
+                                                    <button
+                                                        onClick={() => setPitchCorrection(true)}
+                                                        className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${pitchCorrection
+                                                            ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
+                                                            : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
+                                                            }`}
+                                                    >
+                                                        Digital
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setPitchCorrection(false)}
+                                                        className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${!pitchCorrection
+                                                            ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
+                                                            : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
+                                                            }`}
+                                                    >
+                                                        Analogue
+                                                    </button>
+                                                </div>
+                                                <p className="text-[10px] text-neutral-500 dark:text-white/50 mt-2 leading-snug">
+                                                    {pitchCorrection ? 'Speed and pitch adjust independently.' : 'Speed changes pitch together.'}
+                                                </p>
+                                            </div>
+
+                                            <button
+                                                onClick={() => { setPlaybackRate(1.0); setPitch(0); }}
+                                                className="w-full py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 dark:text-white/60 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 rounded-lg transition-all"
+                                            >
+                                                Reset
                                             </button>
                                         </div>
-
-                                        <button
-                                            onClick={() => {
-                                                setPlaybackRate(1.0);
-                                                setPitch(0);
-                                                updateSettings({ magicCrossfade: false });
-                                            }}
-                                            className="w-full py-3.5 text-sm font-bold text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all dark:text-white dark:bg-white/10 dark:hover:bg-white/20"
-                                        >
-                                            Reset to Default
-                                        </button>
                                     </div>
-                                </div>
+                                </>
                             )}
                         </div>
                         </div>
