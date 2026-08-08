@@ -274,9 +274,9 @@ export const HomeView: React.FC = () => {
             <HeroSection songs={randomSongs} />
 
             {/* Quick Picks & Most Played */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+            <div className="grid grid-cols-1 gap-6 mb-12">
                 {/* Quick Picks Grid */}
-                <div className="lg:col-span-2">
+                <div>
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <Flame className="w-5 h-5 text-orange-500" />
@@ -298,7 +298,7 @@ export const HomeView: React.FC = () => {
                 </div>
 
                 {/* Most Played / For You */}
-                <div className="bg-neutral-100 dark:bg-neutral-900/50 rounded-lg overflow-hidden flex flex-col h-[500px] border border-neutral-200 dark:border-white/5">
+                <div className="bg-neutral-100 dark:bg-neutral-900/50 rounded-lg overflow-hidden flex flex-col h-[600px] border border-neutral-200 dark:border-white/5">
                     <div className="flex border-b border-white/5 shrink-0">
                         <button
                             onClick={() => setActiveTab('played')}

@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  nativeImage,
   net,
   protocol,
   shell,
@@ -14,10 +15,15 @@ import { isAllowedExternalUrl } from './links';
 import { SettingsStore } from './settingsStore';
 import { CredentialVault } from './credentialVault';
 import { createSafeStorageCipher } from './safeStorageCipher';
-import { createTray, destroyTray } from './tray';
+import { createTray, destroyTray, showUpdateBalloon } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
-import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
+import { createCommandClient } from '../playback/commandClient';
+import type {
+  DesktopCommand,
+  DesktopCommandEnvelope,
+  DesktopSnapshot,
+} from '../playback/desktopProtocol';
 
 const SCHEME = 'app';
 const PROTOCOL_URL = 'app://nebula/';
@@ -49,6 +55,8 @@ let updater: Updater;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
 
+const thumbarClient = createCommandClient('nebula-thumbar', () => lastSnapshot?.epoch ?? 0);
+
 const forwardCommand = (envelope: DesktopCommandEnvelope): void => {
   mainWindow?.webContents.send(IPC.playback.command, envelope);
 };
@@ -64,6 +72,35 @@ const updateTaskbarProgress = (snapshot: DesktopSnapshot): void => {
   } else {
     mainWindow.setProgressBar(-1);
   }
+};
+
+const updateThumbarButtons = (snapshot: DesktopSnapshot | null): void => {
+  if (!mainWindow || process.platform !== 'win32') return;
+  if (!snapshot) {
+    mainWindow.setThumbarButtons([]);
+    return;
+  }
+  const send = (command: DesktopCommand): void => forwardCommand(thumbarClient.send(command));
+  const playIcon = snapshot.playing
+    ? nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-pause.png'))
+    : nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-play.png'));
+  mainWindow.setThumbarButtons([
+    {
+      icon: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-prev.png')),
+      tooltip: 'Previous',
+      click: () => send({ name: 'previous' }),
+    },
+    {
+      icon: playIcon,
+      tooltip: snapshot.playing ? 'Pause' : 'Play',
+      click: () => send({ name: 'togglePlayback' }),
+    },
+    {
+      icon: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-next.png')),
+      tooltip: 'Next',
+      click: () => send({ name: 'next' }),
+    },
+  ]);
 };
 
 const MIME: Record<string, string> = {
@@ -209,6 +246,8 @@ const createWindow = (): BrowserWindow => {
       }
       event.preventDefault();
       win.hide();
+    } else {
+      mainWindow?.setThumbarButtons([]);
     }
   });
 
@@ -332,6 +371,11 @@ const showMainWindow = (): void => {
   mainWindow.focus();
 };
 
+const isTrustedSender = (webContents: Electron.WebContents): boolean => {
+  const win = BrowserWindow.fromWebContents(webContents);
+  return !!win && (win === mainWindow || win === miniPlayerWindow);
+};
+
 const registerIpc = (): void => {
   ipcMain.on(IPC.app.info, (event) => {
     event.returnValue = {
@@ -389,25 +433,31 @@ const registerIpc = (): void => {
     }
   });
 
-  ipcMain.handle(IPC.vault.get, (_event, serverUrl: unknown) => {
+  ipcMain.handle(IPC.vault.get, (event, serverUrl: unknown) => {
+    if (!isTrustedSender(event.sender)) return null;
     if (typeof serverUrl !== 'string') return null;
     return credentialVault.get(serverUrl);
   });
-  ipcMain.handle(IPC.vault.set, async (_event, credentials: unknown) => {
+  ipcMain.handle(IPC.vault.set, async (event, credentials: unknown) => {
+    if (!isTrustedSender(event.sender)) return;
     await credentialVault.set(credentials as Parameters<CredentialVault['set']>[0]);
   });
-  ipcMain.handle(IPC.vault.clear, async (_event, serverUrl: unknown) => {
+  ipcMain.handle(IPC.vault.clear, async (event, serverUrl: unknown) => {
+    if (!isTrustedSender(event.sender)) return;
     if (typeof serverUrl === 'string') await credentialVault.clear(serverUrl);
   });
-  ipcMain.handle(IPC.vault.getSecret, (_event, key: unknown) => {
+  ipcMain.handle(IPC.vault.getSecret, (event, key: unknown) => {
+    if (!isTrustedSender(event.sender)) return null;
     if (typeof key !== 'string') return null;
     return credentialVault.getSecret(key);
   });
-  ipcMain.handle(IPC.vault.setSecret, async (_event, key: unknown, value: unknown) => {
+  ipcMain.handle(IPC.vault.setSecret, async (event, key: unknown, value: unknown) => {
+    if (!isTrustedSender(event.sender)) return;
     if (typeof key !== 'string' || typeof value !== 'string') return;
     await credentialVault.setSecret(key, value);
   });
-  ipcMain.handle(IPC.vault.clearSecret, async (_event, key: unknown) => {
+  ipcMain.handle(IPC.vault.clearSecret, async (event, key: unknown) => {
+    if (!isTrustedSender(event.sender)) return;
     if (typeof key === 'string') await credentialVault.clearSecret(key);
   });
 
@@ -427,6 +477,7 @@ const registerIpc = (): void => {
   ipcMain.on(IPC.playback.snapshot, (_event, snapshot: DesktopSnapshot) => {
     lastSnapshot = snapshot;
     updateTaskbarProgress(snapshot);
+    updateThumbarButtons(snapshot);
     broadcastSnapshotToMiniPlayer(snapshot);
   });
 
@@ -501,6 +552,7 @@ if (!gotLock) {
           win.webContents.send(IPC.updater.status, state);
         }
       },
+      onDownloaded: (info) => showUpdateBalloon(info.version),
     });
 
     registerProtocol();
@@ -521,6 +573,7 @@ if (!gotLock) {
       onCommand: forwardCommand,
       onToggleMiniPlayer: toggleMiniPlayer,
       onQuit,
+      onUpdateClick: () => updater.installAndRestart(),
     });
 
     // Check shortly after startup so the first launch isn't slowed down.

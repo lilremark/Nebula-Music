@@ -967,12 +967,6 @@ export const SettingsView: React.FC = () => {
                                 onChange={(v) => updateSettings({ miniPlayerMode: v as 'floating' | 'sidebar' })}
                             />
                             <ToggleRow
-                                label="Always Show Visualizer Controls"
-                                description="Keeps Zen mode track info, controls, and progress visible."
-                                checked={settings.alwaysShowZenControls}
-                                onChange={(v) => updateSettings({ alwaysShowZenControls: v })}
-                            />
-                            <ToggleRow
                                 label="Magic Crossfade"
                                 description="Detects track endings and fades into the next song."
                                 checked={settings.magicCrossfade}

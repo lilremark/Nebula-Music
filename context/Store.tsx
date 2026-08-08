@@ -7,6 +7,8 @@ import { usePlatform } from '../platform/PlatformContext';
 import type { Platform } from '../platform/types';
 import { MOCK_PLAYLISTS } from '../constants';
 import { db } from '../services/db';
+import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
+import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
 
 interface StoreContextType extends AppState {
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
@@ -117,7 +119,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   miniPlayerMode: 'sidebar',
   progressVisualization: 'bar',
   magicCrossfade: false,
-  alwaysShowZenControls: false,
   streamDeck: {
     enabled: false,
     port: 37921,
@@ -274,10 +275,12 @@ const parsePlayHistory = (raw: string | null): PlayHistoryMap => {
   return trimPlayHistory(parsed as PlayHistoryMap);
 };
 
+const canonicalServerUrl = (url: string): string => sanitizeServerUrlForSettings(url);
+
 const loadDesktopCredentials = async (platform: Platform): Promise<SubsonicCredentials | null> => {
   const lastServerUrl = await platform.settings.get('lastServerUrl');
   if (typeof lastServerUrl !== 'string' || lastServerUrl.length === 0) return null;
-  return platform.vault.get(lastServerUrl);
+  return platform.vault.get(canonicalServerUrl(lastServerUrl));
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -292,8 +295,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!platform) return;
     try {
       if (platform.info.kind === 'desktop') {
-        await platform.vault.set(creds);
-        await platform.settings.set('lastServerUrl', creds.serverUrl);
+        const storedUrl = canonicalServerUrl(creds.serverUrl);
+        await platform.vault.set({ ...creds, serverUrl: storedUrl });
+        await platform.settings.set('lastServerUrl', storedUrl);
         // Purge any plaintext credentials left in IndexedDB by the Phase 1 build.
         await db.remove('settings', 'credentials');
       } else {
@@ -310,7 +314,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (platform.info.kind === 'desktop') {
         const lastServerUrl = await platform.settings.get('lastServerUrl');
         if (typeof lastServerUrl === 'string' && lastServerUrl.length > 0) {
-          await platform.vault.clear(lastServerUrl);
+          await platform.vault.clear(canonicalServerUrl(lastServerUrl));
         }
         await platform.settings.set('lastServerUrl', null);
       } else {
@@ -359,6 +363,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const lastPlayedSongIdRef = useRef<string | null>(null);
   const hasScrobbledRef = useRef(false);
   const lastLogTimeRef = useRef(0);
+  const currentSongIndexRef = useRef(currentSongIndex);
+  currentSongIndexRef.current = currentSongIndex;
 
   // Caching State
   const [homeData, setHomeData] = useState<HomeData>({
@@ -636,8 +642,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const legacy = await db.getCredentials();
         if (legacy) {
           try {
-            await platform.vault.set(legacy);
-            await platform.settings.set('lastServerUrl', legacy.serverUrl);
+            const storedUrl = canonicalServerUrl(legacy.serverUrl);
+            await platform.vault.set({ ...legacy, serverUrl: storedUrl });
+            await platform.settings.set('lastServerUrl', storedUrl);
             await db.remove('settings', 'credentials');
             savedCreds = legacy;
           } catch (error) {
@@ -808,9 +815,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const ana = ctx.createAnalyser();
     ana.fftSize = 2048;
-    ana.smoothingTimeConstant = 0.85;
-    compressor.connect(ana);
-    ana.connect(ctx.destination);
+    ana.smoothingTimeConstant = 0.5;
+    dspInputRef.current.connect(ana);
+    compressor.connect(ctx.destination);
 
     analyserRef.current = ana;
     setAnalyser(ana);
@@ -1853,16 +1860,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!('mediaSession' in navigator)) return;
     if (currentSongIndex >= 0 && queue[currentSongIndex]) {
       const song = queue[currentSongIndex];
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: song.title,
-        artist: song.artist,
-        album: song.album,
-        artwork: [
-          { src: service.getCoverArtUrl(song.id, 96),  sizes: '96x96',   type: 'image/jpeg' },
-          { src: service.getCoverArtUrl(song.id, 128), sizes: '128x128', type: 'image/jpeg' },
-          { src: service.getCoverArtUrl(song.id, 256), sizes: '256x256', type: 'image/jpeg' },
-          { src: service.getCoverArtUrl(song.id, 512), sizes: '512x512', type: 'image/jpeg' },
-        ]
+      const artId = song.coverArt || song.id;
+      void toDataUrlArtwork([
+        { src: service.getCoverArtUrl(artId, 96),  sizes: '96x96',   type: 'image/jpeg' },
+        { src: service.getCoverArtUrl(artId, 128), sizes: '128x128', type: 'image/jpeg' },
+        { src: service.getCoverArtUrl(artId, 256), sizes: '256x256', type: 'image/jpeg' },
+        { src: service.getCoverArtUrl(artId, 512), sizes: '512x512', type: 'image/jpeg' },
+      ]).then((artwork) => {
+        const current = queue[currentSongIndexRef.current];
+        if (!current || current.id !== song.id) return;
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.title,
+          artist: song.artist,
+          album: song.album,
+          artwork: artwork.map(({ src, sizes, type }) => ({ src, sizes, type })),
+        });
       });
     } else { navigator.mediaSession.metadata = null; }
 
@@ -1879,7 +1891,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     navigator.mediaSession.setActionHandler('seekforward', (details) => {
       if (audioRef.current) audioRef.current.currentTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + (details.seekOffset ?? 10));
     });
-  }, [currentSongIndex, queue, service, isPlaying, initAudioContext]);
+  }, [currentSongIndex, queue, service, isPlaying, initAudioContext, currentSongIndexRef]);
 
   useEffect(() => {
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
@@ -2000,9 +2012,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setHomeData({ randomSongs: [], recentAlbums: [], newestAlbums: [], exploreAlbums: [], recommendedTracks: [], lastFetched: 0 });
       setCachedArtists([]);
       setMostPlayed([]);
+      localStorage.removeItem('nebula_explore_data');
+      localStorage.removeItem('nebula_explore_date');
+      localStorage.removeItem(PLAY_HISTORY_KEY);
+      setPlayHistory({});
+      setSearchResults({ artists: [], albums: [], songs: [] });
+      setRadioStations([]);
+      setPlaylists([]);
+      navigationStackRef.current = [];
+      setNavigationStack([]);
+      setViewData(null);
       // Fetch real playlists from server
       await saveCredentials(creds);
-      service.getPlaylists().then(setPlaylists);
+      service.getPlaylists().then(setPlaylists).catch(() => {});
       fetchArtists(true);
       return true;
     }

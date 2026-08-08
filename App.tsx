@@ -20,6 +20,7 @@ import { SearchModal } from './components/SearchModal';
 import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { MobilePlayerBar } from './components/MobilePlayerBar';
+import { UpdateBanner } from './components/UpdateBanner';
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
@@ -128,12 +129,16 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="relative h-screen overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
+    <div className="relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
       {/* Navigation Drawer */}
       <NavDrawer isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
 
+      {/* Top-level update banner (desktop only) */}
+      <UpdateBanner />
+
       {/* Split Screen Layout */}
-      <SplitLayout
+      <div className="flex-1 min-h-0">
+        <SplitLayout
         isPlayerVisible={isPlayerVisible}
         isCollapsed={isSidebarCollapsed || useFloatingPlayer}
         rightPanel={
@@ -173,7 +178,7 @@ const AppContent: React.FC = () => {
       >
         {/* Top Bar */}
         <header>
-          <TopBar onMenuClick={() => setIsNavOpen(true)} />
+          <TopBar onMenuClick={() => setIsNavOpen(true)} isNavOpen={isNavOpen} />
         </header>
 
         {/* Scrollable Content */}
@@ -193,6 +198,7 @@ const AppContent: React.FC = () => {
           <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
         )}
       </SplitLayout>
+      </div>
 
       {/* Mini Player */}
       <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${isNavOpen ? 'translate-y-full' : 'translate-y-0'} md:hidden`}>

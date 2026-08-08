@@ -9,9 +9,10 @@ const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
 
 interface TopBarProps {
     onMenuClick: () => void;
+    isNavOpen?: boolean;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
+export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }) => {
     const { openSearchModal, setView, currentView } = useStore();
 
     // Get current page title
@@ -36,7 +37,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
     return (
         <header
             className="relative h-16 flex items-center justify-between px-6 border-b border-neutral-200 dark:border-white/5 sticky top-0 z-30"
-            style={appRegion('drag')}
+            style={appRegion(isNavOpen ? 'no-drag' : 'drag')}
         >
             {/* Blur + background live on a pointer-events-none child so the
                 compositing layer can never swallow mousedown on the drag region. */}

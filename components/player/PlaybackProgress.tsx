@@ -101,7 +101,7 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
                     </div>
                     <div
                     className="absolute inset-0 overflow-hidden pointer-events-none"
-                        style={{ clipPath: progressClipPath, transition: 'clip-path 180ms linear' }}
+                        style={{ clipPath: progressClipPath }}
                     >
                         {waveformBars('', { backgroundColor: accentColor })}
                     </div>
@@ -109,7 +109,7 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
             ) : (
                 <div
                     className="absolute inset-y-0 left-0"
-                    style={{ width: progressWidth, backgroundColor: accentColor, transition: 'width 180ms linear' }}
+                    style={{ width: progressWidth, backgroundColor: accentColor }}
                 />
             )}
 
