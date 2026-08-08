@@ -8,7 +8,7 @@
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
   a responsive interface built for desktop, mobile, and Windows.
 
-  [![Version](https://img.shields.io/badge/version-2.3.0-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.3.1-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
@@ -58,8 +58,8 @@ It includes everything in the web player plus:
 
 Download the latest installer from the
 [**Nebula Releases page**](https://github.com/lilremark/Nebula-Music/releases/latest)
-(`Nebula-2.3.0-setup.exe`, NSIS installer) or sideload the unsigned
-`Nebula-2.3.0-setup.appx` package with Windows Developer Mode enabled. Once
+(`Nebula-2.3.1-setup.exe`, NSIS installer) or sideload the unsigned
+`Nebula-2.3.1-setup.appx` package with Windows Developer Mode enabled. Once
 installed, Nebula checks GitHub Releases for updates and notifies you when a
 new version is available.
 
@@ -346,6 +346,12 @@ permitted by the music server's CORS policy.
 </details>
 
 ## Changelog
+
+### v2.3.1 — August 8, 2026
+
+- Fixed automatic updates — the updater now reads the published `latest.yml` (stable channel) and uses prerelease detection for beta.
+- Replaced the tray indicator with the Nebula logo.
+- Made the Home Most Played / For You section a collapsible dropdown so it no longer scrolls when stacked under Quick Picks.
 
 ### v2.3.0 — August 8, 2026
 

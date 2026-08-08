@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../context/Store';
 import { ISong, IAlbum } from '../types';
-import { Play, Plus, Clock, Flame, Compass, ListPlus, RefreshCw, ChevronRight, BarChart2 } from 'lucide-react';
+import { Play, Plus, Clock, Flame, Compass, ListPlus, RefreshCw, ChevronRight, ChevronDown, BarChart2 } from 'lucide-react';
 
 // Album Card Component - Square, minimal rounding
 const AlbumCard: React.FC<{ album: IAlbum; onClick: () => void }> = ({ album, onClick }) => {
@@ -252,6 +252,7 @@ export const HomeView: React.FC = () => {
     const [loadingExplore, setLoadingExplore] = useState(false);
     const [loadingQuickPicks, setLoadingQuickPicks] = useState(false);
     const [activeTab, setActiveTab] = useState<'played' | 'recommended'>('played');
+    const [mostPlayedOpen, setMostPlayedOpen] = useState(false);
 
     useEffect(() => {
         // Wait for Store initialization to complete before fetching data
@@ -297,53 +298,79 @@ export const HomeView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Most Played / For You */}
-                <div className="bg-neutral-100 dark:bg-neutral-900/50 rounded-lg overflow-hidden flex flex-col h-[600px] border border-neutral-200 dark:border-white/5">
-                    <div className="flex border-b border-white/5 shrink-0">
-                        <button
-                            onClick={() => setActiveTab('played')}
-                            className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition ${activeTab === 'played' ? 'bg-neutral-200 text-neutral-900 dark:bg-white/5 dark:text-white' : 'text-neutral-600 hover:text-neutral-900 dark:text-white/70 dark:hover:text-white'}`}
-                        >
-                            Most Played Songs
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('recommended')}
-                            className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition ${activeTab === 'recommended' ? 'bg-neutral-200 text-neutral-900 dark:bg-white/5 dark:text-white' : 'text-neutral-600 hover:text-neutral-900 dark:text-white/70 dark:hover:text-white'}`}
-                        >
-                            For You
-                        </button>
-                    </div>
+                {/* Most Played / For You (collapsible) */}
+                <div className="bg-neutral-100 dark:bg-neutral-900/50 rounded-lg overflow-hidden border border-neutral-200 dark:border-white/5">
+                    <button
+                        onClick={() => setMostPlayedOpen(!mostPlayedOpen)}
+                        className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-neutral-200/70 dark:hover:bg-white/5"
+                        aria-expanded={mostPlayedOpen}
+                        aria-controls="most-played-panel"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <BarChart2 className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-bold text-neutral-900 dark:text-white">Most Played / For You</h2>
+                                <p className="text-xs text-neutral-600 dark:text-white/50">
+                                    {activeTab === 'played'
+                                        ? `${getMostPlayedSongs().length} most-played tracks`
+                                        : `${homeData.recommendedTracks.length} recommended tracks`}
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 text-neutral-500 dark:text-white/50 transition-transform ${mostPlayedOpen ? 'rotate-180' : ''}`} />
+                    </button>
 
-                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                        {activeTab === 'played' ? (
-                            <div className="space-y-1">
-                                {getMostPlayedSongs().slice(0, 50).map((song) => (
-                                    <SongRow
-                                        key={song.id}
-                                        song={song}
-                                        onClick={() => playSong(song, getMostPlayedSongs())}
-                                        getCoverArtUrl={(id, size) => service.getCoverArtUrl(id, size)}
-                                    />
-                                ))}
-                                {getMostPlayedSongs().length === 0 && (
-                                    <div className="text-center py-8 text-neutral-600 dark:text-white/60 text-sm">
-                                        No stats yet.
+                    {mostPlayedOpen && (
+                        <div id="most-played-panel" className="border-t border-neutral-200 dark:border-white/5">
+                            <div className="flex border-b border-white/5 shrink-0">
+                                <button
+                                    onClick={() => setActiveTab('played')}
+                                    className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition ${activeTab === 'played' ? 'bg-neutral-200 text-neutral-900 dark:bg-white/5 dark:text-white' : 'text-neutral-600 hover:text-neutral-900 dark:text-white/70 dark:hover:text-white'}`}
+                                >
+                                    Most Played Songs
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('recommended')}
+                                    className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition ${activeTab === 'recommended' ? 'bg-neutral-200 text-neutral-900 dark:bg-white/5 dark:text-white' : 'text-neutral-600 hover:text-neutral-900 dark:text-white/70 dark:hover:text-white'}`}
+                                >
+                                    For You
+                                </button>
+                            </div>
+
+                            <div className="max-h-[400px] overflow-y-auto p-4 custom-scrollbar">
+                                {activeTab === 'played' ? (
+                                    <div className="space-y-1">
+                                        {getMostPlayedSongs().slice(0, 50).map((song) => (
+                                            <SongRow
+                                                key={song.id}
+                                                song={song}
+                                                onClick={() => playSong(song, getMostPlayedSongs())}
+                                                getCoverArtUrl={(id, size) => service.getCoverArtUrl(id, size)}
+                                            />
+                                        ))}
+                                        {getMostPlayedSongs().length === 0 && (
+                                            <div className="text-center py-8 text-neutral-600 dark:text-white/60 text-sm">
+                                                No stats yet.
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        {homeData.recommendedTracks.slice(0, 20).map((song, i) => (
+                                            <SongRow
+                                                key={song.id}
+                                                song={song}
+                                                onClick={() => playSong(song, homeData.recommendedTracks)}
+                                                getCoverArtUrl={(id, size) => service.getCoverArtUrl(id, size)}
+                                            />
+                                        ))}
                                     </div>
                                 )}
                             </div>
-                        ) : (
-                            <div className="space-y-1">
-                                {homeData.recommendedTracks.slice(0, 20).map((song, i) => (
-                                    <SongRow
-                                        key={song.id}
-                                        song={song}
-                                        onClick={() => playSong(song, homeData.recommendedTracks)}
-                                        getCoverArtUrl={(id, size) => service.getCoverArtUrl(id, size)}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

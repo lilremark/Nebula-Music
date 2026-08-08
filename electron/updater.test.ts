@@ -18,7 +18,8 @@ const makeHarness = (enabled = true): Harness => {
   const quitAndInstall = vi.fn();
   const broadcast = vi.fn();
   const driver: UpdaterDriver = {
-    channel: 'stable',
+    channel: null,
+    allowPrerelease: false,
     autoDownload: true,
     autoInstallOnAppQuit: true,
     checkForUpdates,
@@ -61,7 +62,8 @@ describe('createUpdater', () => {
       progress: null,
       message: null,
     });
-    expect(harness.driver.channel).toBe('stable');
+    expect(harness.driver.channel).toBeNull();
+    expect(harness.driver.allowPrerelease).toBe(false);
     expect(harness.driver.autoDownload).toBe(true);
     expect(harness.driver.autoInstallOnAppQuit).toBe(true);
   });
@@ -163,16 +165,26 @@ describe('createUpdater', () => {
     expect(harness.quitAndInstall).toHaveBeenCalledTimes(1);
   });
 
-  it('setChannel updates the driver channel', () => {
+  it('setChannel(' + "'beta'" + ') enables prerelease updates without a channel filename', () => {
     const harness = makeHarness(true);
     harness.updater.setChannel('beta');
-    expect(harness.driver.channel).toBe('beta');
+    expect(harness.driver.allowPrerelease).toBe(true);
+    expect(harness.driver.channel).toBeNull();
+  });
+
+  it('setChannel(' + "'stable'" + ') disables prerelease updates', () => {
+    const harness = makeHarness(true);
+    harness.updater.setChannel('beta');
+    harness.updater.setChannel('stable');
+    expect(harness.driver.allowPrerelease).toBe(false);
+    expect(harness.driver.channel).toBeNull();
   });
 
   it('setChannel is a no-op when disabled', () => {
     const harness = makeHarness(false);
     harness.updater.setChannel('beta');
-    expect(harness.driver.channel).toBe('stable');
+    expect(harness.driver.allowPrerelease).toBe(false);
+    expect(harness.driver.channel).toBeNull();
   });
 
   it('dispose removes event listeners', () => {
