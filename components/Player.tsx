@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Volume2, Volume1, VolumeX, ChevronDown,
@@ -23,6 +24,9 @@ interface PlayerProps {
     isExpanded: boolean;
     onClose: () => void;
 }
+
+const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
+    ({ WebkitAppRegion: region }) as CSSProperties;
 
 const withAlpha = (color: string, alpha: number) => {
     if (color.startsWith('#')) {
@@ -282,18 +286,22 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                     onClick={onClose}
                     className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-white/10 flex items-center justify-center hover:bg-neutral-300 dark:hover:bg-white/20 transition-all active:scale-95"
                     aria-label="Close player"
+                    style={appRegion('no-drag')}
                 >
                     <ChevronDown className="w-5 h-5 text-neutral-900 dark:text-white" />
                 </button>
 
                 {/* Tab Navigation */}
                 {!isZenMode && (
-                    <div className="flex items-center gap-1 bg-neutral-200 dark:bg-white/5 rounded-lg p-1">
+                    <div
+                        className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-neutral-200 dark:bg-white/5 rounded-lg p-1"
+                        style={appRegion('no-drag')}
+                    >
                         {(['playing', 'lyrics', 'queue'] as const).map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`px-4 py-2 rounded-md text-xs font-semibold uppercase tracking-wide transition-all ${activeTab === tab
+                                className={`w-20 md:w-24 py-2 rounded-md text-xs font-semibold uppercase tracking-wide transition-all ${activeTab === tab
                                     ? 'bg-white text-black'
                                     : 'text-neutral-600 dark:text-white/50 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5'
                                     }`}
@@ -304,7 +312,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                     </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" style={appRegion('no-drag')}>
                     <button
                         onClick={cycleVisualizerMode}
                         className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-white/10 flex items-center justify-center hover:bg-neutral-300 dark:hover:bg-white/20 transition-all active:scale-95"

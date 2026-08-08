@@ -10,6 +10,7 @@ import {
   LockKeyhole,
 } from 'lucide-react';
 import { useStore } from '../context/Store';
+import { CoverFlow } from './CoverFlow';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
@@ -46,12 +47,12 @@ export const SetupScreen: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 overflow-auto bg-neutral-100 text-neutral-900 dark:bg-[#0a0a0a] dark:text-white">
+    <div className="fixed inset-0 overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#0a0a0a] dark:text-white">
       {/* Drag region so the frameless window can be moved from the sign-in screen */}
-      <div className="absolute top-0 inset-x-0 h-10" style={appRegion('drag')} />
+      <div className="absolute top-0 inset-x-0 h-10 z-30" style={appRegion('drag')} />
 
       {/* Window controls (Windows only) */}
-      <div className="absolute top-2 right-4 z-10" style={appRegion('no-drag')}>
+      <div className="absolute top-2 right-4 z-40" style={appRegion('no-drag')}>
         <WindowControls />
       </div>
 
@@ -67,16 +68,22 @@ export const SetupScreen: React.FC = () => {
         style={{ backgroundColor: 'rgb(var(--color-primary))' }}
       />
 
-      <div className="relative flex min-h-screen items-center justify-center px-5 py-6">
-        <div className="w-full max-w-md">
+      {/* Left: cover flow (hidden below lg) */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-[55%] lg:block">
+        <CoverFlow />
+      </div>
+
+      {/* Right: sign-in form */}
+      <div className="absolute inset-y-0 right-0 flex w-full items-center justify-center px-5 py-6 lg:w-[45%]">
+        <div className="w-full max-w-sm">
           <Card
             elevation={4}
             hover={false}
-            padding="lg"
+            padding="md"
             className="border-neutral-200/70 bg-white/90 dark:border-white/10 dark:bg-neutral-950/82"
           >
-            <div className="mb-6 text-center">
-              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-black shadow-[0_10px_30px_rgba(0,0,0,0.18)] dark:bg-white">
+            <div className="mb-3 text-center">
+              <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-black shadow-[0_10px_30px_rgba(0,0,0,0.18)] dark:bg-white">
                 <svg viewBox="0 0 24 24" className="h-7 w-7 stroke-current" fill="none" strokeWidth="2.6" strokeLinecap="round">
                   <path d="M4 10v4" className="opacity-40" />
                   <path d="M8 7v10" className="opacity-60" />
@@ -86,13 +93,13 @@ export const SetupScreen: React.FC = () => {
                 </svg>
               </div>
               <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-neutral-500 dark:text-white/40">Nebula Music</p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight">Sign in to Nebula</h1>
-              <p className="mt-2 text-sm text-neutral-600 dark:text-white/55">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight">Sign in to Nebula</h1>
+              <p className="mt-1 text-sm text-neutral-600 dark:text-white/55">
                 Connect your Subsonic-compatible server and start listening.
               </p>
             </div>
 
-            <form onSubmit={handleConnect} className="space-y-3">
+            <form onSubmit={handleConnect} className="space-y-2">
               <div className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-white/5">
                 {([
                   ['password', 'Password'],
@@ -117,7 +124,7 @@ export const SetupScreen: React.FC = () => {
               </div>
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
                   Server URL
                 </label>
                 <Input
@@ -131,12 +138,12 @@ export const SetupScreen: React.FC = () => {
                   placeholder="https://music.yourserver.com"
                   autoComplete="url"
                   icon={<Server className="h-4 w-4" />}
-                  className={`py-3 ${isInsecure ? 'border-yellow-500/40 focus:border-yellow-500/60 focus:ring-yellow-500/20' : ''}`}
+                  className={`py-2 ${isInsecure ? 'border-yellow-500/40 focus:border-yellow-500/60 focus:ring-yellow-500/20' : ''}`}
                 />
               </div>
 
               {authMode === 'password' && <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
                   Username
                 </label>
                 <Input
@@ -150,12 +157,12 @@ export const SetupScreen: React.FC = () => {
                   placeholder="Username"
                   autoComplete="username"
                   icon={<User className="h-4 w-4" />}
-                  className="py-3"
+                  className="py-2"
                 />
               </div>}
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
+                <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
                   {authMode === 'apiKey' ? 'API Key' : 'Password'}
                 </label>
                 <Input
@@ -169,12 +176,12 @@ export const SetupScreen: React.FC = () => {
                   placeholder={authMode === 'apiKey' ? 'Enter API key' : 'Enter password'}
                   autoComplete={authMode === 'apiKey' ? 'off' : 'current-password'}
                   icon={<LockKeyhole className="h-4 w-4" />}
-                  className="py-3"
+                  className="py-2"
                 />
               </div>
 
               {isInsecure && (
-                <div className="flex items-start gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-3 py-3 text-xs text-yellow-700 dark:text-yellow-400">
+                <div className="flex items-start gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>HTTPS is recommended for secure server access.</span>
                 </div>
@@ -187,7 +194,7 @@ export const SetupScreen: React.FC = () => {
                 </div>
               )}
 
-              <div className="space-y-3 pt-2">
+              <div className="space-y-2 pt-1">
                 <Button
                   type="submit"
                   size="md"
@@ -210,21 +217,6 @@ export const SetupScreen: React.FC = () => {
                 </Button>
               </div>
             </form>
-          </Card>
-
-          <Card
-            elevation={2}
-            hover={false}
-            padding="md"
-            className="mt-3 border-neutral-200/70 bg-white/75 dark:border-white/10 dark:bg-neutral-950/60"
-          >
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
-              About Nebula
-            </p>
-            <p className="mt-3 text-sm leading-6 text-neutral-600 dark:text-white/60">
-              Nebula is a Subsonic-compatible music player built around focused playback, waveform progress, adaptive color,
-              and a cleaner listening-first interface.
-            </p>
           </Card>
         </div>
       </div>
