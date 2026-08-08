@@ -3,19 +3,20 @@
 
   # Nebula Music
 
-  **A polished, self-hosted web player for Subsonic and OpenSubsonic music libraries.**
+  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser and as a native Windows desktop app.**
 
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
-  a responsive interface built for desktop and mobile.
+  a responsive interface built for desktop, mobile, and Windows.
 
-  [![Version](https://img.shields.io/badge/version-2.2.0-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music)
+  [![Version](https://img.shields.io/badge/version-2.3.0-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
+  [![Windows](https://img.shields.io/badge/Windows-Desktop-0078d6?style=flat-square&logo=windows&logoColor=white)](https://github.com/lilremark/Nebula-Music/releases/latest)
   [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](./docker/README.md)
   [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](./LICENSE.txt)
 
-  [Features](#features) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
+  [Features](#features) · [Desktop for Windows](#desktop-for-windows) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
 </div>
 
 ---
@@ -41,6 +42,27 @@
   </tr>
 </table>
 
+## Desktop for Windows
+
+Nebula is also distributed as a **native Windows desktop app** built with Electron.
+It includes everything in the web player plus:
+
+- A custom frameless title bar with native window controls and a system tray
+- **Automatic updates** delivered from GitHub Releases, with an in-app
+  Restart & Install banner and a tray notification when a new version is ready
+- **Windows taskbar integration**: playback progress, thumbnail transport
+  buttons (previous, play/pause, next), and global media keys
+- A native **always-on-top mini-player** window
+- **Secure credential storage** through the OS credential vault (Windows DPAPI)
+- The Nebula logo as the app and taskbar icon
+
+Download the latest installer from the
+[**Nebula Releases page**](https://github.com/lilremark/Nebula-Music/releases/latest)
+(`Nebula-2.3.0-setup.exe`, NSIS installer) or sideload the unsigned
+`Nebula-2.3.0-setup.appx` package with Windows Developer Mode enabled. Once
+installed, Nebula checks GitHub Releases for updates and notifies you when a
+new version is available.
+
 ## Features
 
 ### Playback
@@ -53,8 +75,8 @@
 
 ### Listening Experience
 
-- Web Audio visualizers including Bars, Wave, Circle, Mirror, Spectrum, Particles
-- Expandable full-screen player, desktop sidebar player, floating mini-player, and mobile player bar
+- Web Audio visualizers including Bars, Wave, Circle, Mirror, and Spectrum
+- Expandable full-screen player, desktop sidebar player, floating mini-player, mobile player bar, and a native desktop mini-player window
 - Structured and synchronized lyrics with fallback lyric providers
 - AutoEq headphone calibration profile search and application
 - Configurable keyboard shortcuts and an immersive Zen mode
@@ -75,7 +97,8 @@
 - Password token/salt authentication and optional OpenSubsonic API-key authentication
 - Responsive light and dark themes with system-preference detection
 - IndexedDB caching for API responses, settings, credentials, and local play statistics
-- Docker, Vercel, and static-hosting deployment options
+- Docker, Vercel, and static-hosting deployment options for the web player
+- Native Windows desktop app (Electron) with automatic updates, tray, taskbar controls, media keys, and OS credential vault
 - Optional authenticated localhost bridge for the Nebula Music Stream Deck plugin
 
 ### Stream Deck
@@ -109,6 +132,20 @@ The music server must be reachable from the browser running Nebula. HTTPS and
 correct CORS configuration are strongly recommended.
 
 ## Quick Start
+
+### Desktop (Windows)
+
+Download and run the latest installer from the
+[Nebula Releases page](https://github.com/lilremark/Nebula-Music/releases/latest).
+No setup beyond the installer is required — Nebula updates itself from GitHub
+Releases. To run the desktop app from source during development:
+
+```bash
+npm install
+npm run start:electron   # builds the renderer + main process and launches Electron
+```
+
+### Web (local development)
 
 ### Prerequisites
 
@@ -310,20 +347,18 @@ permitted by the music server's CORS policy.
 
 ## Changelog
 
-### v2.3.0  — August 8, 2026
+### v2.3.0 — August 8, 2026
 
-  - Native Windows desktop app — custom frameless title bar, window controls, and a system tray.
-  - Automatic updates — Nebula checks GitHub Releases and notifies you via an in-app Restart & Install banner and a tray notification when a new version is ready.
-  - Windows taskbar integration — playback progress, thumbnail transport buttons (previous, play/pause, next), and global media keys.
-  - Native always-on-top mini-player window.
-  - Secure credential storage via the OS credential vault (Windows DPAPI).
-  - The Nebula logo as the app and taskbar icon.
-  - Reworked the sign-in screen into a split view with a looping cover-flow animation.
-  - Redesigned the Settings updates panel as a centered hero.
-  - Made full-screen player tabs and the sidebar close button clickable; pinned Zen-mode controls and refined the title marquee.
-  - Improved visualizer accuracy (pre-DSP sampling), aligned the waveform ticker, and smoothed mini-player progress.
-  - Home layout stacks Quick Picks and Most Played/For You responsively.
-
+- **Nebula is now a native Windows desktop app** with a custom frameless title bar, window controls, and a system tray.
+- Added automatic updates from GitHub Releases with an in-app Restart & Install banner and a tray notification.
+- Added Windows taskbar integration: playback progress, thumbnail transport buttons (previous, play/pause, next), and global media keys.
+- Added a native always-on-top mini-player window and secure credential storage via the OS credential vault (Windows DPAPI).
+- Reworked the sign-in screen into a split view with a looping cover-flow animation.
+- Redesigned the Settings updates panel as a centered hero with phase-aware controls.
+- Made full-screen player tabs and the sidebar close button clickable; pinned Zen-mode controls and refined the title marquee.
+- Improved visualizer accuracy (pre-DSP sampling), aligned the waveform ticker, and smoothed mini-player progress.
+- Home layout stacks Quick Picks and Most Played/For You responsively.
+- Added a signed NSIS installer plus an unsigned appx package and set the Nebula logo as the app/taskbar icon.
 
 ### v2.2.0 — July 24, 2026
 

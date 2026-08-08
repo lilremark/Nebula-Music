@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.2.0';
+export const APP_VERSION = '2.3.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,26 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.3.0',
+    date: '2026-08-08',
+    title: 'Nebula Desktop for Windows',
+    changes: [
+      'Nebula is now a native Windows desktop app with a custom frameless title bar, window controls, and a system tray.',
+      'Added automatic updates delivered from GitHub Releases with an in-app Restart & Install banner and a tray notification.',
+      'Added Windows taskbar integration: playback progress, thumbnail transport buttons (previous, play/pause, next), and global media keys.',
+      'Added a native always-on-top mini-player window and secure credential storage via the OS credential vault.',
+      'Reworked the sign-in screen into a split view with a looping cover-flow animation.',
+      'Redesigned the Settings updates panel as a centered hero with phase-aware controls.',
+      'Made full-screen player tabs and the sidebar close button clickable, and pinned Zen-mode controls so media info stays visible.',
+      'Improved visualizer accuracy by sampling pre-DSP audio and refined the waveform ticker and mini-player progress.',
+      'Added a signed installer (NSIS) plus an unsigned appx package, and set the Nebula logo as the app and taskbar icon.'
+    ],
+    link: {
+      label: 'Download for Windows',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/latest'
+    }
+  },
   {
     version: '2.2.0',
     date: '2026-07-24',

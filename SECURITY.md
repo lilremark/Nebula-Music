@@ -8,8 +8,8 @@ requesting support.
 
 | Version | Supported |
 | --- | --- |
-| 2.2.0 | Yes |
-| 2.1.3 and older | No |
+| 2.3.0 | Yes |
+| 2.2.0 and older | No |
 
 ## Reporting a Vulnerability
 
@@ -44,8 +44,26 @@ Examples of relevant security issues include:
 - Requests leaking credentials to unintended servers
 - Dependency or container vulnerabilities affecting Nebula deployments
 - Bypasses of security controls in the application or Docker configuration
+- Desktop-app (Electron) specific issues:
+  - Credential vault (safeStorage/DPAPI) weaknesses or plaintext credential
+    leakage to the renderer
+  - IPC handler validation gaps that let untrusted content read or write
+    credentials or files
+  - Unsafe handling of the custom `app://nebula` protocol or the media proxy
+  - Auto-update integrity issues (e.g. a compromised `latest.yml` or installer)
 
 General bugs, feature requests, and server-specific compatibility problems that
 do not have a security impact should be reported through the public GitHub issue
 tracker.
+
+## Security in the Desktop App
+
+Nebula's Windows desktop build (Electron) stores credentials in the operating
+system's encrypted credential vault (`safeStorage` / DPAPI) rather than
+plaintext. The renderer runs with `contextIsolation`, `sandbox`, and
+`webSecurity` enabled, and vault IPC handlers validate that requests come from
+trusted app windows. Subsonic passwords are salted and tokenized; API keys are
+sent only to the configured server over the app's proxy. Never include vault
+contents, `app://nebula` proxy URLs with embedded credentials, or full signed
+stream URLs in a security report without redacting them.
 
