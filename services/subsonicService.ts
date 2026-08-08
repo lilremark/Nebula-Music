@@ -427,7 +427,19 @@ export class SubsonicService {
             musicBrainzId: ai.musicBrainzId
           };
         }
-      } catch (e) { }
+      } catch (e) {
+        try {
+          const infoResponse = await this.request('getAlbumInfo.view', { id });
+          const ai = infoResponse.albumInfo;
+          if (ai) {
+            info = {
+              notes: this.stripHtml(ai.notes),
+              lastFmUrl: ai.lastFmUrl,
+              musicBrainzId: ai.musicBrainzId
+            };
+          }
+        } catch (e2) { }
+      }
 
       const result = { ...this.mapAlbum(albumData), songs, info };
       await db.cacheResponse(cacheKey, result);

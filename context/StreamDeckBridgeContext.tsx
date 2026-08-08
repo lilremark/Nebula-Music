@@ -11,6 +11,7 @@ import { useStore } from './Store';
 import { usePlatform } from '../platform/PlatformContext';
 import type { Platform } from '../platform/types';
 import { db } from '../services/db';
+import { APP_VERSION } from '../constants';
 import { createSanitizedArtwork } from '../services/streamDeckArtwork';
 import {
   StreamDeckBridge,
@@ -26,7 +27,7 @@ import {
 } from '../services/streamDeckProtocol';
 
 const TOKEN_KEY = 'stream_deck_pairing_token';
-const NEBULA_VERSION = '2.3.0';
+const NEBULA_VERSION = APP_VERSION;
 
 interface StreamDeckBridgeContextValue {
   status: StreamDeckBridgeStatus;
