@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  nativeImage,
   net,
   protocol,
   shell,
@@ -17,7 +18,12 @@ import { createSafeStorageCipher } from './safeStorageCipher';
 import { createTray, destroyTray, showUpdateBalloon } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
-import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
+import { createCommandClient } from '../playback/commandClient';
+import type {
+  DesktopCommand,
+  DesktopCommandEnvelope,
+  DesktopSnapshot,
+} from '../playback/desktopProtocol';
 
 const SCHEME = 'app';
 const PROTOCOL_URL = 'app://nebula/';
@@ -64,6 +70,36 @@ const updateTaskbarProgress = (snapshot: DesktopSnapshot): void => {
   } else {
     mainWindow.setProgressBar(-1);
   }
+};
+
+const updateThumbarButtons = (snapshot: DesktopSnapshot | null): void => {
+  if (!mainWindow || process.platform !== 'win32') return;
+  if (!snapshot) {
+    mainWindow.setThumbarButtons([]);
+    return;
+  }
+  const client = createCommandClient('nebula-thumbar', () => snapshot.epoch);
+  const send = (command: DesktopCommand): void => forwardCommand(client.send(command));
+  const playIcon = snapshot.playing
+    ? nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-pause.png'))
+    : nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-play.png'));
+  mainWindow.setThumbarButtons([
+    {
+      icon: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-prev.png')),
+      tooltip: 'Previous',
+      click: () => send({ name: 'previous' }),
+    },
+    {
+      icon: playIcon,
+      tooltip: snapshot.playing ? 'Pause' : 'Play',
+      click: () => send({ name: 'togglePlayback' }),
+    },
+    {
+      icon: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-next.png')),
+      tooltip: 'Next',
+      click: () => send({ name: 'next' }),
+    },
+  ]);
 };
 
 const MIME: Record<string, string> = {
@@ -209,6 +245,8 @@ const createWindow = (): BrowserWindow => {
       }
       event.preventDefault();
       win.hide();
+    } else {
+      mainWindow?.setThumbarButtons([]);
     }
   });
 
@@ -427,6 +465,7 @@ const registerIpc = (): void => {
   ipcMain.on(IPC.playback.snapshot, (_event, snapshot: DesktopSnapshot) => {
     lastSnapshot = snapshot;
     updateTaskbarProgress(snapshot);
+    updateThumbarButtons(snapshot);
     broadcastSnapshotToMiniPlayer(snapshot);
   });
 
