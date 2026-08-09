@@ -1,6 +1,7 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
 import type { UpdaterState } from '../electron/updater';
+import type { MediaCacheStats } from '../electron/mediaCache';
 
 export type PlatformKind = 'web' | 'desktop';
 
@@ -56,6 +57,12 @@ export interface JsonFetchResult {
   body: unknown;
 }
 
+/** Media cache stats/clear surface. Inert (null) in the web build. */
+export interface MediaCacheApi {
+  stats(): Promise<MediaCacheStats | null>;
+  clear(): Promise<MediaCacheStats | null>;
+}
+
 export interface MiniPlayerControl {
   /** Toggles the always-on-top mini-player window (main window only). */
   toggle(): Promise<void>;
@@ -94,4 +101,6 @@ export interface Platform {
   /** Rewrites a media URL to the desktop proxy (or identity on web) so audio
    * and cover art load through the main process. */
   resolveMediaUrl(url: string): string;
+  /** Media cache stats/clear (no-op on web). */
+  readonly mediaCache: MediaCacheApi;
 }

@@ -59,6 +59,11 @@ const webUpdater: UpdaterApi = {
   onStatus: () => noopUnsubscribe,
 };
 
+const webMediaCache = {
+  stats: async () => null,
+  clear: async () => null,
+};
+
 const webFetchJson = async (url: string) => {
   const response = await fetch(url);
   const body = await response.json().catch(() => null);
@@ -94,4 +99,5 @@ export const createWebPlatform = (): Platform => ({
   updater: webUpdater,
   fetchJson: webFetchJson,
   resolveMediaUrl: (url) => url,
+  mediaCache: webMediaCache,
 });

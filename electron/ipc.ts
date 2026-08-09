@@ -30,6 +30,10 @@ export const IPC = {
   http: {
     fetchJson: 'nebula:http:fetch-json',
   },
+  mediaCache: {
+    stats: 'nebula:media-cache:stats',
+    clear: 'nebula:media-cache:clear',
+  },
   playback: {
     command: 'nebula:playback:command',
     snapshot: 'nebula:playback:snapshot',

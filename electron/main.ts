@@ -20,6 +20,7 @@ import { createTray, destroyTray, showUpdateBalloon } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
 import { createCommandClient } from '../playback/commandClient';
+import { MediaCache, type MediaCacheEntryMeta } from './mediaCache';
 import type {
   DesktopCommand,
   DesktopCommandEnvelope,
@@ -53,6 +54,7 @@ let miniPlayerWindow: BrowserWindow | null = null;
 let settingsStore: SettingsStore;
 let credentialVault: CredentialVault;
 let updater: Updater;
+let mediaCache: MediaCache;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
 
@@ -139,6 +141,61 @@ const isTrustedProxyTarget = (rawUrl: string): boolean => {
   return true;
 };
 
+/** True when an upstream response delivers the entire file (200 or full-range 206). */
+const isFullContentResponse = (status: number, contentRange: string | null): boolean => {
+  if (status === 200) return true;
+  if (status !== 206 || !contentRange) return false;
+  const match = /^bytes 0-(\d+)\/(\d+)$/.exec(contentRange.trim());
+  return match !== null && Number(match[1]) === Number(match[2]) - 1;
+};
+
+/** Parses a `Range: bytes=a-b` header into [start, end] (inclusive), or null. */
+const parseByteRange = (rangeHeader: string, total: number): { start: number; end: number } | null => {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  if (!match) return null;
+  const rawStart = match[1];
+  const rawEnd = match[2];
+
+  if (rawStart === '' && rawEnd === '') return null;
+  if (rawStart === '') {
+    // Suffix range: last N bytes.
+    const suffix = Math.max(0, Math.min(Number(rawEnd), total));
+    return { start: Math.max(0, total - suffix), end: total - 1 };
+  }
+  const start = Number(rawStart);
+  if (!Number.isFinite(start) || start >= total) return null;
+  const end = rawEnd === '' ? total - 1 : Math.min(Number(rawEnd), total - 1);
+  if (end < start) return null;
+  return { start, end };
+};
+
+/** Builds a Response from a fully cached file, honoring an optional Range header. */
+const serveFromCache = async (meta: MediaCacheEntryMeta, rangeHeader: string | null): Promise<Response> => {
+  const headers = new Headers();
+  headers.set('content-type', meta.contentType || 'application/octet-stream');
+  headers.set('accept-ranges', 'bytes');
+  headers.set('x-content-type-options', 'nosniff');
+
+  if (rangeHeader) {
+    const parsed = parseByteRange(rangeHeader, meta.size);
+    if (parsed) {
+      const { start, end } = parsed;
+      const data = await mediaCache.readRange(meta.key, start, end - start + 1);
+      headers.set('content-range', `bytes ${start}-${start + data.length - 1}/${meta.size}`);
+      headers.set('content-length', String(data.length));
+      return new Response(toBodyInit(data), { status: 206, headers });
+    }
+  }
+
+  const data = await mediaCache.readFile(meta.key);
+  headers.set('content-length', String(data.length));
+  return new Response(toBodyInit(data), { status: 200, headers });
+};
+
+/** Converts a Node Buffer into a body-consumable Uint8Array. */
+const toBodyInit = (buffer: Buffer): Uint8Array<ArrayBuffer> =>
+  new Uint8Array(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
+
 const handleProxy = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
   const target = url.searchParams.get('u');
@@ -150,24 +207,120 @@ const handleProxy = async (request: Request): Promise<Response> => {
   const range = request.headers.get('Range');
   if (range) headers.set('Range', range);
 
+  // Serve previously-played tracks straight from the local cache so replays
+  // are instant and the Subsonic server is not hit again.
+  const key = mediaCache.keyFor(target);
+  const cached = mediaCache.get(key);
+  if (cached) {
+    return serveFromCache(cached, range);
+  }
+
+  // Wire the renderer's abort signal to the upstream request so cancelled
+  // streams (track changes, seeks, skips) release the connection instead of
+  // leaking it. Un-released streams were the cause of the desktop freeze.
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  if (request.signal) {
+    if (request.signal.aborted) onAbort();
+    else request.signal.addEventListener('abort', onAbort, { once: true });
+  }
+
+  let upstream: Response;
   try {
-    const upstream = await net.fetch(target, { headers, redirect: 'follow' });
-    const responseHeaders = new Headers();
-    const contentType = upstream.headers.get('content-type');
-    if (contentType) responseHeaders.set('content-type', contentType);
-    const contentLength = upstream.headers.get('content-length');
-    if (contentLength) responseHeaders.set('content-length', contentLength);
-    const contentRange = upstream.headers.get('content-range');
-    if (contentRange) responseHeaders.set('content-range', contentRange);
-    responseHeaders.set('x-content-type-options', 'nosniff');
+    upstream = await net.fetch(target, { headers, redirect: 'follow', signal: controller.signal });
+  } catch {
+    return new Response('Proxy error', { status: 502 });
+  }
+
+  const responseHeaders = new Headers();
+  const contentType = upstream.headers.get('content-type');
+  if (contentType) responseHeaders.set('content-type', contentType);
+  const contentLength = upstream.headers.get('content-length');
+  if (contentLength) responseHeaders.set('content-length', contentLength);
+  const contentRange = upstream.headers.get('content-range');
+  if (contentRange) responseHeaders.set('content-range', contentRange);
+  responseHeaders.set('x-content-type-options', 'nosniff');
+  if (upstream.status === 206 || upstream.headers.get('accept-ranges')) {
+    responseHeaders.set('accept-ranges', upstream.headers.get('accept-ranges') ?? 'bytes');
+  }
+
+  // Cache full successful audio streams so the next play is instant. Partial
+  // (206) responses and non-media content are streamed through without caching.
+  const shouldCache = mediaCache.isEnabled
+    && upstream.body != null
+    && contentType?.startsWith('audio/')
+    && isFullContentResponse(upstream.status, upstream.headers.get('content-range'));
+
+  if (!shouldCache || !upstream.body) {
     return new Response(upstream.body, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: responseHeaders,
     });
-  } catch {
-    return new Response('Proxy error', { status: 502 });
   }
+
+  return streamAndCache(mediaCache, key, upstream.body, contentType!, responseHeaders, upstream.status, upstream.statusText);
+};
+
+/**
+ * Streams an upstream body to the client while writing every byte to a cache
+ * `.part` file. On full completion the entry is committed; if the client aborts
+ * or the stream errors, the partial download is discarded. The returned stream
+ * is what the renderer consumes.
+ */
+const streamAndCache = async (
+  cache: MediaCache,
+  key: string,
+  body: ReadableStream<Uint8Array>,
+  contentType: string,
+  responseHeaders: Headers,
+  status: number,
+  statusText: string,
+): Promise<Response> => {
+  const writer = await cache.beginWrite(key);
+  const reader = body.getReader();
+  let received = 0;
+  let finalized = false;
+
+  const finish = async (commit: boolean): Promise<void> => {
+    if (finalized) return;
+    finalized = true;
+    await writer.fd.close().catch(() => {});
+    if (commit) {
+      await cache.finalize(key, { size: received, contentType });
+    } else {
+      await cache.discard(key);
+    }
+  };
+
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          await finish(true);
+          controller.close();
+          return;
+        }
+        if (value) {
+          await writer.fd.write(value);
+          received += value.byteLength;
+        }
+        controller.enqueue(value);
+      } catch (error) {
+        await finish(false);
+        controller.error(error);
+      }
+    },
+    async cancel() {
+      try {
+        await reader.cancel();
+      } catch { }
+      await finish(false);
+    },
+  });
+
+  return new Response(stream, { status, statusText, headers: responseHeaders });
 };
 
 const handleProtocol = async (request: Request): Promise<Response> => {
@@ -431,6 +584,10 @@ const registerIpc = (): void => {
       else mainWindow?.setProgressBar(-1);
     } else if (key === 'updateChannel' && typeof value === 'string') {
       updater.setChannel(value);
+    } else if (key === 'mediaCacheEnabled') {
+      await mediaCache?.setEnabled(value === true);
+    } else if (key === 'mediaCacheMaxMb' && typeof value === 'number') {
+      await mediaCache?.setMaxBytes(value * 1024 * 1024);
     }
   });
 
@@ -473,6 +630,12 @@ const registerIpc = (): void => {
     } catch {
       throw new Error('Network error while fetching Subsonic server.');
     }
+  });
+
+  ipcMain.handle(IPC.mediaCache.stats, () => mediaCache?.stats() ?? null);
+  ipcMain.handle(IPC.mediaCache.clear, async () => {
+    await mediaCache?.clear();
+    return mediaCache?.stats() ?? null;
   });
 
   ipcMain.on(IPC.playback.snapshot, (_event, snapshot: DesktopSnapshot) => {
@@ -558,6 +721,11 @@ if (!gotLock) {
       path.join(app.getPath('userData'), 'vault.json'),
       createSafeStorageCipher(),
     );
+    mediaCache = await MediaCache.open({
+      directory: path.join(app.getPath('userData'), 'media-cache'),
+      maxBytes: (settingsStore.get<number>('mediaCacheMaxMb') ?? 4096) * 1024 * 1024,
+      enabled: settingsStore.get('mediaCacheEnabled') !== false,
+    });
 
     // Auto-update only runs in installed builds; dev launches use the web
     // bundle over `npm run dev` and must never attempt a check.
@@ -622,6 +790,7 @@ if (!gotLock) {
     unregisterMediaKeys();
     destroyTray();
     updater?.dispose();
+    void mediaCache?.persistIndex();
     miniPlayerWindow?.destroy();
     miniPlayerWindow = null;
   });

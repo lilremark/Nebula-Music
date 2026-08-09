@@ -142,6 +142,7 @@ const DesktopSettingsPanel = () => {
     const platform = usePlatform();
     const [values, setValues] = useState<Record<string, boolean>>({});
     const [loaded, setLoaded] = useState(false);
+    const [cacheStats, setCacheStats] = useState<{ usedBytes: number; entryCount: number } | null>(null);
 
     useEffect(() => {
         if (!platform || platform.info.kind !== 'desktop') return;
@@ -151,14 +152,18 @@ const DesktopSettingsPanel = () => {
             platform.settings.get('minimizeToTray'),
             platform.settings.get('mediaKeysEnabled'),
             platform.settings.get('taskbarProgressEnabled'),
-        ]).then(([trayOnClose, minimizeToTray, mediaKeysEnabled, taskbarProgressEnabled]) => {
+            platform.settings.get('mediaCacheEnabled'),
+            platform.mediaCache.stats(),
+        ]).then(([trayOnClose, minimizeToTray, mediaKeysEnabled, taskbarProgressEnabled, mediaCacheEnabled, stats]) => {
             if (cancelled) return;
             setValues({
                 trayOnClose: trayOnClose !== false,
                 minimizeToTray: minimizeToTray === true,
                 mediaKeysEnabled: mediaKeysEnabled !== false,
                 taskbarProgressEnabled: taskbarProgressEnabled !== false,
+                mediaCacheEnabled: mediaCacheEnabled !== false,
             });
+            setCacheStats(stats ?? null);
             setLoaded(true);
         }).catch(() => {});
         return () => { cancelled = true; };
@@ -174,6 +179,19 @@ const DesktopSettingsPanel = () => {
             console.warn('[nebula] failed to persist desktop setting', key, error);
             setValues(prev => ({ ...prev, [key]: !value }));
         }
+    };
+
+    const formatBytes = (bytes: number): string => {
+        if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
+        if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
+        if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+        return `${bytes} B`;
+    };
+
+    const clearCache = async () => {
+        if (!platform) return;
+        const stats = await platform.mediaCache.clear();
+        setCacheStats(stats);
     };
 
     return (
@@ -202,6 +220,25 @@ const DesktopSettingsPanel = () => {
                 checked={loaded ? values.taskbarProgressEnabled ?? true : true}
                 onChange={(v) => setValue('taskbarProgressEnabled', v)}
             />
+            <div className={rowClass}>
+                <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Media Cache</span>
+                    <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+                        Keep played tracks on disk so replays start instantly.
+                        {cacheStats && cacheStats.entryCount > 0
+                            ? ` Currently using ${formatBytes(cacheStats.usedBytes)} across ${cacheStats.entryCount} track${cacheStats.entryCount === 1 ? '' : 's'}.`
+                            : ' No tracks cached yet.'}
+                    </span>
+                </span>
+                <button
+                    type="button"
+                    disabled={!cacheStats || cacheStats.entryCount === 0}
+                    onClick={clearCache}
+                    className="shrink-0 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-700 transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+                >
+                    Clear
+                </button>
+            </div>
         </SettingPanel>
     );
 };

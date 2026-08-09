@@ -1,6 +1,7 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
 import type { UpdaterState } from '../electron/updater';
+import type { MediaCacheStats } from '../electron/mediaCache';
 
 /**
  * The shape of the `window.desktop` bridge exposed by the Electron preload
@@ -37,6 +38,10 @@ export interface DesktopBridge {
   http: {
     fetchJson(url: string): Promise<{ status: number; statusText: string; ok: boolean; body: unknown }>;
     proxyUrl(url: string): string;
+  };
+  mediaCache: {
+    stats(): Promise<MediaCacheStats | null>;
+    clear(): Promise<MediaCacheStats | null>;
   };
   playback: {
     onCommand(handler: (envelope: DesktopCommandEnvelope) => void): () => void;

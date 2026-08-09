@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.3.2';
+export const APP_VERSION = '2.3.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,16 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.3.3',
+    date: '2026-08-08',
+    title: 'Playback Stability and Media Cache',
+    changes: [
+      'Fixed the desktop freeze after a few tracks — aborted streams now release their server connections properly.',
+      'Added a disk media cache so previously-played tracks start instantly on replay, with automatic LRU cleanup and a size limit so it can never fill your disk.',
+      'Fixed Stream Deck pairing from the desktop app by reporting the loopback origin the plugin expects.'
+    ]
+  },
   {
     version: '2.3.2',
     date: '2026-08-08',

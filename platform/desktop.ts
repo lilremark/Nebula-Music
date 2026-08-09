@@ -53,6 +53,11 @@ export const createDesktopPlatform = (): Platform => {
 
   const fetchJson = (url: string) => bridge.http.fetchJson(url);
 
+  const mediaCache = {
+    stats: () => bridge.mediaCache.stats(),
+    clear: () => bridge.mediaCache.clear(),
+  };
+
   const resolveMediaUrl = (url: string): string => {
     if (!url) return url;
     if (/^https?:\/\//i.test(url)) return bridge.http.proxyUrl(url);
@@ -85,5 +90,6 @@ export const createDesktopPlatform = (): Platform => {
     },
     fetchJson,
     resolveMediaUrl,
+    mediaCache,
   };
 };
