@@ -253,12 +253,23 @@ const DesktopUpdatesPanel = () => {
                 ? 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/50'
                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
 
+    const statusLabel =
+        phase === 'downloaded'
+            ? 'Ready to Install'
+            : phase === 'available' || phase === 'downloading'
+                ? 'Update available'
+                : phase === 'checking'
+                    ? 'Checking'
+                    : phase === 'error'
+                        ? 'Error'
+                        : 'Up to Date';
+
     return (
         <SettingPanel icon={Download} title="Updates">
             <div className="px-5 py-6">
                 <div className="flex flex-col items-center text-center">
                     <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${badgeClass}`}>
-                        {phase.replace('-', ' ')}
+                        {statusLabel}
                     </span>
                     <span className="mt-3 block text-lg font-bold text-neutral-900 dark:text-white">
                         {currentVersion ? `Nebula ${currentVersion}` : 'Nebula'}

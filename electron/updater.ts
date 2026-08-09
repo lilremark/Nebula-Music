@@ -110,7 +110,7 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
   const onError = (error: Error): void =>
     emit({ phase: 'error', newVersion: null, progress: null, message: error?.message ?? 'Update check failed.' });
   const onProgress = (progress: UpdateDownloadProgress): void =>
-    emit({ phase: 'downloading', progress: progress.percent, message: 'Downloading update\u2026' });
+    emit({ phase: 'downloading', progress: Math.round(progress.percent), message: 'Downloading update\u2026' });
   const onDownloaded = (info: { version: string }): void => {
     emit({
       phase: 'downloaded',

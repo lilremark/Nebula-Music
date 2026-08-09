@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.3.1';
+export const APP_VERSION = '2.3.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,16 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.3.2',
+    date: '2026-08-08',
+    title: 'Update Flow Polish',
+    changes: [
+      'Fixed Stream Deck pairing from the desktop app by sending a valid loopback origin on the bridge WebSocket.',
+      'Improved the update status labels: "Up to Date", "Update available", and "Error" with the message.',
+      'Download progress now shows whole-number percentages.'
+    ]
+  },
   {
     version: '2.3.1',
     date: '2026-08-08',
