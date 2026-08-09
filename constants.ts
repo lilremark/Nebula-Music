@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.3.3';
+export const APP_VERSION = '2.3.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,15 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.3.4',
+    date: '2026-08-08',
+    title: 'Playback Freeze Fix',
+    changes: [
+      'Fixed the desktop freeze after a few tracks — upstream stream requests are now serialized so the media proxy can never exhaust Chromium\'s per-host connection pool.',
+      'Aborted streams (track changes, seeks) now release their server connection immediately, and hung requests time out instead of blocking playback forever.'
+    ]
+  },
   {
     version: '2.3.3',
     date: '2026-08-08',
