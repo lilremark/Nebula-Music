@@ -58,6 +58,34 @@ let mediaCache: MediaCache;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
 
+/**
+ * Caps concurrent upstream fetches per host. Chromium's network service keeps
+ * a small HTTP/1.1 connection pool per host (default 6); aborted media streams
+ * can leave pooled sockets stuck, and once the pool saturates every subsequent
+ * request to that host queues forever — the desktop freeze. Serializing below
+ * the pool size guarantees requests always have a free socket.
+ */
+const MAX_CONCURRENT_PROXY = 4;
+let proxyActive = 0;
+const proxyWaiters: Array<() => void> = [];
+
+const acquireProxySlot = (): Promise<void> => {
+  if (proxyActive < MAX_CONCURRENT_PROXY) {
+    proxyActive++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => proxyWaiters.push(resolve));
+};
+
+const releaseProxySlot = (): void => {
+  proxyActive--;
+  const next = proxyWaiters.shift();
+  if (next) {
+    proxyActive++;
+    next();
+  }
+};
+
 const thumbarClient = createCommandClient('nebula-thumbar', () => lastSnapshot?.epoch ?? 0);
 
 const forwardCommand = (envelope: DesktopCommandEnvelope): void => {
@@ -206,6 +234,12 @@ const handleProxy = async (request: Request): Promise<Response> => {
   const headers = new Headers();
   const range = request.headers.get('Range');
   if (range) headers.set('Range', range);
+  // Do not keep-alive upstream connections: Chromium's HTTP/1.1 pool is limited
+  // per host (default 6) and aborted media streams can otherwise leave pooled
+  // sockets in a stuck state, saturating the pool and freezing all proxy
+  // traffic after a few tracks. A fresh connection per request is a small cost
+  // for audio and eliminates the exhaustion entirely.
+  headers.set('Connection', 'close');
 
   // Serve previously-played tracks straight from the local cache so replays
   // are instant and the Subsonic server is not hit again.
@@ -217,7 +251,7 @@ const handleProxy = async (request: Request): Promise<Response> => {
 
   // Wire the renderer's abort signal to the upstream request so cancelled
   // streams (track changes, seeks, skips) release the connection instead of
-  // leaking it. Un-released streams were the cause of the desktop freeze.
+  // leaking it.
   const controller = new AbortController();
   const onAbort = () => controller.abort();
   if (request.signal) {
@@ -225,10 +259,22 @@ const handleProxy = async (request: Request): Promise<Response> => {
     else request.signal.addEventListener('abort', onAbort, { once: true });
   }
 
+  // Serialize upstream fetches: the network service keeps a small per-host
+  // HTTP/1.1 connection pool (default 6). Allowing more concurrent requests
+  // than the pool can hold queues the excess forever once any socket is left
+  // in a stuck state, which froze the app after a few tracks.
   let upstream: Response;
   try {
-    upstream = await net.fetch(target, { headers, redirect: 'follow', signal: controller.signal });
-  } catch {
+    await acquireProxySlot();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+    try {
+      upstream = await net.fetch(target, { headers, redirect: 'follow', signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+      releaseProxySlot();
+    }
+  } catch (e) {
+    console.warn(`[proxy] upstream fetch failed for ${target.slice(0, 80)}: ${String(e)}`);
     return new Response('Proxy error', { status: 502 });
   }
 
@@ -252,14 +298,53 @@ const handleProxy = async (request: Request): Promise<Response> => {
     && isFullContentResponse(upstream.status, upstream.headers.get('content-range'));
 
   if (!shouldCache || !upstream.body) {
-    return new Response(upstream.body, {
+    if (!upstream.body) {
+      return new Response('Proxy error', { status: 502 });
+    }
+    const body = trackBody(upstream.body, key, controller);
+    return new Response(body, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: responseHeaders,
     });
   }
 
-  return streamAndCache(mediaCache, key, upstream.body, contentType!, responseHeaders, upstream.status, upstream.statusText);
+  return streamAndCache(mediaCache, key, upstream.body, contentType!, responseHeaders, upstream.status, upstream.statusText, controller);
+};
+
+/**
+ * Wraps a pass-through body and aborts the upstream request when the renderer
+ * cancels the stream, so the connection is released instead of poisoning
+ * Chromium's keep-alive pool.
+ */
+const trackBody = (
+  body: ReadableStream<Uint8Array>,
+  key: string,
+  controller: AbortController,
+): ReadableStream<Uint8Array> => {
+  const reader = body.getReader();
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    controller.abort();
+  };
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) { release(); controller.close(); return; }
+        controller.enqueue(value);
+      } catch (e) {
+        release();
+        controller.error(e);
+      }
+    },
+    async cancel() {
+      try { await reader.cancel(); } catch { }
+      release();
+    },
+  });
 };
 
 /**
@@ -276,6 +361,7 @@ const streamAndCache = async (
   responseHeaders: Headers,
   status: number,
   statusText: string,
+  controller: AbortController,
 ): Promise<Response> => {
   const writer = await cache.beginWrite(key);
   const reader = body.getReader();
@@ -293,6 +379,10 @@ const streamAndCache = async (
     }
   };
 
+  const release = (): void => {
+    controller.abort();
+  };
+
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
@@ -300,6 +390,7 @@ const streamAndCache = async (
         if (done) {
           await finish(true);
           controller.close();
+          release();
           return;
         }
         if (value) {
@@ -310,6 +401,7 @@ const streamAndCache = async (
       } catch (error) {
         await finish(false);
         controller.error(error);
+        release();
       }
     },
     async cancel() {
@@ -317,6 +409,7 @@ const streamAndCache = async (
         await reader.cancel();
       } catch { }
       await finish(false);
+      release();
     },
   });
 
