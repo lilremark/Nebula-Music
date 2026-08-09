@@ -5,6 +5,7 @@ import {
   nativeImage,
   net,
   protocol,
+  session,
   shell,
 } from 'electron';
 import fs from 'node:fs/promises';
@@ -502,6 +503,24 @@ const registerIpc = (): void => {
   });
 };
 
+/**
+ * The renderer is served from the custom `app://nebula` scheme, so its WebSocket
+ * `Origin` header is `app://nebula`. The Stream Deck plugin only accepts
+ * `http:`/`https:` origins on the loopback bridge handshake and otherwise closes
+ * the socket with "Valid Origin required". Rewrite the Origin header for the
+ * Stream Deck WebSocket endpoint so pairing works from the desktop build.
+ */
+const registerStreamDeckOriginRewrite = (): void => {
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    if (details.url.startsWith('ws://127.0.0.1:') && details.url.includes('/nebula/v1')) {
+      const headers = { ...details.requestHeaders, Origin: 'http://localhost' };
+      callback({ requestHeaders: headers });
+      return;
+    }
+    callback({ requestHeaders: details.requestHeaders });
+  });
+};
+
 const onQuit = (): void => {
   isQuitting = true;
   app.quit();
@@ -557,6 +576,7 @@ if (!gotLock) {
 
     registerProtocol();
     registerIpc();
+    registerStreamDeckOriginRewrite();
 
     mainWindow = createWindow();
 
