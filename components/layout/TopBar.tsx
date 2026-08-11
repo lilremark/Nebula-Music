@@ -39,7 +39,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }
 
     return (
         <header
-            className={`relative h-16 flex items-center justify-between px-6 ${isMac ? 'pl-24' : ''} border-b border-neutral-200 dark:border-white/5 sticky top-0 z-30`}
+            className={`relative h-16 flex items-center justify-between px-6 ${isMac ? 'pl-3' : ''} border-b border-neutral-200 dark:border-white/5 sticky top-0 z-30`}
             style={appRegion(isNavOpen ? 'no-drag' : 'drag')}
         >
             {/* Blur + background live on a pointer-events-none child so the

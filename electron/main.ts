@@ -217,7 +217,7 @@ const createWindow = (): BrowserWindow => {
     minWidth: WINDOW_MIN.width,
     minHeight: WINDOW_MIN.height,
     ...(process.platform === 'darwin'
-      ? { titleBarStyle: 'hiddenInset' as const }
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 20, y: 10 } as const }
       : process.platform === 'win32'
         ? { frame: false }
         : {}),
