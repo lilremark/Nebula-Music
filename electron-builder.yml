@@ -25,6 +25,18 @@ appx:
   identityName: com.nebula.desktop
   publisherDisplayName: Nebula
   publisher: CN=Nebula
+mac:
+  icon: electron/assets/icon.icns
+  category: public.app-category.music
+  identity: null
+  target:
+    - target: dmg
+      arch:
+        - arm64
+    - target: zip
+      arch:
+        - arm64
+  artifactName: ${productName}-${version}-${arch}.${ext}
 publish:
   provider: github
   owner: lilremark
