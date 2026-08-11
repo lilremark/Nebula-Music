@@ -69,6 +69,16 @@ const ToggleRow = ({ label, description, checked, onChange }: { label: string; d
     </button>
 );
 
+const StaticRow = ({ label, description }: { label: string; description?: string }) => (
+    <div className={`${rowClass}`}>
+        <span className="min-w-0">
+            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
+            {description && <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</span>}
+        </span>
+        <span className="shrink-0 rounded-full bg-neutral-200 px-3 py-1 text-xs font-bold text-neutral-600 dark:bg-white/10 dark:text-white/50">On</span>
+    </div>
+);
+
 const ShortcutRow = ({ id, label, value, editingKey, setEditingKey }: { id: string; label: string; value: string, editingKey: string | null, setEditingKey: (k: string | null) => void }) => (
     <div className={rowClass}>
         <span className="text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
@@ -140,6 +150,8 @@ const OptionRow = ({ label, description, options, value, onChange }: {
 
 const DesktopSettingsPanel = () => {
     const platform = usePlatform();
+    const isWindows = platform?.info.os === 'win32';
+    const isMac = platform?.info.os === 'darwin';
     const [values, setValues] = useState<Record<string, boolean>>({});
     const [loaded, setLoaded] = useState(false);
 
@@ -180,28 +192,37 @@ const DesktopSettingsPanel = () => {
         <SettingPanel icon={Monitor} title="Desktop Integration">
             <ToggleRow
                 label="Close to Tray"
-                description="Closing the window keeps Nebula running in the system tray."
+                description={isMac ? 'Closing the window keeps Nebula running in the menu bar.' : 'Closing the window keeps Nebula running in the system tray.'}
                 checked={loaded ? values.trayOnClose ?? true : true}
                 onChange={(v) => setValue('trayOnClose', v)}
             />
             <ToggleRow
                 label="Minimize to Tray"
-                description="Minimizing hides the window to the tray instead of the taskbar."
+                description={isMac ? 'Minimizing hides the window to the menu bar instead of the Dock.' : 'Minimizing hides the window to the tray instead of the taskbar.'}
                 checked={loaded ? values.minimizeToTray ?? false : false}
                 onChange={(v) => setValue('minimizeToTray', v)}
             />
-            <ToggleRow
-                label="Global Media Keys"
-                description="Control playback with your keyboard's media keys even when Nebula is in the background."
-                checked={loaded ? values.mediaKeysEnabled ?? true : true}
-                onChange={(v) => setValue('mediaKeysEnabled', v)}
-            />
-            <ToggleRow
-                label="Taskbar Progress"
-                description="Show playback progress in the Windows taskbar."
-                checked={loaded ? values.taskbarProgressEnabled ?? true : true}
-                onChange={(v) => setValue('taskbarProgressEnabled', v)}
-            />
+            {isWindows ? (
+                <ToggleRow
+                    label="Global Media Keys"
+                    description="Control playback with your keyboard's media keys even when Nebula is in the background."
+                    checked={loaded ? values.mediaKeysEnabled ?? true : true}
+                    onChange={(v) => setValue('mediaKeysEnabled', v)}
+                />
+            ) : (
+                <StaticRow
+                    label="Now Playing"
+                    description="Media keys and Control Center are handled by macOS while music is playing."
+                />
+            )}
+            {isWindows && (
+                <ToggleRow
+                    label="Taskbar Progress"
+                    description="Show playback progress in the Windows taskbar."
+                    checked={loaded ? values.taskbarProgressEnabled ?? true : true}
+                    onChange={(v) => setValue('taskbarProgressEnabled', v)}
+                />
+            )}
         </SettingPanel>
     );
 };
