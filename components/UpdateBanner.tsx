@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
 import { usePlatform } from '../platform/PlatformContext';
 import type { UpdaterState } from '../electron/updater';
+import { shouldShowDownloadedUpdateBanner } from './updateAction';
 
 export const UpdateBanner: React.FC = () => {
   const platform = usePlatform();
@@ -15,7 +16,7 @@ export const UpdateBanner: React.FC = () => {
   }, [platform]);
 
   if (!platform || platform.info.kind !== 'desktop') return null;
-  if (!state || state.phase !== 'downloaded' || dismissed) return null;
+  if (!state || !shouldShowDownloadedUpdateBanner(state) || dismissed) return null;
 
   return (
     <div className="flex items-center justify-between gap-4 border-b border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-900 dark:text-emerald-300">
