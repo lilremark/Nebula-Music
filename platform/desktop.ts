@@ -87,6 +87,7 @@ export const createDesktopPlatform = (): Platform => {
       getState: () => bridge.updater.getState(),
       check: () => bridge.updater.check(),
       installAndRestart: () => bridge.updater.installAndRestart(),
+      openDownloadPage: () => bridge.updater.openDownloadPage(),
       onStatus: (handler) => bridge.updater.onStatus(handler),
     },
     fetchJson,

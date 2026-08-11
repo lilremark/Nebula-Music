@@ -86,6 +86,8 @@ const bridge: DesktopBridge = {
     getState: () => ipcRenderer.invoke(IPC.updater.getState) as Promise<UpdaterState>,
     check: () => ipcRenderer.invoke(IPC.updater.check) as Promise<boolean>,
     installAndRestart: () => ipcRenderer.invoke(IPC.updater.installAndRestart),
+    openDownloadPage: () =>
+      ipcRenderer.invoke(IPC.updater.openDownloadPage) as Promise<boolean>,
     onStatus: (handler: (state: UpdaterState) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, state: unknown) => {
         handler(state as UpdaterState);

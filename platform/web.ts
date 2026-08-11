@@ -60,6 +60,7 @@ const webUpdater: UpdaterApi = {
   }),
   check: async () => false,
   installAndRestart: async () => {},
+  openDownloadPage: async () => false,
   onStatus: () => noopUnsubscribe,
 };
 

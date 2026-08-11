@@ -12,6 +12,7 @@ import path from 'node:path';
 import { autoUpdater } from 'electron-updater';
 import { IPC } from './ipc';
 import { isAllowedExternalUrl } from './links';
+import { releaseUrlForVersion } from './releaseUrl';
 import { SettingsStore } from './settingsStore';
 import { CredentialVault } from './credentialVault';
 import { createSafeStorageCipher } from './safeStorageCipher';
@@ -507,10 +508,31 @@ const registerIpc = (): void => {
     showMainWindow();
   });
 
-  ipcMain.handle(IPC.updater.getState, () => updater.getState());
-  ipcMain.handle(IPC.updater.check, () => updater.check());
-  ipcMain.handle(IPC.updater.installAndRestart, () => {
+  ipcMain.handle(IPC.updater.getState, (event) => {
+    if (!isTrustedSender(event.sender)) return null;
+    return updater.getState();
+  });
+  ipcMain.handle(IPC.updater.check, (event) => {
+    if (!isTrustedSender(event.sender)) return false;
+    return updater.check();
+  });
+  ipcMain.handle(IPC.updater.installAndRestart, (event) => {
+    if (!isTrustedSender(event.sender)) return;
     updater.installAndRestart();
+  });
+  ipcMain.handle(IPC.updater.openDownloadPage, async (event) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents) return false;
+    const state = updater.getState();
+    if (
+      !state.enabled ||
+      state.installMode !== 'manual' ||
+      state.phase !== 'available' ||
+      !state.newVersion
+    ) {
+      return false;
+    }
+    const url = releaseUrlForVersion(state.newVersion);
+    return url ? openExternalSafely(url) : false;
   });
 };
 

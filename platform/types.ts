@@ -75,6 +75,8 @@ export interface UpdaterApi {
   check(): Promise<boolean>;
   /** Installs the downloaded update and restarts (no-op until downloaded). */
   installAndRestart(): Promise<void>;
+  /** Opens the available manual update's validated release page. */
+  openDownloadPage(): Promise<boolean>;
   /** Subscribes to state pushes; returns an unsubscribe function. */
   onStatus(handler: (state: UpdaterState) => void): () => void;
 }
