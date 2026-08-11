@@ -1,6 +1,12 @@
 import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
-import { createUpdater, type Updater, type UpdaterDriver, type UpdaterState } from './updater';
+import {
+  createUpdater,
+  type UpdateInstallMode,
+  type Updater,
+  type UpdaterDriver,
+  type UpdaterState,
+} from './updater';
 
 interface Harness {
   driver: UpdaterDriver;
@@ -12,7 +18,10 @@ interface Harness {
   getState: () => UpdaterState;
 }
 
-const makeHarness = (enabled = true): Harness => {
+const makeHarness = (
+  enabled = true,
+  installMode: UpdateInstallMode = 'automatic',
+): Harness => {
   const events = new EventEmitter();
   const checkForUpdates = vi.fn(async () => ({}));
   const quitAndInstall = vi.fn();
@@ -36,7 +45,8 @@ const makeHarness = (enabled = true): Harness => {
   const updater = createUpdater({
     driver,
     enabled,
-    getCurrentVersion: () => '2.2.0',
+    installMode,
+    getCurrentVersion: () => '2.4.0',
     getChannel: () => 'stable',
     broadcast,
   });
@@ -56,8 +66,9 @@ describe('createUpdater', () => {
     const harness = makeHarness(true);
     expect(harness.getState()).toEqual({
       enabled: true,
+      installMode: 'automatic',
       phase: 'idle',
-      currentVersion: '2.2.0',
+      currentVersion: '2.4.0',
       newVersion: null,
       progress: null,
       message: null,
@@ -66,6 +77,40 @@ describe('createUpdater', () => {
     expect(harness.driver.allowPrerelease).toBe(false);
     expect(harness.driver.autoDownload).toBe(true);
     expect(harness.driver.autoInstallOnAppQuit).toBe(true);
+  });
+
+  it('configures automatic install mode', () => {
+    const harness = makeHarness(true, 'automatic');
+    expect(harness.getState().installMode).toBe('automatic');
+    expect(harness.driver.autoDownload).toBe(true);
+    expect(harness.driver.autoInstallOnAppQuit).toBe(true);
+  });
+
+  it('configures manual install mode without automatic download', () => {
+    const harness = makeHarness(true, 'manual');
+    expect(harness.getState().installMode).toBe('manual');
+    expect(harness.driver.autoDownload).toBe(false);
+    expect(harness.driver.autoInstallOnAppQuit).toBe(false);
+  });
+
+  it('checks and reports availability in manual mode', async () => {
+    const harness = makeHarness(true, 'manual');
+    await expect(harness.updater.check()).resolves.toBe(true);
+    harness.emit('update-available', { version: '2.4.1' });
+    expect(harness.getState()).toMatchObject({
+      installMode: 'manual',
+      phase: 'available',
+      newVersion: '2.4.1',
+    });
+  });
+
+  it('ignores download events and install requests in manual mode', () => {
+    const harness = makeHarness(true, 'manual');
+    harness.emit('download-progress', { percent: 50, transferred: 1, total: 2, bytesPerSecond: 1 });
+    harness.emit('update-downloaded', { version: '2.4.1' });
+    harness.updater.installAndRestart();
+    expect(harness.getState().phase).toBe('idle');
+    expect(harness.quitAndInstall).not.toHaveBeenCalled();
   });
 
   it('is inert and explains itself when disabled', () => {

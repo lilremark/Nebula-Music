@@ -4,6 +4,7 @@ import { getTitleBarUpdateState } from './titleBarUpdateState';
 
 const base = (overrides: Partial<UpdaterState>): UpdaterState => ({
   enabled: true,
+  installMode: 'automatic',
   phase: 'idle',
   currentVersion: '2.4.0',
   newVersion: null,

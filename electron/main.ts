@@ -557,6 +557,7 @@ if (!gotLock) {
     updater = createUpdater({
       driver: autoUpdater,
       enabled: app.isPackaged,
+      installMode: process.platform === 'darwin' ? 'manual' : 'automatic',
       getCurrentVersion: () => app.getVersion(),
       getChannel: () => settingsStore.get('updateChannel') ?? 'stable',
       broadcast: (state) => {

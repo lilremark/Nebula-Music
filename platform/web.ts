@@ -51,6 +51,7 @@ const webMiniPlayer = {
 const webUpdater: UpdaterApi = {
   getState: async () => ({
     enabled: false,
+    installMode: 'automatic',
     phase: 'idle',
     currentVersion: null,
     newVersion: null,

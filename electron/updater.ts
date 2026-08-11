@@ -15,9 +15,12 @@ export type UpdatePhase =
   | 'not-available'
   | 'error';
 
+export type UpdateInstallMode = 'automatic' | 'manual';
+
 export interface UpdaterState {
   /** False outside installed builds; check()/installAndRestart() are inert. */
   enabled: boolean;
+  installMode: UpdateInstallMode;
   phase: UpdatePhase;
   currentVersion: string | null;
   newVersion: string | null;
@@ -57,6 +60,7 @@ export interface UpdaterDriver {
 export interface UpdaterOptions {
   driver: UpdaterDriver;
   enabled: boolean;
+  installMode: UpdateInstallMode;
   getCurrentVersion: () => string | null;
   /** Read the current update channel (stable/beta) from settings. */
   getChannel: () => string;
@@ -77,10 +81,19 @@ export interface Updater {
 const DISABLED_MESSAGE = 'Automatic updates are only available in installed builds.';
 
 export const createUpdater = (options: UpdaterOptions): Updater => {
-  const { driver, enabled, getCurrentVersion, getChannel, broadcast, onDownloaded: onDownloadedOption } = options;
+  const {
+    driver,
+    enabled,
+    installMode,
+    getCurrentVersion,
+    getChannel,
+    broadcast,
+    onDownloaded: onDownloadedOption,
+  } = options;
 
   let state: UpdaterState = {
     enabled,
+    installMode,
     phase: 'idle',
     currentVersion: getCurrentVersion(),
     newVersion: null,
@@ -98,8 +111,8 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
     // `latest.yml` file electron-builder publishes. The stable/beta toggle maps
     // to whether prerelease releases are allowed, not to a channel filename.
     driver.allowPrerelease = getChannel() === 'beta';
-    driver.autoDownload = true;
-    driver.autoInstallOnAppQuit = true;
+    driver.autoDownload = installMode === 'automatic';
+    driver.autoInstallOnAppQuit = installMode === 'automatic';
   }
 
   const onChecking = (): void => emit({ phase: 'checking', message: 'Checking for updates\u2026' });
@@ -109,9 +122,12 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
     emit({ phase: 'not-available', newVersion: null, message: 'Nebula is up to date.' });
   const onError = (error: Error): void =>
     emit({ phase: 'error', newVersion: null, progress: null, message: error?.message ?? 'Update check failed.' });
-  const onProgress = (progress: UpdateDownloadProgress): void =>
+  const onProgress = (progress: UpdateDownloadProgress): void => {
+    if (installMode !== 'automatic') return;
     emit({ phase: 'downloading', progress: progress.percent, message: 'Downloading update\u2026' });
+  };
   const onDownloaded = (info: { version: string }): void => {
+    if (installMode !== 'automatic') return;
     emit({
       phase: 'downloaded',
       newVersion: info.version,
@@ -146,7 +162,7 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
   };
 
   const installAndRestart = (): void => {
-    if (!enabled || state.phase !== 'downloaded') return;
+    if (!enabled || installMode !== 'automatic' || state.phase !== 'downloaded') return;
     driver.quitAndInstall();
   };
 
