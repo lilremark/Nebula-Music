@@ -107,17 +107,14 @@ them together to avoid drift:
 - `SECURITY.md` — supported-versions table
 - `docker/README.md` — pinned image tag, when a web/Docker release is cut
 
-Build and publish the Windows installer with electron-builder using a `GH_TOKEN`
-(or `gh auth token`):
-
-```bash
-GH_TOKEN=$(gh auth token) npx electron-builder --win --publish always
-```
-
-electron-builder creates a GitHub release tagged `v<version>`, uploads the NSIS
-installer, its `.blockmap`, and `latest.yml` (the file electron-updater reads for
-automatic updates). A draft release is created automatically; publish it once
-you are ready.
+Desktop releases are built natively by `.github/workflows/release-desktop.yml`.
+After release-prep changes merge, create and push an annotated `v<version>` tag
+that matches the synchronized package version. The workflow verifies the
+version, tests, audit, Windows installer/feed, and macOS DMG/ZIP/feed, then
+creates one draft GitHub Release. Inspect every draft asset and update metadata
+file before publishing it. Native build jobs must use `--publish never`; do not
+publish one platform independently. A manual workflow dispatch builds and
+validates both platforms without creating a release.
 
 ## Bug Reports
 
@@ -151,4 +148,3 @@ Pull requests should:
 
 By submitting a contribution, you agree that it will be licensed under the
 project's [MIT License](./LICENSE.txt).
-
