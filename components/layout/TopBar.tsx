@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { Menu, Search, Settings } from 'lucide-react';
 import { WindowControls } from '../window/WindowControls';
 import { useStore } from '../../context/Store';
+import { usePlatform } from '../../platform/PlatformContext';
 
 const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
     ({ WebkitAppRegion: region }) as CSSProperties;
@@ -14,6 +15,8 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }) => {
     const { openSearchModal, setView, currentView } = useStore();
+    const platform = usePlatform();
+    const isMac = platform?.info.os === 'darwin';
 
     // Get current page title
     const getPageTitle = () => {
@@ -36,7 +39,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }
 
     return (
         <header
-            className="relative h-16 flex items-center justify-between px-6 border-b border-neutral-200 dark:border-white/5 sticky top-0 z-30"
+            className={`relative h-16 flex items-center justify-between px-6 ${isMac ? 'pl-24' : ''} border-b border-neutral-200 dark:border-white/5 sticky top-0 z-30`}
             style={appRegion(isNavOpen ? 'no-drag' : 'drag')}
         >
             {/* Blur + background live on a pointer-events-none child so the

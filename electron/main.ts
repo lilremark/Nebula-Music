@@ -215,7 +215,11 @@ const createWindow = (): BrowserWindow => {
     height: 800,
     minWidth: WINDOW_MIN.width,
     minHeight: WINDOW_MIN.height,
-    ...(process.platform === 'win32' ? { frame: false } : {}),
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hiddenInset' as const }
+      : process.platform === 'win32'
+        ? { frame: false }
+        : {}),
     show: false,
     backgroundColor: '#0b0b12',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
