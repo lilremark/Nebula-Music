@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StoreProvider, useStore } from './context/Store';
-import { SplitLayout, TopBar } from './components/layout';
+import { SplitLayout, TopBar, MacTitleBar } from './components/layout';
 import { NavDrawer } from './components/navigation';
 import { NowPlayingPanel } from './components/player/NowPlayingPanel';
 import { FloatingMiniPlayer } from './components/player/FloatingMiniPlayer';
@@ -185,7 +185,8 @@ const AppContent: React.FC = () => {
         }
       >
         {/* Top Bar */}
-        <header>
+        <header className="flex flex-col shrink-0">
+          <MacTitleBar />
           <TopBar onMenuClick={() => setIsNavOpen(true)} isNavOpen={isNavOpen} />
         </header>
 
