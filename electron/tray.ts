@@ -1,10 +1,12 @@
 import {
   BrowserWindow,
   Menu,
+  Notification,
   Tray,
   nativeImage,
   type MenuItemConstructorOptions,
 } from 'electron';
+import path from 'node:path';
 import { IPC } from './ipc';
 import { createCommandClient } from '../playback/commandClient';
 import type { DesktopCommand, DesktopCommandEnvelope } from '../playback/desktopProtocol';
@@ -18,6 +20,7 @@ const TRAY_ICON_PNG =
 
 let tray: Tray | null = null;
 let updateClickHandler: (() => void) | null = null;
+let showWindowHandler: (() => void) | null = null;
 
 interface TrayOptions {
   getWindow: () => BrowserWindow | null;
@@ -32,7 +35,12 @@ export const createTray = (options: TrayOptions): Tray => {
   if (tray) return tray;
   updateClickHandler = options.onUpdateClick;
 
-  const icon = nativeImage.createFromDataURL(TRAY_ICON_PNG);
+  const templatePath = path.join(__dirname, '..', 'assets', 'trayTemplate.png');
+  const isDarwin = process.platform === 'darwin';
+  const icon = isDarwin
+    ? nativeImage.createFromPath(templatePath)
+    : nativeImage.createFromDataURL(TRAY_ICON_PNG);
+  if (isDarwin) icon.setTemplateImage(true);
   tray = new Tray(icon);
   tray.setToolTip('Nebula');
 
@@ -48,6 +56,8 @@ export const createTray = (options: TrayOptions): Tray => {
     win.show();
     win.focus();
   };
+
+  showWindowHandler = showWindow;
 
   const menu: MenuItemConstructorOptions[] = [
     { label: 'Show Nebula', click: showWindow },
@@ -70,6 +80,19 @@ export const createTray = (options: TrayOptions): Tray => {
 
 export const showUpdateBalloon = (version: string): void => {
   if (!tray) return;
+  if (process.platform !== 'win32') {
+    if (!Notification.isSupported()) return;
+    new Notification({
+      title: 'Nebula update ready',
+      body: `Version ${version} is downloaded. Click to install.`,
+    })
+      .on('click', () => {
+        updateClickHandler?.();
+        showWindowHandler?.();
+      })
+      .show();
+    return;
+  }
   tray.displayBalloon({
     title: 'Nebula update ready',
     content: `Version ${version} is downloaded. Click to install.`,

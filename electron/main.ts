@@ -293,6 +293,7 @@ const createMiniPlayerWindow = (): BrowserWindow => {
   const win = new BrowserWindow({
     width: 360,
     height: 96,
+    ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
     resizable: false,
     minimizable: false,
     maximizable: false,
