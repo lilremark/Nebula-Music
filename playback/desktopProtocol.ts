@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { RepeatMode } from '../types';
+import { STREAM_DECK_MAX_ARTWORK_LENGTH } from '../services/streamDeckProtocol';
 
 /**
  * Desktop playback protocol (v1).
@@ -52,12 +53,20 @@ export const desktopCommandEnvelopeSchema = z.object({
 
 export type DesktopCommandEnvelope = z.infer<typeof desktopCommandEnvelopeSchema>;
 
+const desktopCoverArtUrlSchema = z
+  .string()
+  .max(STREAM_DECK_MAX_ARTWORK_LENGTH)
+  .regex(
+    /^data:image\/jpeg;base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/,
+  );
+
 export const desktopTrackSchema = z
   .object({
     id: z.string().min(1).max(256),
     title: z.string().min(1).max(512),
     artist: z.string().min(1).max(512),
     album: z.string().max(512).optional(),
+    coverArtUrl: desktopCoverArtUrlSchema.optional(),
   })
   .nullable();
 
@@ -143,9 +152,14 @@ export const toTrackSummary = (song: {
   title: string;
   artist: string;
   album?: string;
-}): DesktopTrack => ({
-  id: song.id.slice(0, 256),
-  title: song.title.slice(0, 512),
-  artist: song.artist.slice(0, 512),
-  ...(song.album ? { album: song.album.slice(0, 512) } : {}),
-});
+  coverArtUrl?: string;
+}): DesktopTrack => {
+  const coverArtUrl = desktopCoverArtUrlSchema.safeParse(song.coverArtUrl);
+  return {
+    id: song.id.slice(0, 256),
+    title: song.title.slice(0, 512),
+    artist: song.artist.slice(0, 512),
+    ...(song.album ? { album: song.album.slice(0, 512) } : {}),
+    ...(coverArtUrl.success ? { coverArtUrl: coverArtUrl.data } : {}),
+  };
+};

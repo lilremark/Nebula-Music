@@ -18,12 +18,13 @@ import { createSafeStorageCipher } from './safeStorageCipher';
 import { createTray, destroyTray, showUpdateBalloon } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
-import { installMacAppMenu } from './macMenu';
+import { installMacAppMenu, updateMacPlaybackMenu } from './macMenu';
 import { createCommandClient } from '../playback/commandClient';
-import type {
-  DesktopCommand,
-  DesktopCommandEnvelope,
-  DesktopSnapshot,
+import {
+  desktopSnapshotSchema,
+  type DesktopCommand,
+  type DesktopCommandEnvelope,
+  type DesktopSnapshot,
 } from '../playback/desktopProtocol';
 
 const SCHEME = 'app';
@@ -480,11 +481,16 @@ const registerIpc = (): void => {
     }
   });
 
-  ipcMain.on(IPC.playback.snapshot, (_event, snapshot: DesktopSnapshot) => {
-    lastSnapshot = snapshot;
-    updateTaskbarProgress(snapshot);
-    updateThumbarButtons(snapshot);
-    broadcastSnapshotToMiniPlayer(snapshot);
+  ipcMain.on(IPC.playback.snapshot, (event, snapshot: unknown) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents) return;
+    const parsed = desktopSnapshotSchema.safeParse(snapshot);
+    if (!parsed.success) return;
+    const validatedSnapshot = parsed.data;
+    lastSnapshot = validatedSnapshot;
+    if (process.platform === 'darwin') updateMacPlaybackMenu(validatedSnapshot);
+    updateTaskbarProgress(validatedSnapshot);
+    updateThumbarButtons(validatedSnapshot);
+    broadcastSnapshotToMiniPlayer(validatedSnapshot);
   });
 
   // Commands from the mini-player (a remote client) are validated and
@@ -577,6 +583,11 @@ if (!gotLock) {
           mainWindow?.webContents.send(IPC.app.openSettings);
         },
       });
+      // Dev launches run from the Electron binary and show its default Dock
+      // icon; force the Nebula icon until the bundle .icns applies.
+      if (!app.isPackaged) {
+        app.dock?.setIcon(path.join(__dirname, '..', 'assets', 'icon.png'));
+      }
     }
 
     if (settingsStore.get('mediaKeysEnabled') === true) {

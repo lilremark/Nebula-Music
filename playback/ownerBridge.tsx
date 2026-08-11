@@ -8,6 +8,13 @@ import React, {
 } from 'react';
 import { useStore } from '../context/Store';
 import { usePlatform } from '../platform/PlatformContext';
+import { createSanitizedArtwork } from '../services/streamDeckArtwork';
+import {
+  cancelCoverArtLoad,
+  completeCoverArtLoad,
+  startCoverArtLoad,
+  type CoverArtLoadState,
+} from './coverArtLoadState';
 import {
   acceptEnvelope,
   clamp,
@@ -58,6 +65,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     setPlaybackRate,
     setRepeatMode,
     audioRef,
+    service,
   } = useStore();
 
   const platform = usePlatform();
@@ -67,6 +75,8 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
   const epochRef = useRef(0);
   const platformRef = useRef(platform);
   platformRef.current = platform;
+  const coverArtRef = useRef<CoverArtLoadState>({ status: 'idle' });
+  const coverArtRequestIdRef = useRef(0);
 
   const stateRef = useRef({
     queue,
@@ -117,6 +127,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     const duration = Number.isFinite(audio?.duration)
       ? Math.max(0, audio?.duration ?? 0)
       : songDuration;
+    const coverArt = coverArtRef.current;
     return {
       v: DESKTOP_PROTOCOL_VERSION,
       ownerId: OWNER_ID,
@@ -128,6 +139,10 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
             title: song.title,
             artist: song.artist,
             ...(song.album ? { album: song.album } : {}),
+            coverArtUrl:
+              coverArt.status === 'completed' && coverArt.songId === song.id
+                ? coverArt.dataUrl
+                : undefined,
           })
         : null,
       positionSeconds: clamp(
@@ -147,6 +162,8 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
   const publishSnapshot = () => {
     platformRef.current?.playback.publishSnapshot(buildSnapshot());
   };
+  const publishSnapshotRef = useRef(publishSnapshot);
+  publishSnapshotRef.current = publishSnapshot;
 
   const handleCommand = (rawEnvelope: unknown): void => {
     const parsed = parseCommandEnvelope(rawEnvelope);
@@ -238,6 +255,35 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
   useEffect(() => {
     publishSnapshot();
   }, [publishSnapshot, song?.id]);
+
+  // Fetch a small cover-art data URL for the tray/menu when the song changes.
+  // Cached per song id; only the current song's art is ever sent.
+  useEffect(() => {
+    if (!song) {
+      coverArtRef.current = { status: 'idle' };
+      return;
+    }
+    const requestId = ++coverArtRequestIdRef.current;
+    const pendingState = startCoverArtLoad(coverArtRef.current, song.id, requestId);
+    if (pendingState === coverArtRef.current) return;
+    coverArtRef.current = pendingState;
+    const controller = new AbortController();
+    void createSanitizedArtwork(
+      service.getCoverArtUrl(song.coverArt || song.id, 96),
+      controller.signal,
+      96,
+    ).then((dataUrl) => {
+      if (controller.signal.aborted) return;
+      const completedState = completeCoverArtLoad(coverArtRef.current, requestId, dataUrl);
+      if (completedState === coverArtRef.current) return;
+      coverArtRef.current = completedState;
+      publishSnapshotRef.current();
+    });
+    return () => {
+      controller.abort();
+      coverArtRef.current = cancelCoverArtLoad(coverArtRef.current, requestId);
+    };
+  }, [service, song?.id]);
 
   // Progress snapshots for future mini-player/media-key affordances.
   useEffect(() => {
