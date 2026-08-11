@@ -18,11 +18,13 @@ import { createSafeStorageCipher } from './safeStorageCipher';
 import { createTray, destroyTray, showUpdateBalloon } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
+import { installMacAppMenu, updateMacPlaybackMenu } from './macMenu';
 import { createCommandClient } from '../playback/commandClient';
-import type {
-  DesktopCommand,
-  DesktopCommandEnvelope,
-  DesktopSnapshot,
+import {
+  desktopSnapshotSchema,
+  type DesktopCommand,
+  type DesktopCommandEnvelope,
+  type DesktopSnapshot,
 } from '../playback/desktopProtocol';
 
 const SCHEME = 'app';
@@ -215,7 +217,11 @@ const createWindow = (): BrowserWindow => {
     height: 800,
     minWidth: WINDOW_MIN.width,
     minHeight: WINDOW_MIN.height,
-    ...(process.platform === 'win32' ? { frame: false } : {}),
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 20, y: 10 } as const }
+      : process.platform === 'win32'
+        ? { frame: false }
+        : {}),
     show: false,
     backgroundColor: '#0b0b12',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -288,6 +294,7 @@ const createMiniPlayerWindow = (): BrowserWindow => {
   const win = new BrowserWindow({
     width: 360,
     height: 96,
+    ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -474,11 +481,16 @@ const registerIpc = (): void => {
     }
   });
 
-  ipcMain.on(IPC.playback.snapshot, (_event, snapshot: DesktopSnapshot) => {
-    lastSnapshot = snapshot;
-    updateTaskbarProgress(snapshot);
-    updateThumbarButtons(snapshot);
-    broadcastSnapshotToMiniPlayer(snapshot);
+  ipcMain.on(IPC.playback.snapshot, (event, snapshot: unknown) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents) return;
+    const parsed = desktopSnapshotSchema.safeParse(snapshot);
+    if (!parsed.success) return;
+    const validatedSnapshot = parsed.data;
+    lastSnapshot = validatedSnapshot;
+    if (process.platform === 'darwin') updateMacPlaybackMenu(validatedSnapshot);
+    updateTaskbarProgress(validatedSnapshot);
+    updateThumbarButtons(validatedSnapshot);
+    broadcastSnapshotToMiniPlayer(validatedSnapshot);
   });
 
   // Commands from the mini-player (a remote client) are validated and
@@ -559,6 +571,24 @@ if (!gotLock) {
     registerIpc();
 
     mainWindow = createWindow();
+
+    if (process.platform === 'darwin') {
+      installMacAppMenu({
+        getWindow: () => mainWindow,
+        getEpoch: () => lastSnapshot?.epoch ?? 0,
+        onCommand: forwardCommand,
+        toggleMiniPlayer,
+        openSettings: () => {
+          mainWindow?.show();
+          mainWindow?.webContents.send(IPC.app.openSettings);
+        },
+      });
+      // Dev launches run from the Electron binary and show its default Dock
+      // icon; force the Nebula icon until the bundle .icns applies.
+      if (!app.isPackaged) {
+        app.dock?.setIcon(path.join(__dirname, '..', 'assets', 'icon.png'));
+      }
+    }
 
     if (settingsStore.get('mediaKeysEnabled') === true) {
       registerMediaKeys({

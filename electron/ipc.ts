@@ -6,6 +6,7 @@ export const IPC = {
   app: {
     info: 'nebula:app:info',
     openExternal: 'nebula:app:open-external',
+    openSettings: 'nebula:app:open-settings',
   },
   window: {
     minimize: 'nebula:window:minimize',

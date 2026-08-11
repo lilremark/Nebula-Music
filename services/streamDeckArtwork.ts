@@ -29,6 +29,7 @@ const loadImage = (url: string): Promise<HTMLImageElement> =>
 export const createSanitizedArtwork = async (
   authenticatedUrl: string,
   signal?: AbortSignal,
+  targetSize: number = TARGET_SIZE,
 ): Promise<string | undefined> => {
   try {
     const response = await fetch(authenticatedUrl, {
@@ -46,18 +47,18 @@ export const createSanitizedArtwork = async (
     const sourceDataUrl = await readBlobAsDataUrl(blob);
     const image = await loadImage(sourceDataUrl);
     const canvas = document.createElement('canvas');
-    canvas.width = TARGET_SIZE;
-    canvas.height = TARGET_SIZE;
+    canvas.width = targetSize;
+    canvas.height = targetSize;
     const context = canvas.getContext('2d');
     if (!context) return undefined;
 
-    const scale = Math.max(TARGET_SIZE / image.naturalWidth, TARGET_SIZE / image.naturalHeight);
+    const scale = Math.max(targetSize / image.naturalWidth, targetSize / image.naturalHeight);
     const width = image.naturalWidth * scale;
     const height = image.naturalHeight * scale;
     context.drawImage(
       image,
-      (TARGET_SIZE - width) / 2,
-      (TARGET_SIZE - height) / 2,
+      (targetSize - width) / 2,
+      (targetSize - height) / 2,
       width,
       height,
     );

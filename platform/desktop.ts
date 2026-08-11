@@ -3,6 +3,7 @@ import type {
   DesktopSettingsApi,
   PlaybackTransport,
   Platform,
+  PlatformApp,
   PlatformInfo,
   WindowControl,
 } from './types';
@@ -59,6 +60,10 @@ export const createDesktopPlatform = (): Platform => {
     return url;
   };
 
+  const app: PlatformApp = {
+    onOpenSettings: (handler) => bridge.app.onOpenSettings(handler),
+  };
+
   const info: PlatformInfo = {
     kind: 'desktop',
     os: bridge.info.os,
@@ -69,6 +74,7 @@ export const createDesktopPlatform = (): Platform => {
   return {
     info,
     window: windowControl,
+    app,
     openExternal: (url) => bridge.openExternal(url),
     settings,
     vault,

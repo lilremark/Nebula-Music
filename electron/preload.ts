@@ -7,6 +7,15 @@ const info = ipcRenderer.sendSync(IPC.app.info) as DesktopBridge['info'];
 
 const bridge: DesktopBridge = {
   info,
+  app: {
+    onOpenSettings: (handler: () => void) => {
+      const listener = (): void => handler();
+      ipcRenderer.on(IPC.app.openSettings, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC.app.openSettings, listener);
+      };
+    },
+  },
   window: {
     minimize: async () => {
       ipcRenderer.send(IPC.window.minimize);
