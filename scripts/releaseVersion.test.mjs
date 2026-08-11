@@ -1,5 +1,10 @@
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { validateVersionSources } from './releaseVersion.mjs';
+
+const scriptPath = fileURLToPath(new URL('./releaseVersion.mjs', import.meta.url));
+const rootDir = fileURLToPath(new URL('..', import.meta.url));
 
 const synced = {
   packageVersion: '2.4.0',
@@ -28,7 +33,21 @@ describe('release version contract', () => {
       .toContain('tag v2.4.1 does not match v2.4.0');
   });
 
+  it('rejects an explicitly empty tag', () => {
+    expect(validateVersionSources(synced, '')).toContain('tag value is required');
+  });
+
   it('allows validation without a tag for pull requests', () => {
     expect(validateVersionSources(synced)).toEqual([]);
+  });
+
+  it('rejects --tag without a value', () => {
+    const result = spawnSync(process.execPath, [scriptPath, '--tag'], {
+      cwd: rootDir,
+      encoding: 'utf8',
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('tag value is required');
   });
 });

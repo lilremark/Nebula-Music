@@ -24,7 +24,9 @@ export const validateVersionSources = (sources, tag) => {
       errors.push(`${key} ${sources[key]} does not match ${expected}`);
     }
   }
-  if (tag && tag !== `v${sources.packageVersion}`) {
+  if (tag === '') {
+    errors.push('tag value is required');
+  } else if (tag !== undefined && tag !== `v${sources.packageVersion}`) {
     errors.push(`tag ${tag} does not match v${sources.packageVersion}`);
   }
   return errors;
@@ -33,7 +35,7 @@ export const validateVersionSources = (sources, tag) => {
 const isCli = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isCli) {
   const tagIndex = process.argv.indexOf('--tag');
-  const tag = tagIndex >= 0 ? process.argv[tagIndex + 1] : undefined;
+  const tag = tagIndex >= 0 ? (process.argv[tagIndex + 1] ?? '') : undefined;
   const sources = readVersionSources(process.cwd());
   const errors = validateVersionSources(sources, tag);
   if (errors.length) {
