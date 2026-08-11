@@ -24,6 +24,7 @@ import { UpdateBanner } from './components/UpdateBanner';
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
+import { usePlatform } from './platform/PlatformContext';
 
 const AppContent: React.FC = () => {
   const {
@@ -91,6 +92,13 @@ const AppContent: React.FC = () => {
       mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [currentView]);
+
+  const platform = usePlatform();
+
+  useEffect(() => {
+    if (!platform) return;
+    return platform.app.onOpenSettings(() => setView('SETTINGS'));
+  }, [platform, setView]);
 
   if (!credentials && !isDemoMode) {
     return <SetupScreen />;

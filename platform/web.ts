@@ -3,6 +3,7 @@ import type {
   DesktopSettingsApi,
   PlaybackTransport,
   Platform,
+  PlatformApp,
   PlatformInfo,
   UpdaterApi,
   WindowControl,
@@ -32,6 +33,8 @@ const webVault: CredentialVault = {
 };
 
 const noopUnsubscribe = (): void => {};
+
+const webApp: PlatformApp = { onOpenSettings: () => noopUnsubscribe };
 
 const webPlayback: PlaybackTransport = {
   onCommand: () => noopUnsubscribe,
@@ -90,6 +93,7 @@ export const createWebPlatform = (): Platform => ({
   settings: webSettings,
   vault: webVault,
   playback: webPlayback,
+  app: webApp,
   miniPlayer: webMiniPlayer,
   updater: webUpdater,
   fetchJson: webFetchJson,

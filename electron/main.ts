@@ -18,6 +18,7 @@ import { createSafeStorageCipher } from './safeStorageCipher';
 import { createTray, destroyTray, showUpdateBalloon } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
+import { installMacAppMenu } from './macMenu';
 import { createCommandClient } from '../playback/commandClient';
 import type {
   DesktopCommand,
@@ -563,6 +564,19 @@ if (!gotLock) {
     registerIpc();
 
     mainWindow = createWindow();
+
+    if (process.platform === 'darwin') {
+      installMacAppMenu({
+        getWindow: () => mainWindow,
+        getEpoch: () => lastSnapshot?.epoch ?? 0,
+        onCommand: forwardCommand,
+        toggleMiniPlayer,
+        openSettings: () => {
+          mainWindow?.show();
+          mainWindow?.webContents.send(IPC.app.openSettings);
+        },
+      });
+    }
 
     if (settingsStore.get('mediaKeysEnabled') === true) {
       registerMediaKeys({

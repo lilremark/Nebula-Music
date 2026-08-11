@@ -11,6 +11,11 @@ export interface PlatformInfo {
   appVersion: string | null;
 }
 
+export interface PlatformApp {
+  /** Subscribes to a "open settings" request from the native app menu. */
+  onOpenSettings(handler: () => void): () => void;
+}
+
 export interface WindowControl {
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
@@ -82,6 +87,7 @@ export interface UpdaterApi {
 export interface Platform {
   readonly info: PlatformInfo;
   readonly window: WindowControl;
+  readonly app: PlatformApp;
   openExternal(url: string): Promise<boolean>;
   readonly settings: DesktopSettingsApi;
   readonly vault: CredentialVault;

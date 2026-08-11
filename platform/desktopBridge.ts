@@ -13,6 +13,9 @@ export interface DesktopBridge {
     appName: string;
     appVersion: string;
   };
+  app: {
+    onOpenSettings(handler: () => void): () => void;
+  };
   window: {
     minimize(): Promise<void>;
     toggleMaximize(): Promise<void>;
