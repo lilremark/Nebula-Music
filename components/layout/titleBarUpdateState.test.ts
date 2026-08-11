@@ -13,28 +13,34 @@ const base = (overrides: Partial<UpdaterState>): UpdaterState => ({
 });
 
 describe('getTitleBarUpdateState', () => {
-  it('is busy while checking or downloading', () => {
-    expect(getTitleBarUpdateState(base({ phase: 'checking' })).busy).toBe(true);
-    expect(getTitleBarUpdateState(base({ phase: 'downloading' })).busy).toBe(true);
-    expect(getTitleBarUpdateState(base({ phase: 'idle' })).busy).toBe(false);
+  it.each([
+    ['idle', null, false, false, true, 'Check for updates', 'Check for updates'],
+    ['checking', 'Checking for updates…', true, false, false, 'Checking for updates…', 'Checking for updates…'],
+    ['available', 'Update 2.5.0 is available.', false, true, false, 'Update 2.5.0 is available.', 'Update 2.5.0 is available.'],
+    ['downloading', 'Downloading update…', true, false, false, 'Downloading update…', 'Downloading update…'],
+    ['downloaded', 'Restart Nebula to finish installing the update.', false, true, false, 'Restart Nebula to finish installing the update.', 'Restart Nebula to finish installing the update.'],
+    ['not-available', 'Nebula is up to date.', false, false, true, 'Nebula is up to date.', 'Check for updates. Nebula is up to date.'],
+    ['error', 'Update check failed.', false, false, true, 'Update check failed.', 'Check for updates. Update check failed.'],
+  ] as const)('maps the %s phase', (phase, message, busy, hasUpdate, canCheck, tooltip, accessibleName) => {
+    expect(getTitleBarUpdateState(base({ phase, message }))).toEqual({
+      busy,
+      hasUpdate,
+      canCheck,
+      tooltip,
+      accessibleName,
+    });
   });
 
-  it('reports an update when available or downloaded', () => {
-    expect(getTitleBarUpdateState(base({ phase: 'available', newVersion: '2.5.0' })).hasUpdate).toBe(true);
-    expect(getTitleBarUpdateState(base({ phase: 'downloaded', newVersion: '2.5.0' })).hasUpdate).toBe(true);
-    expect(getTitleBarUpdateState(base({ phase: 'idle' })).hasUpdate).toBe(false);
-  });
+  it('is inert and uses installed-build copy when updates are disabled', () => {
+    const state = getTitleBarUpdateState(base({
+      enabled: false,
+      phase: 'idle',
+      message: 'Automatic updates are only available in installed builds.',
+    }));
 
-  it('disables clicking while busy or when an update is available', () => {
-    expect(getTitleBarUpdateState(base({ phase: 'checking' })).canCheck).toBe(false);
-    expect(getTitleBarUpdateState(base({ phase: 'available' })).canCheck).toBe(false);
-    expect(getTitleBarUpdateState(base({ phase: 'idle' })).canCheck).toBe(true);
-  });
-
-  it('is inert when updates are disabled', () => {
-    expect(getTitleBarUpdateState(base({ enabled: false, phase: 'idle' })).canCheck).toBe(false);
-    expect(getTitleBarUpdateState(base({ enabled: false, phase: 'idle' })).tooltip)
-      .toBe('Updates available in installed builds');
+    expect(state.canCheck).toBe(false);
+    expect(state.tooltip).toBe('Updates available in installed builds');
+    expect(state.accessibleName).toBe('Updates available in installed builds');
   });
 
   it('uses the state message as the tooltip when present', () => {

@@ -138,6 +138,8 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
+      <MacTitleBar />
+
       {/* Navigation Drawer */}
       <NavDrawer isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
 
@@ -186,7 +188,6 @@ const AppContent: React.FC = () => {
       >
         {/* Top Bar */}
         <header className="flex flex-col shrink-0">
-          <MacTitleBar />
           <TopBar onMenuClick={() => setIsNavOpen(true)} isNavOpen={isNavOpen} />
         </header>
 

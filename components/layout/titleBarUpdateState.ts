@@ -5,6 +5,7 @@ export interface TitleBarUpdateState {
   hasUpdate: boolean;
   canCheck: boolean;
   tooltip: string;
+  accessibleName: string;
 }
 
 export const getTitleBarUpdateState = (state: UpdaterState): TitleBarUpdateState => {
@@ -12,7 +13,11 @@ export const getTitleBarUpdateState = (state: UpdaterState): TitleBarUpdateState
   const hasUpdate = state.phase === 'available' || state.phase === 'downloaded';
   const canCheck = state.enabled === true && !busy && !hasUpdate;
   const tooltip =
-    state.message ??
-    (state.enabled === true ? 'Check for updates' : 'Updates available in installed builds');
-  return { busy, hasUpdate, canCheck, tooltip };
+    state.enabled === false
+      ? 'Updates available in installed builds'
+      : state.message ?? 'Check for updates';
+  const accessibleName = canCheck && tooltip !== 'Check for updates'
+    ? `Check for updates. ${tooltip}`
+    : tooltip;
+  return { busy, hasUpdate, canCheck, tooltip, accessibleName };
 };
