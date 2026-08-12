@@ -21,6 +21,7 @@ import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
 import { installMacAppMenu, updateMacPlaybackMenu } from './macMenu';
 import { createCommandClient } from '../playback/commandClient';
+import { createStreamProxy } from './streamProxy';
 import {
   desktopSnapshotSchema,
   type DesktopCommand,
@@ -34,9 +35,10 @@ const WINDOW_MIN = { width: 940, height: 600 };
 
 // Served only to the desktop renderer (via the app://nebula protocol), so the
 // Vite dev server keeps its own (CSP-less) environment for HMR. The renderer
-// fetches Subsonic JSON through the main process and streams media through the
-// proxy, so it only needs self-origin, the Stream Deck loopback WebSocket, and
-// https (radio streams, lrclib lyrics, Google Fonts).
+// fetches Subsonic JSON through the main process and loads https media
+// directly; only plain-http servers stream through the proxy. The renderer
+// therefore needs self-origin, the Stream Deck loopback WebSocket, and https
+// (direct server media, radio streams, lrclib lyrics, Google Fonts).
 const CSP = [
   "default-src 'self' app://nebula",
   "script-src 'self'",
@@ -141,41 +143,18 @@ const isTrustedProxyTarget = (rawUrl: string): boolean => {
   return true;
 };
 
-const handleProxy = async (request: Request): Promise<Response> => {
-  const url = new URL(request.url);
-  const target = url.searchParams.get('u');
-  if (!target || !isTrustedProxyTarget(target)) {
-    return new Response('Forbidden', { status: 403 });
-  }
-
-  const headers = new Headers();
-  const range = request.headers.get('Range');
-  if (range) headers.set('Range', range);
-
-  try {
-    const upstream = await net.fetch(target, { headers, redirect: 'follow' });
-    const responseHeaders = new Headers();
-    const contentType = upstream.headers.get('content-type');
-    if (contentType) responseHeaders.set('content-type', contentType);
-    const contentLength = upstream.headers.get('content-length');
-    if (contentLength) responseHeaders.set('content-length', contentLength);
-    const contentRange = upstream.headers.get('content-range');
-    if (contentRange) responseHeaders.set('content-range', contentRange);
-    responseHeaders.set('x-content-type-options', 'nosniff');
-    return new Response(upstream.body, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: responseHeaders,
-    });
-  } catch {
-    return new Response('Proxy error', { status: 502 });
-  }
-};
+// The proxy forwards the renderer's abort signal upstream so interrupted
+// media requests release their server connection instead of leaking it until
+// the stream finishes (which exhausts the connection pool and stalls playback).
+const streamProxy = createStreamProxy({
+  fetchImpl: (url, init) => net.fetch(url, init),
+  isTrustedTarget: isTrustedProxyTarget,
+});
 
 const handleProtocol = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
 
-  if (url.pathname === '/proxy') return handleProxy(request);
+  if (url.pathname === '/proxy') return streamProxy.handle(request);
 
   const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
   const normalized = path.posix.normalize(pathname).replace(/^([/\\])+/, '');

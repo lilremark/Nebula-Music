@@ -28,7 +28,7 @@ import { usePlatform } from './platform/PlatformContext';
 
 const AppContent: React.FC = () => {
   const {
-    currentView, setView, credentials, isDemoMode, queue, currentSongIndex,
+    currentView, setView, viewData, credentials, isDemoMode, queue, currentSongIndex,
     currentRadioStation,
     togglePlay, nextSong, prevSong, toggleRepeat, isPlaying,
     visualizerMode, setVisualizerMode, isZenMode, setZenMode,
@@ -87,11 +87,14 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('keydown', handleGlobalShortcuts);
   }, [handleGlobalShortcuts]);
 
+  // Scroll to top on navigation. The view alone is not enough: clicking a
+  // related album in "More by" keeps the same view and only changes viewData,
+  // so the effect must also key off viewData to land on the new album's header.
   useEffect(() => {
     if (mainRef.current) {
       mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [currentView]);
+  }, [currentView, viewData]);
 
   const platform = usePlatform();
 
