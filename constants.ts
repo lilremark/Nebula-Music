@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.4.1';
+export const APP_VERSION = '2.4.2';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.4.2',
+    date: '2026-08-12',
+    title: 'Expanded Mini Player and Taskbar Fix',
+    changes: [
+      'Reworked the always-on-top mini-player: it now shows the current album art, progress, and transport controls, plus an "Up Next" list of the next five queued tracks with their cover art.',
+      'Clicking an "Up Next" row jumps playback to that track in the queue.',
+      'Fixed a Windows taskbar issue where a second, overlapping Nebula icon appeared by registering the app\'s AppUserModelID so all windows share one taskbar entry.'
+    ],
+    link: {
+      label: 'Download Nebula 2.4.2',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.2'
+    }
+  },
   {
     version: '2.4.1',
     date: '2026-08-12',

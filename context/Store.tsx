@@ -23,6 +23,7 @@ interface StoreContextType extends AppState {
   togglePlay: () => void;
   nextSong: () => void;
   prevSong: () => void;
+  playQueueIndex: (index: number) => void;
   setVolume: (val: number) => void;
   setPlaybackRate: (val: number) => void;
   setPitch: (val: number) => void;
@@ -1855,6 +1856,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const playQueueIndex = (index: number) => {
+    if (index < 0 || index >= queue.length) return;
+    cancelCrossfade();
+    if (radioAudioRef.current) radioAudioRef.current.pause();
+    setIsRadioPlaying(false);
+    setCurrentRadioStation(null);
+    setCurrentSongIndex(index);
+    setIsPlaying(true);
+  };
+
   // Media Session Updates
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
@@ -2217,7 +2228,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <StoreContext.Provider value={{
       currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, radioPitch, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
       credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
-      playSong, playRadioStation, toggleRadioPlay, stopRadio, setRadioPitch, togglePlay, nextSong, prevSong, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
+      playSong, playRadioStation, toggleRadioPlay, stopRadio, setRadioPitch, togglePlay, nextSong, prevSong, playQueueIndex, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
       setRepeatMode,
       connectToSubsonic, disconnect, enableDemoMode, addToQueue, updateSettings,
       openPlaylistModal, closePlaylistModal, createPlaylist, savePlaylist, addSongToPlaylist, deletePlaylist, reorderPlaylist, addRadioStation, updateRadioStation, deleteRadioStation,

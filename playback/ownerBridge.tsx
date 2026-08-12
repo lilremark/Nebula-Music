@@ -22,13 +22,16 @@ import {
   parseCommandEnvelope,
   toRepeatMode,
   toTrackSummary,
+  toUpcomingSummary,
   type CommandCursor,
   type DesktopCommandEnvelope,
   type DesktopSnapshot,
+  type DesktopUpcomingTrack,
 } from './desktopProtocol';
 
 const OWNER_ID = 'nebula-desktop-owner';
 const SNAPSHOT_INTERVAL_MS = 1_000;
+const UPCOMING_LIST_SIZE = 5;
 
 interface DesktopOwnerBridgeContextValue {
   snapshotEpoch: number;
@@ -39,6 +42,51 @@ const DesktopOwnerBridgeContext = createContext<DesktopOwnerBridgeContextValue>(
   snapshotEpoch: 0,
   isConnected: false,
 });
+
+interface QueueSongLike {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  duration?: number;
+  coverArt?: string;
+}
+
+/** Computes the up-to-5 tracks queued after the current one. */
+const buildUpcomingList = (
+  queue: QueueSongLike[],
+  currentSongIndex: number,
+  repeatMode: 'OFF' | 'ALL' | 'ONE',
+  coverArtById: Map<string, string | undefined>,
+): DesktopUpcomingTrack[] => {
+  if (queue.length === 0 || currentSongIndex < 0) return [];
+  const result: DesktopUpcomingTrack[] = [];
+  let index = currentSongIndex + 1;
+  let guard = 0;
+  while (result.length < UPCOMING_LIST_SIZE && guard < queue.length + UPCOMING_LIST_SIZE) {
+    guard += 1;
+    if (index >= queue.length) {
+      if (repeatMode !== 'ALL') break;
+      index = 0;
+    }
+    if (index === currentSongIndex) break;
+    const song = queue[index];
+    if (song) {
+      result.push(
+        toUpcomingSummary({
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          ...(song.album ? { album: song.album } : {}),
+          durationSeconds: song.duration,
+          coverArtUrl: coverArtById.get(song.id),
+        }),
+      );
+    }
+    index += 1;
+  }
+  return result;
+};
 
 /**
  * The renderer-side playback owner for desktop remote clients (tray, media
@@ -61,6 +109,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     togglePlay,
     nextSong,
     prevSong,
+    playQueueIndex,
     setVolume,
     setPlaybackRate,
     setRepeatMode,
@@ -77,6 +126,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
   platformRef.current = platform;
   const coverArtRef = useRef<CoverArtLoadState>({ status: 'idle' });
   const coverArtRequestIdRef = useRef(0);
+  const upcomingCoverArtRef = useRef(new Map<string, string | undefined>());
 
   const stateRef = useRef({
     queue,
@@ -88,6 +138,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     togglePlay,
     nextSong,
     prevSong,
+    playQueueIndex,
     setVolume,
     setPlaybackRate,
     setRepeatMode,
@@ -103,6 +154,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     togglePlay,
     nextSong,
     prevSong,
+    playQueueIndex,
     setVolume,
     setPlaybackRate,
     setRepeatMode,
@@ -128,6 +180,12 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
       ? Math.max(0, audio?.duration ?? 0)
       : songDuration;
     const coverArt = coverArtRef.current;
+    const upcoming = buildUpcomingList(
+      state.queue,
+      state.currentSongIndex,
+      state.repeatMode,
+      upcomingCoverArtRef.current,
+    );
     return {
       v: DESKTOP_PROTOCOL_VERSION,
       ownerId: OWNER_ID,
@@ -156,6 +214,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
       playbackRate: clamp(state.playbackRate, 0.5, 2),
       repeatMode: toRepeatMode(state.repeatMode),
       updatedAt: Date.now(),
+      upcoming,
     };
   };
 
@@ -209,6 +268,9 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
       }
       case 'setRepeatMode':
         state.setRepeatMode(envelope.command.repeatMode);
+        break;
+      case 'playQueueIndex':
+        state.playQueueIndex(envelope.command.index);
         break;
     }
     publishSnapshot();
@@ -284,6 +346,57 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
       coverArtRef.current = cancelCoverArtLoad(coverArtRef.current, requestId);
     };
   }, [service, song?.id]);
+
+  // Lazy-load small cover-art data URLs for the up-to-5 upcoming tracks shown
+  // in the mini-player. Cached per song id; only loaded once per unique track.
+  useEffect(() => {
+    const state = stateRef.current;
+    const upcoming = buildUpcomingList(
+      state.queue,
+      state.currentSongIndex,
+      state.repeatMode,
+      upcomingCoverArtRef.current,
+    );
+    const missing = upcoming
+      .map((t) => t.id)
+      .filter((id) => !upcomingCoverArtRef.current.has(id));
+    if (missing.length === 0) return;
+    const controllers: AbortController[] = [];
+    for (const id of missing) {
+      const song = state.queue.find((s) => s.id === id);
+      if (!song) {
+        upcomingCoverArtRef.current.set(id, undefined);
+        continue;
+      }
+      upcomingCoverArtRef.current.set(id, undefined);
+      const controller = new AbortController();
+      controllers.push(controller);
+      void createSanitizedArtwork(
+        service.getCoverArtUrl(song.coverArt || song.id, 96),
+        controller.signal,
+        96,
+      )
+        .then((dataUrl) => {
+          if (controller.signal.aborted) return;
+          upcomingCoverArtRef.current.set(id, dataUrl);
+          publishSnapshotRef.current();
+        })
+        .catch(() => {
+          upcomingCoverArtRef.current.set(id, undefined);
+        });
+    }
+    // Bound the cache so long sessions do not retain every song ever queued.
+    if (upcomingCoverArtRef.current.size > 100) {
+      const keys = [...upcomingCoverArtRef.current.keys()];
+      for (const k of keys.slice(0, keys.length - 100)) {
+        upcomingCoverArtRef.current.delete(k);
+      }
+    }
+    return () => {
+      for (const controller of controllers) controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queue, currentSongIndex, service]);
 
   // Progress snapshots for future mini-player/media-key affordances.
   useEffect(() => {
