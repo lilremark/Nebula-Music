@@ -116,6 +116,12 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
     audioRef,
   } = useStore();
 
+  // The Stream Deck plugin only accepts http:/https: origins on the loopback
+  // bridge. The desktop renderer is served from app://nebula, so report a valid
+  // loopback origin that the plugin accepts and that matches the rewritten
+  // WebSocket Origin header applied in the main process.
+  const bridgeOrigin = platform?.info.kind === 'desktop' ? 'http://localhost' : window.location.origin;
+
   const [status, setStatus] = useState<StreamDeckBridgeStatus>(defaultStatus);
   const sessionIdRef = useRef(getSessionId());
   const clientIdRef = useRef(getClientId());
@@ -127,7 +133,7 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
   const snapshotRef = useRef<StreamDeckSnapshot>({
     sessionId: sessionIdRef.current,
     clientId: clientIdRef.current,
-    origin: window.location.origin,
+    origin: bridgeOrigin,
     nebulaVersion: NEBULA_VERSION,
     visible: document.visibilityState === 'visible',
     lastActiveAt: lastActiveAtRef.current,
@@ -197,7 +203,7 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
     return {
       sessionId: sessionIdRef.current,
       clientId: clientIdRef.current,
-      origin: window.location.origin,
+      origin: bridgeOrigin,
       nebulaVersion: NEBULA_VERSION,
       visible: document.visibilityState === 'visible',
       lastActiveAt: lastActiveAtRef.current,
@@ -276,7 +282,7 @@ export const StreamDeckBridgeProvider: React.FC<React.PropsWithChildren> = ({ ch
       new StreamDeckBridge({
         sessionId: sessionIdRef.current,
         clientId: clientIdRef.current,
-        origin: window.location.origin,
+        origin: bridgeOrigin,
         nebulaVersion: NEBULA_VERSION,
         tokenStore,
         onSocketOpen: (connectedAt) => {

@@ -38,6 +38,10 @@ export const desktopCommandSchema = z.discriminatedUnion('name', [
     trackId: z.string().min(1).max(256),
   }),
   z.object({ name: z.literal('setRepeatMode'), repeatMode: z.enum(REPEAT_MODES) }),
+  z.object({
+    name: z.literal('playQueueIndex'),
+    index: z.number().int().min(0).max(65_535),
+  }),
 ]);
 
 export type DesktopCommand = z.infer<typeof desktopCommandSchema>;
@@ -72,6 +76,18 @@ export const desktopTrackSchema = z
 
 export type DesktopTrack = z.infer<typeof desktopTrackSchema>;
 
+/** A track queued ahead of the current one, for the mini-player "Up Next" list. */
+export const desktopUpcomingTrackSchema = z.object({
+  id: z.string().min(1).max(256),
+  title: z.string().min(1).max(512),
+  artist: z.string().min(1).max(512),
+  album: z.string().max(512).optional(),
+  durationSeconds: z.number().min(0),
+  coverArtUrl: desktopCoverArtUrlSchema.optional(),
+});
+
+export type DesktopUpcomingTrack = z.infer<typeof desktopUpcomingTrackSchema>;
+
 export const desktopSnapshotSchema = z.object({
   v: z.literal(DESKTOP_PROTOCOL_VERSION),
   ownerId: z.string().min(1).max(64),
@@ -85,6 +101,8 @@ export const desktopSnapshotSchema = z.object({
   playbackRate: z.number().min(0.5).max(2),
   repeatMode: z.enum(REPEAT_MODES),
   updatedAt: z.number().int().min(0),
+  /** Upcoming queue entries (mini-player "Up Next" list). Empty when nothing is queued. */
+  upcoming: z.array(desktopUpcomingTrackSchema).default([]),
 });
 
 export type DesktopSnapshot = z.infer<typeof desktopSnapshotSchema>;
@@ -160,6 +178,26 @@ export const toTrackSummary = (song: {
     title: song.title.slice(0, 512),
     artist: song.artist.slice(0, 512),
     ...(song.album ? { album: song.album.slice(0, 512) } : {}),
+    ...(coverArtUrl.success ? { coverArtUrl: coverArtUrl.data } : {}),
+  };
+};
+
+/** Builds a summary for a queued track in the mini-player "Up Next" list. */
+export const toUpcomingSummary = (song: {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  durationSeconds?: number;
+  coverArtUrl?: string;
+}): DesktopUpcomingTrack => {
+  const coverArtUrl = desktopCoverArtUrlSchema.safeParse(song.coverArtUrl);
+  return {
+    id: song.id.slice(0, 256),
+    title: song.title.slice(0, 512),
+    artist: song.artist.slice(0, 512),
+    ...(song.album ? { album: song.album.slice(0, 512) } : {}),
+    durationSeconds: Math.max(0, song.durationSeconds ?? 0),
     ...(coverArtUrl.success ? { coverArtUrl: coverArtUrl.data } : {}),
   };
 };

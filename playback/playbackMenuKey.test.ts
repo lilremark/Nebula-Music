@@ -19,6 +19,7 @@ const snapshot = (overrides: Partial<DesktopSnapshot> = {}): DesktopSnapshot => 
   playbackRate: 1,
   repeatMode: 'OFF',
   updatedAt: 1,
+  upcoming: [],
   ...overrides,
 });
 
