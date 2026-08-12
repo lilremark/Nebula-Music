@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.4.0';
+export const APP_VERSION = '2.4.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.4.1',
+    date: '2026-08-12',
+    title: 'Playback and Navigation Fixes',
+    changes: [
+      'Fixed desktop playback stalling after a few tracks — media now loads directly from your server instead of the proxy, so streams and cover art no longer exhaust their connection pool.',
+      'Opening a related album under "More by" now returns to the top of the album page, showing the album art, info, and tracklist (web, Windows, and macOS).',
+      'Waveform previews fall back gracefully on servers that do not send CORS headers, matching the web build.'
+    ],
+    link: {
+      label: 'Download Nebula 2.4.1',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.1'
+    }
+  },
   {
     version: '2.4.0',
     date: '2026-08-11',
