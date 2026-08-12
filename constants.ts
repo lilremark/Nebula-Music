@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.3.1';
+export const APP_VERSION = '2.4.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,21 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.4.0',
+    date: '2026-08-11',
+    title: 'Nebula for macOS',
+    changes: [
+      'Added a native macOS arm64 edition with a dedicated title strip, traffic lights, app menu, Dock menu, menu-bar controls, media keys, and Notification Center updates.',
+      'Added live Now Playing metadata and sanitized cover art to the macOS Playback menu.',
+      'Added reproducible Windows and macOS release artifacts with platform-specific GitHub update feeds.',
+      'Kept automatic Windows updates and added safe update checks with manual GitHub downloads for unsigned macOS builds.'
+    ],
+    link: {
+      label: 'Download Nebula 2.4.0',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.0'
+    }
+  },
   {
     version: '2.3.1',
     date: '2026-08-08',

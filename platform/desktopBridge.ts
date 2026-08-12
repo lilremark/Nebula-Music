@@ -55,6 +55,7 @@ export interface DesktopBridge {
     getState(): Promise<UpdaterState>;
     check(): Promise<boolean>;
     installAndRestart(): Promise<void>;
+    openDownloadPage(): Promise<boolean>;
     onStatus(handler: (state: UpdaterState) => void): () => void;
   };
 }

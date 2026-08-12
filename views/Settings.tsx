@@ -10,6 +10,7 @@ import type { UpdaterState } from '../electron/updater';
 import { VISUALIZER_MODES } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { CustomDropdown } from '../components/CustomDropdown';
+import { getUpdateAction } from '../components/updateAction';
 import {
     AutoEqIndexEntry,
     fetchAutoEqIndex,
@@ -263,8 +264,10 @@ const DesktopUpdatesPanel = () => {
     const phase = updateState?.phase ?? 'idle';
     const enabled = updateState?.enabled ?? false;
     const busy = phase === 'checking' || phase === 'downloading';
-    const readyToInstall = phase === 'downloaded';
     const currentVersion = updateState?.currentVersion ?? platform.info.appVersion;
+    const action = updateState
+        ? getUpdateAction(updateState)
+        : { kind: 'none' as const, label: 'Loading update status' };
 
     const badgeClass = phase === 'downloaded'
         ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
@@ -285,31 +288,30 @@ const DesktopUpdatesPanel = () => {
                         {currentVersion ? `Nebula ${currentVersion}` : 'Nebula'}
                     </span>
                     <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-                        {updateState?.message ?? 'Updates are checked against GitHub Releases.'}
+                        {updateState?.installMode === 'manual'
+                            ? 'Unsigned macOS builds download updates from GitHub for manual installation.'
+                            : updateState?.message ?? 'Updates are checked against GitHub Releases.'}
                     </span>
 
-                    {phase === 'downloaded' ? (
-                        <button
-                            type="button"
-                            onClick={() => platform.updater.installAndRestart()}
-                            className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110"
-                        >
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (action.kind === 'check') void platform.updater.check();
+                            if (action.kind === 'download') void platform.updater.openDownloadPage();
+                            if (action.kind === 'install') void platform.updater.installAndRestart();
+                        }}
+                        disabled={action.kind === 'none'}
+                        className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        {action.kind === 'download' || action.kind === 'install' ? (
                             <Download className="h-4 w-4" />
-                            Restart &amp; Install
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={() => platform.updater.check()}
-                            disabled={!enabled || busy}
-                            className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
+                        ) : (
                             <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
-                            {busy ? (phase === 'downloading' ? `Downloading\u2026 ${updateState?.progress ?? 0}%` : 'Checking\u2026') : 'Check for updates'}
-                        </button>
-                    )}
+                        )}
+                        {action.label}
+                    </button>
 
-                    {phase === 'downloading' && (
+                    {updateState?.installMode === 'automatic' && phase === 'downloading' && (
                         <div className="mt-3 h-1.5 w-56 overflow-hidden rounded-full bg-white/10">
                             <div
                                 className="h-full rounded-full bg-primary transition-all"

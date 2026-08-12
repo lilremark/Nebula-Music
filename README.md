@@ -374,6 +374,13 @@ permitted by the music server's CORS policy.
 
 ## Changelog
 
+### v2.4.0 - August 11, 2026
+
+- Added a native macOS arm64 edition with a dedicated title strip, traffic lights, app menu, Dock menu, menu-bar controls, media keys, and Notification Center updates.
+- Added live Now Playing metadata and sanitized cover art to the macOS Playback menu.
+- Added reproducible Windows and macOS release artifacts with platform-specific GitHub update feeds.
+- Kept automatic Windows updates and added safe update checks with manual GitHub downloads for unsigned macOS builds.
+
 ### v2.3.1 — August 8, 2026
 
 - Fixed automatic updates — the updater now reads the published `latest.yml` (stable channel) and uses prerelease detection for beta.

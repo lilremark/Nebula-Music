@@ -30,14 +30,15 @@ export const MacTitleBar: React.FC = () => {
         : {
             busy: false,
             hasUpdate: false,
-            canCheck: false,
+            action: 'none' as const,
             tooltip: 'Loading update status',
             accessibleName: 'Loading update status',
         };
 
-    const handleCheck = () => {
-        if (!isHydrated || !state || !updaterState.canCheck || !platform) return;
-        void platform.updater.check();
+    const handleUpdateAction = () => {
+        if (!isHydrated || !state || !platform) return;
+        if (updaterState.action === 'check') void platform.updater.check();
+        if (updaterState.action === 'download') void platform.updater.openDownloadPage();
     };
 
     return (
@@ -53,8 +54,8 @@ export const MacTitleBar: React.FC = () => {
             <div className="w-24 shrink-0 flex justify-end">
                 <button
                     type="button"
-                    onClick={handleCheck}
-                    disabled={!updaterState.canCheck}
+                    onClick={handleUpdateAction}
+                    disabled={updaterState.action === 'none'}
                     aria-label={updaterState.accessibleName}
                     title={updaterState.tooltip}
                     className="relative p-1.5 rounded-lg text-neutral-500 dark:text-white/40 hover:bg-neutral-200 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white transition-all duration-200 disabled:opacity-60"

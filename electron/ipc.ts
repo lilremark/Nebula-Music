@@ -45,6 +45,7 @@ export const IPC = {
     getState: 'nebula:updater:get-state',
     check: 'nebula:updater:check',
     installAndRestart: 'nebula:updater:install-and-restart',
+    openDownloadPage: 'nebula:updater:open-download-page',
     status: 'nebula:updater:status',
   },
 } as const;

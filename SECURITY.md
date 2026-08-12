@@ -8,8 +8,8 @@ requesting support.
 
 | Version | Supported |
 | --- | --- |
-| 2.3.1 | Yes |
-| 2.3.0 and older | No |
+| 2.4.0 | Yes |
+| 2.3.4 and older | No |
 
 ## Reporting a Vulnerability
 
