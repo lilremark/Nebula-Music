@@ -5,7 +5,6 @@ import {
   nativeImage,
   net,
   protocol,
-  session,
   shell,
 } from 'electron';
 import fs from 'node:fs/promises';
@@ -13,18 +12,21 @@ import path from 'node:path';
 import { autoUpdater } from 'electron-updater';
 import { IPC } from './ipc';
 import { isAllowedExternalUrl } from './links';
+import { releaseUrlForVersion } from './releaseUrl';
 import { SettingsStore } from './settingsStore';
 import { CredentialVault } from './credentialVault';
 import { createSafeStorageCipher } from './safeStorageCipher';
 import { createTray, destroyTray, showUpdateBalloon } from './tray';
 import { registerMediaKeys, unregisterMediaKeys } from './mediaKeys';
 import { createUpdater, type Updater } from './updater';
+import { installMacAppMenu, updateMacPlaybackMenu } from './macMenu';
 import { createCommandClient } from '../playback/commandClient';
-import { MediaCache, type MediaCacheEntryMeta } from './mediaCache';
-import type {
-  DesktopCommand,
-  DesktopCommandEnvelope,
-  DesktopSnapshot,
+import { createStreamProxy } from './streamProxy';
+import {
+  desktopSnapshotSchema,
+  type DesktopCommand,
+  type DesktopCommandEnvelope,
+  type DesktopSnapshot,
 } from '../playback/desktopProtocol';
 
 const SCHEME = 'app';
@@ -33,9 +35,10 @@ const WINDOW_MIN = { width: 940, height: 600 };
 
 // Served only to the desktop renderer (via the app://nebula protocol), so the
 // Vite dev server keeps its own (CSP-less) environment for HMR. The renderer
-// fetches Subsonic JSON through the main process and streams media through the
-// proxy, so it only needs self-origin, the Stream Deck loopback WebSocket, and
-// https (radio streams, lrclib lyrics, Google Fonts).
+// fetches Subsonic JSON through the main process and loads https media
+// directly; only plain-http servers stream through the proxy. The renderer
+// therefore needs self-origin, the Stream Deck loopback WebSocket, and https
+// (direct server media, radio streams, lrclib lyrics, Google Fonts).
 const CSP = [
   "default-src 'self' app://nebula",
   "script-src 'self'",
@@ -54,37 +57,8 @@ let miniPlayerWindow: BrowserWindow | null = null;
 let settingsStore: SettingsStore;
 let credentialVault: CredentialVault;
 let updater: Updater;
-let mediaCache: MediaCache;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
-
-/**
- * Caps concurrent upstream fetches per host. Chromium's network service keeps
- * a small HTTP/1.1 connection pool per host (default 6); aborted media streams
- * can leave pooled sockets stuck, and once the pool saturates every subsequent
- * request to that host queues forever — the desktop freeze. Serializing below
- * the pool size guarantees requests always have a free socket.
- */
-const MAX_CONCURRENT_PROXY = 4;
-let proxyActive = 0;
-const proxyWaiters: Array<() => void> = [];
-
-const acquireProxySlot = (): Promise<void> => {
-  if (proxyActive < MAX_CONCURRENT_PROXY) {
-    proxyActive++;
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => proxyWaiters.push(resolve));
-};
-
-const releaseProxySlot = (): void => {
-  proxyActive--;
-  const next = proxyWaiters.shift();
-  if (next) {
-    proxyActive++;
-    next();
-  }
-};
 
 const thumbarClient = createCommandClient('nebula-thumbar', () => lastSnapshot?.epoch ?? 0);
 
@@ -169,257 +143,18 @@ const isTrustedProxyTarget = (rawUrl: string): boolean => {
   return true;
 };
 
-/** True when an upstream response delivers the entire file (200 or full-range 206). */
-const isFullContentResponse = (status: number, contentRange: string | null): boolean => {
-  if (status === 200) return true;
-  if (status !== 206 || !contentRange) return false;
-  const match = /^bytes 0-(\d+)\/(\d+)$/.exec(contentRange.trim());
-  return match !== null && Number(match[1]) === Number(match[2]) - 1;
-};
-
-/** Parses a `Range: bytes=a-b` header into [start, end] (inclusive), or null. */
-const parseByteRange = (rangeHeader: string, total: number): { start: number; end: number } | null => {
-  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
-  if (!match) return null;
-  const rawStart = match[1];
-  const rawEnd = match[2];
-
-  if (rawStart === '' && rawEnd === '') return null;
-  if (rawStart === '') {
-    // Suffix range: last N bytes.
-    const suffix = Math.max(0, Math.min(Number(rawEnd), total));
-    return { start: Math.max(0, total - suffix), end: total - 1 };
-  }
-  const start = Number(rawStart);
-  if (!Number.isFinite(start) || start >= total) return null;
-  const end = rawEnd === '' ? total - 1 : Math.min(Number(rawEnd), total - 1);
-  if (end < start) return null;
-  return { start, end };
-};
-
-/** Builds a Response from a fully cached file, honoring an optional Range header. */
-const serveFromCache = async (meta: MediaCacheEntryMeta, rangeHeader: string | null): Promise<Response> => {
-  const headers = new Headers();
-  headers.set('content-type', meta.contentType || 'application/octet-stream');
-  headers.set('accept-ranges', 'bytes');
-  headers.set('x-content-type-options', 'nosniff');
-
-  if (rangeHeader) {
-    const parsed = parseByteRange(rangeHeader, meta.size);
-    if (parsed) {
-      const { start, end } = parsed;
-      const data = await mediaCache.readRange(meta.key, start, end - start + 1);
-      headers.set('content-range', `bytes ${start}-${start + data.length - 1}/${meta.size}`);
-      headers.set('content-length', String(data.length));
-      return new Response(toBodyInit(data), { status: 206, headers });
-    }
-  }
-
-  const data = await mediaCache.readFile(meta.key);
-  headers.set('content-length', String(data.length));
-  return new Response(toBodyInit(data), { status: 200, headers });
-};
-
-/** Converts a Node Buffer into a body-consumable Uint8Array. */
-const toBodyInit = (buffer: Buffer): Uint8Array<ArrayBuffer> =>
-  new Uint8Array(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer);
-
-const handleProxy = async (request: Request): Promise<Response> => {
-  const url = new URL(request.url);
-  const target = url.searchParams.get('u');
-  if (!target || !isTrustedProxyTarget(target)) {
-    return new Response('Forbidden', { status: 403 });
-  }
-
-  const headers = new Headers();
-  const range = request.headers.get('Range');
-  if (range) headers.set('Range', range);
-  // Do not keep-alive upstream connections: Chromium's HTTP/1.1 pool is limited
-  // per host (default 6) and aborted media streams can otherwise leave pooled
-  // sockets in a stuck state, saturating the pool and freezing all proxy
-  // traffic after a few tracks. A fresh connection per request is a small cost
-  // for audio and eliminates the exhaustion entirely.
-  headers.set('Connection', 'close');
-
-  // Serve previously-played tracks straight from the local cache so replays
-  // are instant and the Subsonic server is not hit again.
-  const key = mediaCache.keyFor(target);
-  const cached = mediaCache.get(key);
-  if (cached) {
-    return serveFromCache(cached, range);
-  }
-
-  // Wire the renderer's abort signal to the upstream request so cancelled
-  // streams (track changes, seeks, skips) release the connection instead of
-  // leaking it.
-  const controller = new AbortController();
-  const onAbort = () => controller.abort();
-  if (request.signal) {
-    if (request.signal.aborted) onAbort();
-    else request.signal.addEventListener('abort', onAbort, { once: true });
-  }
-
-  // Serialize upstream fetches: the network service keeps a small per-host
-  // HTTP/1.1 connection pool (default 6). Allowing more concurrent requests
-  // than the pool can hold queues the excess forever once any socket is left
-  // in a stuck state, which froze the app after a few tracks.
-  let upstream: Response;
-  try {
-    await acquireProxySlot();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
-    try {
-      upstream = await net.fetch(target, { headers, redirect: 'follow', signal: controller.signal });
-    } finally {
-      clearTimeout(timeout);
-      releaseProxySlot();
-    }
-  } catch (e) {
-    console.warn(`[proxy] upstream fetch failed for ${target.slice(0, 80)}: ${String(e)}`);
-    return new Response('Proxy error', { status: 502 });
-  }
-
-  const responseHeaders = new Headers();
-  const contentType = upstream.headers.get('content-type');
-  if (contentType) responseHeaders.set('content-type', contentType);
-  const contentLength = upstream.headers.get('content-length');
-  if (contentLength) responseHeaders.set('content-length', contentLength);
-  const contentRange = upstream.headers.get('content-range');
-  if (contentRange) responseHeaders.set('content-range', contentRange);
-  responseHeaders.set('x-content-type-options', 'nosniff');
-  if (upstream.status === 206 || upstream.headers.get('accept-ranges')) {
-    responseHeaders.set('accept-ranges', upstream.headers.get('accept-ranges') ?? 'bytes');
-  }
-
-  // Cache full successful audio streams so the next play is instant. Partial
-  // (206) responses and non-media content are streamed through without caching.
-  const shouldCache = mediaCache.isEnabled
-    && upstream.body != null
-    && contentType?.startsWith('audio/')
-    && isFullContentResponse(upstream.status, upstream.headers.get('content-range'));
-
-  if (!shouldCache || !upstream.body) {
-    if (!upstream.body) {
-      return new Response('Proxy error', { status: 502 });
-    }
-    const body = trackBody(upstream.body, key, controller);
-    return new Response(body, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: responseHeaders,
-    });
-  }
-
-  return streamAndCache(mediaCache, key, upstream.body, contentType!, responseHeaders, upstream.status, upstream.statusText, controller);
-};
-
-/**
- * Wraps a pass-through body and aborts the upstream request when the renderer
- * cancels the stream, so the connection is released instead of poisoning
- * Chromium's keep-alive pool.
- */
-const trackBody = (
-  body: ReadableStream<Uint8Array>,
-  key: string,
-  controller: AbortController,
-): ReadableStream<Uint8Array> => {
-  const reader = body.getReader();
-  let released = false;
-  const release = () => {
-    if (released) return;
-    released = true;
-    controller.abort();
-  };
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      try {
-        const { done, value } = await reader.read();
-        if (done) { release(); controller.close(); return; }
-        controller.enqueue(value);
-      } catch (e) {
-        release();
-        controller.error(e);
-      }
-    },
-    async cancel() {
-      try { await reader.cancel(); } catch { }
-      release();
-    },
-  });
-};
-
-/**
- * Streams an upstream body to the client while writing every byte to a cache
- * `.part` file. On full completion the entry is committed; if the client aborts
- * or the stream errors, the partial download is discarded. The returned stream
- * is what the renderer consumes.
- */
-const streamAndCache = async (
-  cache: MediaCache,
-  key: string,
-  body: ReadableStream<Uint8Array>,
-  contentType: string,
-  responseHeaders: Headers,
-  status: number,
-  statusText: string,
-  controller: AbortController,
-): Promise<Response> => {
-  const writer = await cache.beginWrite(key);
-  const reader = body.getReader();
-  let received = 0;
-  let finalized = false;
-
-  const finish = async (commit: boolean): Promise<void> => {
-    if (finalized) return;
-    finalized = true;
-    await writer.fd.close().catch(() => {});
-    if (commit) {
-      await cache.finalize(key, { size: received, contentType });
-    } else {
-      await cache.discard(key);
-    }
-  };
-
-  const release = (): void => {
-    controller.abort();
-  };
-
-  const stream = new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      try {
-        const { done, value } = await reader.read();
-        if (done) {
-          await finish(true);
-          controller.close();
-          release();
-          return;
-        }
-        if (value) {
-          await writer.fd.write(value);
-          received += value.byteLength;
-        }
-        controller.enqueue(value);
-      } catch (error) {
-        await finish(false);
-        controller.error(error);
-        release();
-      }
-    },
-    async cancel() {
-      try {
-        await reader.cancel();
-      } catch { }
-      await finish(false);
-      release();
-    },
-  });
-
-  return new Response(stream, { status, statusText, headers: responseHeaders });
-};
+// The proxy forwards the renderer's abort signal upstream so interrupted
+// media requests release their server connection instead of leaking it until
+// the stream finishes (which exhausts the connection pool and stalls playback).
+const streamProxy = createStreamProxy({
+  fetchImpl: (url, init) => net.fetch(url, init),
+  isTrustedTarget: isTrustedProxyTarget,
+});
 
 const handleProtocol = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
 
-  if (url.pathname === '/proxy') return handleProxy(request);
+  if (url.pathname === '/proxy') return streamProxy.handle(request);
 
   const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
   const normalized = path.posix.normalize(pathname).replace(/^([/\\])+/, '');
@@ -462,7 +197,11 @@ const createWindow = (): BrowserWindow => {
     height: 800,
     minWidth: WINDOW_MIN.width,
     minHeight: WINDOW_MIN.height,
-    ...(process.platform === 'win32' ? { frame: false } : {}),
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hiddenInset' as const, trafficLightPosition: { x: 20, y: 10 } as const }
+      : process.platform === 'win32'
+        ? { frame: false }
+        : {}),
     show: false,
     backgroundColor: '#0b0b12',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
@@ -535,6 +274,7 @@ const createMiniPlayerWindow = (): BrowserWindow => {
   const win = new BrowserWindow({
     width: 360,
     height: 96,
+    ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -677,10 +417,6 @@ const registerIpc = (): void => {
       else mainWindow?.setProgressBar(-1);
     } else if (key === 'updateChannel' && typeof value === 'string') {
       updater.setChannel(value);
-    } else if (key === 'mediaCacheEnabled') {
-      await mediaCache?.setEnabled(value === true);
-    } else if (key === 'mediaCacheMaxMb' && typeof value === 'number') {
-      await mediaCache?.setMaxBytes(value * 1024 * 1024);
     }
   });
 
@@ -725,17 +461,16 @@ const registerIpc = (): void => {
     }
   });
 
-  ipcMain.handle(IPC.mediaCache.stats, () => mediaCache?.stats() ?? null);
-  ipcMain.handle(IPC.mediaCache.clear, async () => {
-    await mediaCache?.clear();
-    return mediaCache?.stats() ?? null;
-  });
-
-  ipcMain.on(IPC.playback.snapshot, (_event, snapshot: DesktopSnapshot) => {
-    lastSnapshot = snapshot;
-    updateTaskbarProgress(snapshot);
-    updateThumbarButtons(snapshot);
-    broadcastSnapshotToMiniPlayer(snapshot);
+  ipcMain.on(IPC.playback.snapshot, (event, snapshot: unknown) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents) return;
+    const parsed = desktopSnapshotSchema.safeParse(snapshot);
+    if (!parsed.success) return;
+    const validatedSnapshot = parsed.data;
+    lastSnapshot = validatedSnapshot;
+    if (process.platform === 'darwin') updateMacPlaybackMenu(validatedSnapshot);
+    updateTaskbarProgress(validatedSnapshot);
+    updateThumbarButtons(validatedSnapshot);
+    broadcastSnapshotToMiniPlayer(validatedSnapshot);
   });
 
   // Commands from the mini-player (a remote client) are validated and
@@ -752,28 +487,31 @@ const registerIpc = (): void => {
     showMainWindow();
   });
 
-  ipcMain.handle(IPC.updater.getState, () => updater.getState());
-  ipcMain.handle(IPC.updater.check, () => updater.check());
-  ipcMain.handle(IPC.updater.installAndRestart, () => {
+  ipcMain.handle(IPC.updater.getState, (event) => {
+    if (!isTrustedSender(event.sender)) return null;
+    return updater.getState();
+  });
+  ipcMain.handle(IPC.updater.check, (event) => {
+    if (!isTrustedSender(event.sender)) return false;
+    return updater.check();
+  });
+  ipcMain.handle(IPC.updater.installAndRestart, (event) => {
+    if (!isTrustedSender(event.sender)) return;
     updater.installAndRestart();
   });
-};
-
-/**
- * The renderer is served from the custom `app://nebula` scheme, so its WebSocket
- * `Origin` header is `app://nebula`. The Stream Deck plugin only accepts
- * `http:`/`https:` origins on the loopback bridge handshake and otherwise closes
- * the socket with "Valid Origin required". Rewrite the Origin header for the
- * Stream Deck WebSocket endpoint so pairing works from the desktop build.
- */
-const registerStreamDeckOriginRewrite = (): void => {
-  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-    if (details.url.startsWith('ws://127.0.0.1:') && details.url.includes('/nebula/v1')) {
-      const headers = { ...details.requestHeaders, Origin: 'http://localhost' };
-      callback({ requestHeaders: headers });
-      return;
+  ipcMain.handle(IPC.updater.openDownloadPage, async (event) => {
+    if (!mainWindow || event.sender !== mainWindow.webContents) return false;
+    const state = updater.getState();
+    if (
+      !state.enabled ||
+      state.installMode !== 'manual' ||
+      state.phase !== 'available' ||
+      !state.newVersion
+    ) {
+      return false;
     }
-    callback({ requestHeaders: details.requestHeaders });
+    const url = releaseUrlForVersion(state.newVersion);
+    return url ? openExternalSafely(url) : false;
   });
 };
 
@@ -814,17 +552,13 @@ if (!gotLock) {
       path.join(app.getPath('userData'), 'vault.json'),
       createSafeStorageCipher(),
     );
-    mediaCache = await MediaCache.open({
-      directory: path.join(app.getPath('userData'), 'media-cache'),
-      maxBytes: (settingsStore.get<number>('mediaCacheMaxMb') ?? 4096) * 1024 * 1024,
-      enabled: settingsStore.get('mediaCacheEnabled') !== false,
-    });
 
     // Auto-update only runs in installed builds; dev launches use the web
     // bundle over `npm run dev` and must never attempt a check.
     updater = createUpdater({
       driver: autoUpdater,
       enabled: app.isPackaged,
+      installMode: process.platform === 'darwin' ? 'manual' : 'automatic',
       getCurrentVersion: () => app.getVersion(),
       getChannel: () => settingsStore.get('updateChannel') ?? 'stable',
       broadcast: (state) => {
@@ -837,9 +571,26 @@ if (!gotLock) {
 
     registerProtocol();
     registerIpc();
-    registerStreamDeckOriginRewrite();
 
     mainWindow = createWindow();
+
+    if (process.platform === 'darwin') {
+      installMacAppMenu({
+        getWindow: () => mainWindow,
+        getEpoch: () => lastSnapshot?.epoch ?? 0,
+        onCommand: forwardCommand,
+        toggleMiniPlayer,
+        openSettings: () => {
+          mainWindow?.show();
+          mainWindow?.webContents.send(IPC.app.openSettings);
+        },
+      });
+      // Dev launches run from the Electron binary and show its default Dock
+      // icon; force the Nebula icon until the bundle .icns applies.
+      if (!app.isPackaged) {
+        app.dock?.setIcon(path.join(__dirname, '..', 'assets', 'icon.png'));
+      }
+    }
 
     if (settingsStore.get('mediaKeysEnabled') === true) {
       registerMediaKeys({
@@ -883,7 +634,6 @@ if (!gotLock) {
     unregisterMediaKeys();
     destroyTray();
     updater?.dispose();
-    void mediaCache?.persistIndex();
     miniPlayerWindow?.destroy();
     miniPlayerWindow = null;
   });

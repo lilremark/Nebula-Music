@@ -24,9 +24,11 @@ export const webSubsonicTransport: SubsonicTransport = {
 };
 
 /**
- * Desktop transport: JSON fetches and media URLs route through the main
- * process, which bypasses renderer CORS and mixed-content policy so plain-HTTP
- * Subsonic servers work (subject to the per-server opt-in enforced in main).
+ * Desktop transport: JSON fetches route through the main process, which
+ * bypasses renderer CORS so Subsonic servers work without CORS headers.
+ * https media loads directly from the server (identical to the web build);
+ * only plain-http media is routed through the proxy to satisfy the app's
+ * mixed-content policy (subject to the per-server opt-in enforced in main).
  */
 export const createDesktopSubsonicTransport = (platform: Platform): SubsonicTransport => ({
   fetchJson: (url) => platform.fetchJson(url),

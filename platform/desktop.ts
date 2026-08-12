@@ -3,6 +3,7 @@ import type {
   DesktopSettingsApi,
   PlaybackTransport,
   Platform,
+  PlatformApp,
   PlatformInfo,
   WindowControl,
 } from './types';
@@ -53,15 +54,22 @@ export const createDesktopPlatform = (): Platform => {
 
   const fetchJson = (url: string) => bridge.http.fetchJson(url);
 
-  const mediaCache = {
-    stats: () => bridge.mediaCache.stats(),
-    clear: () => bridge.mediaCache.clear(),
-  };
-
+  // Media (audio streams, cover art) loads directly from the Subsonic server.
+  // <audio> and <img> elements are not CORS-restricted, the CSP already allows
+  // https media/img/connect, and the web build has always loaded media this
+  // way without issue. Routing every stream through the main-process proxy
+  // leaked connections there and eventually stalled playback after a handful
+  // of tracks. Only http:// targets keep using the proxy because a secure
+  // app:// context blocks plain-http media as mixed content.
   const resolveMediaUrl = (url: string): string => {
     if (!url) return url;
-    if (/^https?:\/\//i.test(url)) return bridge.http.proxyUrl(url);
+    if (/^https:\/\//i.test(url)) return url;
+    if (/^http:\/\//i.test(url)) return bridge.http.proxyUrl(url);
     return url;
+  };
+
+  const app: PlatformApp = {
+    onOpenSettings: (handler) => bridge.app.onOpenSettings(handler),
   };
 
   const info: PlatformInfo = {
@@ -74,6 +82,7 @@ export const createDesktopPlatform = (): Platform => {
   return {
     info,
     window: windowControl,
+    app,
     openExternal: (url) => bridge.openExternal(url),
     settings,
     vault,
@@ -86,10 +95,10 @@ export const createDesktopPlatform = (): Platform => {
       getState: () => bridge.updater.getState(),
       check: () => bridge.updater.check(),
       installAndRestart: () => bridge.updater.installAndRestart(),
+      openDownloadPage: () => bridge.updater.openDownloadPage(),
       onStatus: (handler) => bridge.updater.onStatus(handler),
     },
     fetchJson,
     resolveMediaUrl,
-    mediaCache,
   };
 };

@@ -6,6 +6,7 @@ export const IPC = {
   app: {
     info: 'nebula:app:info',
     openExternal: 'nebula:app:open-external',
+    openSettings: 'nebula:app:open-settings',
   },
   window: {
     minimize: 'nebula:window:minimize',
@@ -30,10 +31,6 @@ export const IPC = {
   http: {
     fetchJson: 'nebula:http:fetch-json',
   },
-  mediaCache: {
-    stats: 'nebula:media-cache:stats',
-    clear: 'nebula:media-cache:clear',
-  },
   playback: {
     command: 'nebula:playback:command',
     snapshot: 'nebula:playback:snapshot',
@@ -48,6 +45,7 @@ export const IPC = {
     getState: 'nebula:updater:get-state',
     check: 'nebula:updater:check',
     installAndRestart: 'nebula:updater:install-and-restart',
+    openDownloadPage: 'nebula:updater:open-download-page',
     status: 'nebula:updater:status',
   },
 } as const;

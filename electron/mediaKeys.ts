@@ -23,6 +23,7 @@ const BINDINGS: Array<{ accelerator: string; command: DesktopCommand }> = [
 let client: CommandClient | null = null;
 
 export const registerMediaKeys = (options: MediaKeysOptions): void => {
+  if (process.platform !== 'win32') return;
   if (client) return;
   client = createCommandClient('nebula-media-keys', options.getEpoch);
 

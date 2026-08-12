@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.3.4';
+export const APP_VERSION = '2.4.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -16,33 +16,33 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '2.3.4',
-    date: '2026-08-08',
-    title: 'Playback Freeze Fix',
+    version: '2.4.1',
+    date: '2026-08-12',
+    title: 'Playback and Navigation Fixes',
     changes: [
-      'Fixed the desktop freeze after a few tracks — upstream stream requests are now serialized so the media proxy can never exhaust Chromium\'s per-host connection pool.',
-      'Aborted streams (track changes, seeks) now release their server connection immediately, and hung requests time out instead of blocking playback forever.'
-    ]
+      'Fixed desktop playback stalling after a few tracks — media now loads directly from your server instead of the proxy, so streams and cover art no longer exhaust their connection pool.',
+      'Opening a related album under "More by" now returns to the top of the album page, showing the album art, info, and tracklist (web, Windows, and macOS).',
+      'Waveform previews fall back gracefully on servers that do not send CORS headers, matching the web build.'
+    ],
+    link: {
+      label: 'Download Nebula 2.4.1',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.1'
+    }
   },
   {
-    version: '2.3.3',
-    date: '2026-08-08',
-    title: 'Playback Stability and Media Cache',
+    version: '2.4.0',
+    date: '2026-08-11',
+    title: 'Nebula for macOS',
     changes: [
-      'Fixed the desktop freeze after a few tracks — aborted streams now release their server connections properly.',
-      'Added a disk media cache so previously-played tracks start instantly on replay, with automatic LRU cleanup and a size limit so it can never fill your disk.',
-      'Fixed Stream Deck pairing from the desktop app by reporting the loopback origin the plugin expects.'
-    ]
-  },
-  {
-    version: '2.3.2',
-    date: '2026-08-08',
-    title: 'Update Flow Polish',
-    changes: [
-      'Fixed Stream Deck pairing from the desktop app by sending a valid loopback origin on the bridge WebSocket.',
-      'Improved the update status labels: "Up to Date", "Update available", and "Error" with the message.',
-      'Download progress now shows whole-number percentages.'
-    ]
+      'Added a native macOS arm64 edition with a dedicated title strip, traffic lights, app menu, Dock menu, menu-bar controls, media keys, and Notification Center updates.',
+      'Added live Now Playing metadata and sanitized cover art to the macOS Playback menu.',
+      'Added reproducible Windows and macOS release artifacts with platform-specific GitHub update feeds.',
+      'Kept automatic Windows updates and added safe update checks with manual GitHub downloads for unsigned macOS builds.'
+    ],
+    link: {
+      label: 'Download Nebula 2.4.0',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.0'
+    }
   },
   {
     version: '2.3.1',

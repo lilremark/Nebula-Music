@@ -10,6 +10,7 @@ import type { UpdaterState } from '../electron/updater';
 import { VISUALIZER_MODES } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { CustomDropdown } from '../components/CustomDropdown';
+import { getUpdateAction } from '../components/updateAction';
 import {
     AutoEqIndexEntry,
     fetchAutoEqIndex,
@@ -67,6 +68,16 @@ const ToggleRow = ({ label, description, checked, onChange }: { label: string; d
             <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
         </span>
     </button>
+);
+
+const StaticRow = ({ label, description }: { label: string; description?: string }) => (
+    <div className={`${rowClass}`}>
+        <span className="min-w-0">
+            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
+            {description && <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</span>}
+        </span>
+        <span className="shrink-0 rounded-full bg-neutral-200 px-3 py-1 text-xs font-bold text-neutral-600 dark:bg-white/10 dark:text-white/50">On</span>
+    </div>
 );
 
 const ShortcutRow = ({ id, label, value, editingKey, setEditingKey }: { id: string; label: string; value: string, editingKey: string | null, setEditingKey: (k: string | null) => void }) => (
@@ -140,9 +151,10 @@ const OptionRow = ({ label, description, options, value, onChange }: {
 
 const DesktopSettingsPanel = () => {
     const platform = usePlatform();
+    const isWindows = platform?.info.os === 'win32';
+    const isMac = platform?.info.os === 'darwin';
     const [values, setValues] = useState<Record<string, boolean>>({});
     const [loaded, setLoaded] = useState(false);
-    const [cacheStats, setCacheStats] = useState<{ usedBytes: number; entryCount: number } | null>(null);
 
     useEffect(() => {
         if (!platform || platform.info.kind !== 'desktop') return;
@@ -152,18 +164,14 @@ const DesktopSettingsPanel = () => {
             platform.settings.get('minimizeToTray'),
             platform.settings.get('mediaKeysEnabled'),
             platform.settings.get('taskbarProgressEnabled'),
-            platform.settings.get('mediaCacheEnabled'),
-            platform.mediaCache.stats(),
-        ]).then(([trayOnClose, minimizeToTray, mediaKeysEnabled, taskbarProgressEnabled, mediaCacheEnabled, stats]) => {
+        ]).then(([trayOnClose, minimizeToTray, mediaKeysEnabled, taskbarProgressEnabled]) => {
             if (cancelled) return;
             setValues({
                 trayOnClose: trayOnClose !== false,
                 minimizeToTray: minimizeToTray === true,
                 mediaKeysEnabled: mediaKeysEnabled !== false,
                 taskbarProgressEnabled: taskbarProgressEnabled !== false,
-                mediaCacheEnabled: mediaCacheEnabled !== false,
             });
-            setCacheStats(stats ?? null);
             setLoaded(true);
         }).catch(() => {});
         return () => { cancelled = true; };
@@ -181,64 +189,41 @@ const DesktopSettingsPanel = () => {
         }
     };
 
-    const formatBytes = (bytes: number): string => {
-        if (bytes >= 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
-        if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(0)} MB`;
-        if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-        return `${bytes} B`;
-    };
-
-    const clearCache = async () => {
-        if (!platform) return;
-        const stats = await platform.mediaCache.clear();
-        setCacheStats(stats);
-    };
-
     return (
         <SettingPanel icon={Monitor} title="Desktop Integration">
             <ToggleRow
                 label="Close to Tray"
-                description="Closing the window keeps Nebula running in the system tray."
+                description={isMac ? 'Closing the window keeps Nebula running in the menu bar.' : 'Closing the window keeps Nebula running in the system tray.'}
                 checked={loaded ? values.trayOnClose ?? true : true}
                 onChange={(v) => setValue('trayOnClose', v)}
             />
             <ToggleRow
                 label="Minimize to Tray"
-                description="Minimizing hides the window to the tray instead of the taskbar."
+                description={isMac ? 'Minimizing hides the window to the menu bar instead of the Dock.' : 'Minimizing hides the window to the tray instead of the taskbar.'}
                 checked={loaded ? values.minimizeToTray ?? false : false}
                 onChange={(v) => setValue('minimizeToTray', v)}
             />
-            <ToggleRow
-                label="Global Media Keys"
-                description="Control playback with your keyboard's media keys even when Nebula is in the background."
-                checked={loaded ? values.mediaKeysEnabled ?? true : true}
-                onChange={(v) => setValue('mediaKeysEnabled', v)}
-            />
-            <ToggleRow
-                label="Taskbar Progress"
-                description="Show playback progress in the Windows taskbar."
-                checked={loaded ? values.taskbarProgressEnabled ?? true : true}
-                onChange={(v) => setValue('taskbarProgressEnabled', v)}
-            />
-            <div className={rowClass}>
-                <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Media Cache</span>
-                    <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-                        Keep played tracks on disk so replays start instantly.
-                        {cacheStats && cacheStats.entryCount > 0
-                            ? ` Currently using ${formatBytes(cacheStats.usedBytes)} across ${cacheStats.entryCount} track${cacheStats.entryCount === 1 ? '' : 's'}.`
-                            : ' No tracks cached yet.'}
-                    </span>
-                </span>
-                <button
-                    type="button"
-                    disabled={!cacheStats || cacheStats.entryCount === 0}
-                    onClick={clearCache}
-                    className="shrink-0 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-700 transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
-                >
-                    Clear
-                </button>
-            </div>
+            {isWindows ? (
+                <ToggleRow
+                    label="Global Media Keys"
+                    description="Control playback with your keyboard's media keys even when Nebula is in the background."
+                    checked={loaded ? values.mediaKeysEnabled ?? true : true}
+                    onChange={(v) => setValue('mediaKeysEnabled', v)}
+                />
+            ) : (
+                <StaticRow
+                    label="Now Playing"
+                    description="Media keys and Control Center are handled by macOS while music is playing."
+                />
+            )}
+            {isWindows && (
+                <ToggleRow
+                    label="Taskbar Progress"
+                    description="Show playback progress in the Windows taskbar."
+                    checked={loaded ? values.taskbarProgressEnabled ?? true : true}
+                    onChange={(v) => setValue('taskbarProgressEnabled', v)}
+                />
+            )}
         </SettingPanel>
     );
 };
@@ -279,8 +264,10 @@ const DesktopUpdatesPanel = () => {
     const phase = updateState?.phase ?? 'idle';
     const enabled = updateState?.enabled ?? false;
     const busy = phase === 'checking' || phase === 'downloading';
-    const readyToInstall = phase === 'downloaded';
     const currentVersion = updateState?.currentVersion ?? platform.info.appVersion;
+    const action = updateState
+        ? getUpdateAction(updateState)
+        : { kind: 'none' as const, label: 'Loading update status' };
 
     const badgeClass = phase === 'downloaded'
         ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
@@ -290,53 +277,41 @@ const DesktopUpdatesPanel = () => {
                 ? 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/50'
                 : 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
 
-    const statusLabel =
-        phase === 'downloaded'
-            ? 'Ready to Install'
-            : phase === 'available' || phase === 'downloading'
-                ? 'Update available'
-                : phase === 'checking'
-                    ? 'Checking'
-                    : phase === 'error'
-                        ? 'Error'
-                        : 'Up to Date';
-
     return (
         <SettingPanel icon={Download} title="Updates">
             <div className="px-5 py-6">
                 <div className="flex flex-col items-center text-center">
                     <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${badgeClass}`}>
-                        {statusLabel}
+                        {phase.replace('-', ' ')}
                     </span>
                     <span className="mt-3 block text-lg font-bold text-neutral-900 dark:text-white">
                         {currentVersion ? `Nebula ${currentVersion}` : 'Nebula'}
                     </span>
                     <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-                        {updateState?.message ?? 'Updates are checked against GitHub Releases.'}
+                        {updateState?.installMode === 'manual'
+                            ? 'Unsigned macOS builds download updates from GitHub for manual installation.'
+                            : updateState?.message ?? 'Updates are checked against GitHub Releases.'}
                     </span>
 
-                    {phase === 'downloaded' ? (
-                        <button
-                            type="button"
-                            onClick={() => platform.updater.installAndRestart()}
-                            className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110"
-                        >
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (action.kind === 'check') void platform.updater.check();
+                            if (action.kind === 'download') void platform.updater.openDownloadPage();
+                            if (action.kind === 'install') void platform.updater.installAndRestart();
+                        }}
+                        disabled={action.kind === 'none'}
+                        className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        {action.kind === 'download' || action.kind === 'install' ? (
                             <Download className="h-4 w-4" />
-                            Restart &amp; Install
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={() => platform.updater.check()}
-                            disabled={!enabled || busy}
-                            className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
+                        ) : (
                             <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
-                            {busy ? (phase === 'downloading' ? `Downloading\u2026 ${updateState?.progress ?? 0}%` : 'Checking\u2026') : 'Check for updates'}
-                        </button>
-                    )}
+                        )}
+                        {action.label}
+                    </button>
 
-                    {phase === 'downloading' && (
+                    {updateState?.installMode === 'automatic' && phase === 'downloading' && (
                         <div className="mt-3 h-1.5 w-56 overflow-hidden rounded-full bg-white/10">
                             <div
                                 className="h-full rounded-full bg-primary transition-all"

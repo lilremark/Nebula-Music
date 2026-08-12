@@ -7,6 +7,15 @@ const info = ipcRenderer.sendSync(IPC.app.info) as DesktopBridge['info'];
 
 const bridge: DesktopBridge = {
   info,
+  app: {
+    onOpenSettings: (handler: () => void) => {
+      const listener = (): void => handler();
+      ipcRenderer.on(IPC.app.openSettings, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC.app.openSettings, listener);
+      };
+    },
+  },
   window: {
     minimize: async () => {
       ipcRenderer.send(IPC.window.minimize);
@@ -47,10 +56,6 @@ const bridge: DesktopBridge = {
     fetchJson: (url: string) => ipcRenderer.invoke(IPC.http.fetchJson, url),
     proxyUrl: (url: string) => `app://nebula/proxy?u=${encodeURIComponent(url)}`,
   },
-  mediaCache: {
-    stats: () => ipcRenderer.invoke(IPC.mediaCache.stats),
-    clear: () => ipcRenderer.invoke(IPC.mediaCache.clear),
-  },
   playback: {
     onCommand: (handler) => {
       const listener = (_event: Electron.IpcRendererEvent, envelope: unknown) => {
@@ -81,6 +86,8 @@ const bridge: DesktopBridge = {
     getState: () => ipcRenderer.invoke(IPC.updater.getState) as Promise<UpdaterState>,
     check: () => ipcRenderer.invoke(IPC.updater.check) as Promise<boolean>,
     installAndRestart: () => ipcRenderer.invoke(IPC.updater.installAndRestart),
+    openDownloadPage: () =>
+      ipcRenderer.invoke(IPC.updater.openDownloadPage) as Promise<boolean>,
     onStatus: (handler: (state: UpdaterState) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, state: unknown) => {
         handler(state as UpdaterState);

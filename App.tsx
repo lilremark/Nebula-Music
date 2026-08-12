@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StoreProvider, useStore } from './context/Store';
-import { SplitLayout, TopBar } from './components/layout';
+import { SplitLayout, TopBar, MacTitleBar } from './components/layout';
 import { NavDrawer } from './components/navigation';
 import { NowPlayingPanel } from './components/player/NowPlayingPanel';
 import { FloatingMiniPlayer } from './components/player/FloatingMiniPlayer';
@@ -24,10 +24,11 @@ import { UpdateBanner } from './components/UpdateBanner';
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
+import { usePlatform } from './platform/PlatformContext';
 
 const AppContent: React.FC = () => {
   const {
-    currentView, setView, credentials, isDemoMode, queue, currentSongIndex,
+    currentView, setView, viewData, credentials, isDemoMode, queue, currentSongIndex,
     currentRadioStation,
     togglePlay, nextSong, prevSong, toggleRepeat, isPlaying,
     visualizerMode, setVisualizerMode, isZenMode, setZenMode,
@@ -86,11 +87,21 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('keydown', handleGlobalShortcuts);
   }, [handleGlobalShortcuts]);
 
+  // Scroll to top on navigation. The view alone is not enough: clicking a
+  // related album in "More by" keeps the same view and only changes viewData,
+  // so the effect must also key off viewData to land on the new album's header.
   useEffect(() => {
     if (mainRef.current) {
       mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [currentView]);
+  }, [currentView, viewData]);
+
+  const platform = usePlatform();
+
+  useEffect(() => {
+    if (!platform) return;
+    return platform.app.onOpenSettings(() => setView('SETTINGS'));
+  }, [platform, setView]);
 
   if (!credentials && !isDemoMode) {
     return <SetupScreen />;
@@ -130,6 +141,8 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
+      <MacTitleBar />
+
       {/* Navigation Drawer */}
       <NavDrawer isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
 
@@ -177,7 +190,7 @@ const AppContent: React.FC = () => {
         }
       >
         {/* Top Bar */}
-        <header>
+        <header className="flex flex-col shrink-0">
           <TopBar onMenuClick={() => setIsNavOpen(true)} isNavOpen={isNavOpen} />
         </header>
 

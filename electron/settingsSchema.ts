@@ -23,10 +23,6 @@ export const desktopSettingsSchema = z.object({
   permitInsecureHttp: z.boolean().default(true),
   windowBounds: windowBoundsSchema.default(null),
   updateChannel: z.enum(['stable', 'beta']).default('stable'),
-  // Media cache: previously-played tracks are kept on disk so replays load
-  // instantly. Bounded by mediaCacheMaxMb with LRU eviction.
-  mediaCacheEnabled: z.boolean().default(true),
-  mediaCacheMaxMb: z.number().int().min(128).max(65536).default(4096),
 });
 
 export type DesktopSettings = z.infer<typeof desktopSettingsSchema>;
@@ -41,6 +37,4 @@ export const DESKTOP_SETTINGS_DEFAULTS: DesktopSettings = {
   permitInsecureHttp: true,
   windowBounds: null,
   updateChannel: 'stable',
-  mediaCacheEnabled: true,
-  mediaCacheMaxMb: 4096,
 };

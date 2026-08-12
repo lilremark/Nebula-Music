@@ -2,7 +2,9 @@ import React, { useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { Home, Compass, Mic2, Disc, Music, ListMusic, Heart, Star, Settings, X, Radio } from 'lucide-react';
 import { useStore } from '../../context/Store';
+import { usePlatform } from '../../platform/PlatformContext';
 import { View } from '../../types';
+import { getNavDrawerTopClass } from './drawerLayout';
 
 const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
     ({ WebkitAppRegion: region }) as CSSProperties;
@@ -14,6 +16,8 @@ interface NavDrawerProps {
 
 export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
     const { currentView, setView, isDemoMode, settings } = useStore();
+    const platform = usePlatform();
+    const drawerTopClass = getNavDrawerTopClass(platform?.info.os);
     const s = settings.sidebar;
 
     // Close on escape key
@@ -72,7 +76,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
             {/* Backdrop */}
             <div
                 className={`
-                    fixed inset-0 z-40 bg-black/70 backdrop-blur-xs
+                    fixed left-0 right-0 bottom-0 ${drawerTopClass} z-40 bg-black/70 backdrop-blur-xs
                     transition-opacity duration-300
                     ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
                 `}
@@ -83,7 +87,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
             {/* Drawer */}
             <nav
                 className={`
-                    fixed top-0 left-0 bottom-0 z-50
+                    fixed ${drawerTopClass} left-0 bottom-0 z-50
                     w-72 max-w-[85vw]
                     bg-white dark:bg-neutral-950 border-r border-neutral-200 dark:border-white/10
                     flex flex-col

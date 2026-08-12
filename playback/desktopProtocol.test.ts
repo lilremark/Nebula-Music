@@ -9,6 +9,7 @@ import {
   toTrackSummary,
   type DesktopCommandEnvelope,
 } from './desktopProtocol';
+import { STREAM_DECK_MAX_ARTWORK_LENGTH } from '../services/streamDeckProtocol';
 
 const envelope = (
   command: DesktopCommandEnvelope['command'] = { name: 'togglePlayback' },
@@ -99,6 +100,77 @@ describe('Desktop playback protocol', () => {
     });
     expect(parsed.success).toBe(true);
   });
+
+  it('accepts JPEG base64 cover art data URLs', () => {
+    const parsed = desktopSnapshotSchema.safeParse({
+      v: DESKTOP_PROTOCOL_VERSION,
+      ownerId: 'owner',
+      epoch: 0,
+      playing: true,
+      track: {
+        id: 'song-1',
+        title: 'Nebula',
+        artist: 'Drift',
+        coverArtUrl: 'data:image/jpeg;base64,/9j/2Q==',
+      },
+      positionSeconds: 12,
+      durationSeconds: 210,
+      volume: 0.8,
+      muted: false,
+      playbackRate: 1,
+      repeatMode: 'OFF',
+      updatedAt: 1_234,
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it.each([
+    'https://music.example/cover.jpg',
+    'data:image/png;base64,iVBORw0KGgo=',
+    'data:image/jpeg,/9j/2Q==',
+    'data:image/jpeg;base64,not valid base64!',
+  ])('rejects cover art outside the sanitized JPEG contract: %s', (coverArtUrl) => {
+    const parsed = desktopSnapshotSchema.safeParse({
+      v: DESKTOP_PROTOCOL_VERSION,
+      ownerId: 'owner',
+      epoch: 0,
+      playing: true,
+      track: { id: 'song-1', title: 'Nebula', artist: 'Drift', coverArtUrl },
+      positionSeconds: 12,
+      durationSeconds: 210,
+      volume: 0.8,
+      muted: false,
+      playbackRate: 1,
+      repeatMode: 'OFF',
+      updatedAt: 1_234,
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it('rejects cover art above the sanitizer output limit', () => {
+    const prefix = 'data:image/jpeg;base64,';
+    const coverArtUrl = prefix + 'AAAA'.repeat(Math.ceil(STREAM_DECK_MAX_ARTWORK_LENGTH / 4));
+    expect(coverArtUrl.length).toBeGreaterThan(STREAM_DECK_MAX_ARTWORK_LENGTH);
+
+    const parsed = desktopSnapshotSchema.safeParse({
+      v: DESKTOP_PROTOCOL_VERSION,
+      ownerId: 'owner',
+      epoch: 0,
+      playing: true,
+      track: { id: 'song-1', title: 'Nebula', artist: 'Drift', coverArtUrl },
+      positionSeconds: 12,
+      durationSeconds: 210,
+      volume: 0.8,
+      muted: false,
+      playbackRate: 1,
+      repeatMode: 'OFF',
+      updatedAt: 1_234,
+    });
+
+    expect(parsed.success).toBe(false);
+  });
 });
 
 describe('Epoch and sequence validation', () => {
@@ -170,6 +242,29 @@ describe('Snapshot helpers', () => {
       title: 'Nebula',
       artist: 'Drift',
     });
+  });
+
+  it('keeps only cover art that satisfies the sanitizer output contract', () => {
+    const validCoverArtUrl = 'data:image/jpeg;base64,/9j/2Q==';
+    expect(
+      toTrackSummary({
+        id: 'song-1',
+        title: 'Nebula',
+        artist: 'Drift',
+        coverArtUrl: validCoverArtUrl,
+      }),
+    ).toHaveProperty('coverArtUrl', validCoverArtUrl);
+
+    const prefix = 'data:image/jpeg;base64,';
+    const overLimit = prefix + 'AAAA'.repeat(Math.ceil(STREAM_DECK_MAX_ARTWORK_LENGTH / 4));
+    expect(
+      toTrackSummary({
+        id: 'song-1',
+        title: 'Nebula',
+        artist: 'Drift',
+        coverArtUrl: overLimit,
+      }),
+    ).not.toHaveProperty('coverArtUrl');
   });
 
   it('normalizes repeat modes to the protocol vocabulary', () => {

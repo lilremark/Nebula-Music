@@ -1,7 +1,6 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
 import type { UpdaterState } from '../electron/updater';
-import type { MediaCacheStats } from '../electron/mediaCache';
 
 export type PlatformKind = 'web' | 'desktop';
 
@@ -10,6 +9,11 @@ export interface PlatformInfo {
   os: string;
   appName: string | null;
   appVersion: string | null;
+}
+
+export interface PlatformApp {
+  /** Subscribes to a "open settings" request from the native app menu. */
+  onOpenSettings(handler: () => void): () => void;
 }
 
 export interface WindowControl {
@@ -57,12 +61,6 @@ export interface JsonFetchResult {
   body: unknown;
 }
 
-/** Media cache stats/clear surface. Inert (null) in the web build. */
-export interface MediaCacheApi {
-  stats(): Promise<MediaCacheStats | null>;
-  clear(): Promise<MediaCacheStats | null>;
-}
-
 export interface MiniPlayerControl {
   /** Toggles the always-on-top mini-player window (main window only). */
   toggle(): Promise<void>;
@@ -77,6 +75,8 @@ export interface UpdaterApi {
   check(): Promise<boolean>;
   /** Installs the downloaded update and restarts (no-op until downloaded). */
   installAndRestart(): Promise<void>;
+  /** Opens the available manual update's validated release page. */
+  openDownloadPage(): Promise<boolean>;
   /** Subscribes to state pushes; returns an unsubscribe function. */
   onStatus(handler: (state: UpdaterState) => void): () => void;
 }
@@ -89,6 +89,7 @@ export interface UpdaterApi {
 export interface Platform {
   readonly info: PlatformInfo;
   readonly window: WindowControl;
+  readonly app: PlatformApp;
   openExternal(url: string): Promise<boolean>;
   readonly settings: DesktopSettingsApi;
   readonly vault: CredentialVault;
@@ -101,6 +102,4 @@ export interface Platform {
   /** Rewrites a media URL to the desktop proxy (or identity on web) so audio
    * and cover art load through the main process. */
   resolveMediaUrl(url: string): string;
-  /** Media cache stats/clear (no-op on web). */
-  readonly mediaCache: MediaCacheApi;
 }

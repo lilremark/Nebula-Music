@@ -3,6 +3,7 @@ import type {
   DesktopSettingsApi,
   PlaybackTransport,
   Platform,
+  PlatformApp,
   PlatformInfo,
   UpdaterApi,
   WindowControl,
@@ -33,6 +34,8 @@ const webVault: CredentialVault = {
 
 const noopUnsubscribe = (): void => {};
 
+const webApp: PlatformApp = { onOpenSettings: () => noopUnsubscribe };
+
 const webPlayback: PlaybackTransport = {
   onCommand: () => noopUnsubscribe,
   publishSnapshot: () => {},
@@ -48,6 +51,7 @@ const webMiniPlayer = {
 const webUpdater: UpdaterApi = {
   getState: async () => ({
     enabled: false,
+    installMode: 'automatic',
     phase: 'idle',
     currentVersion: null,
     newVersion: null,
@@ -56,12 +60,8 @@ const webUpdater: UpdaterApi = {
   }),
   check: async () => false,
   installAndRestart: async () => {},
+  openDownloadPage: async () => false,
   onStatus: () => noopUnsubscribe,
-};
-
-const webMediaCache = {
-  stats: async () => null,
-  clear: async () => null,
 };
 
 const webFetchJson = async (url: string) => {
@@ -95,9 +95,9 @@ export const createWebPlatform = (): Platform => ({
   settings: webSettings,
   vault: webVault,
   playback: webPlayback,
+  app: webApp,
   miniPlayer: webMiniPlayer,
   updater: webUpdater,
   fetchJson: webFetchJson,
   resolveMediaUrl: (url) => url,
-  mediaCache: webMediaCache,
 });

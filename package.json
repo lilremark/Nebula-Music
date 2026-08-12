@@ -1,7 +1,7 @@
 {
   "name": "nebula-music",
   "private": true,
-  "version": "2.3.4",
+  "version": "2.4.1",
   "description": "Subsonic music player for the desktop.",
   "author": "Nebula",
   "main": "electron/dist/main.cjs",
@@ -19,7 +19,8 @@
     "build:electron": "node esbuild.config.mjs && vite build",
     "start:electron": "node esbuild.config.mjs && vite build && electron .",
     "preview": "vite preview",
-    "dist:win": "node esbuild.config.mjs && vite build && electron-builder --win --publish never"
+    "dist:win": "node esbuild.config.mjs && vite build && electron-builder --win --publish never",
+    "dist:mac": "node esbuild.config.mjs && vite build && electron-builder --mac --publish never"
   },
   "dependencies": {
     "blueimp-md5": "^2.19.0",
@@ -52,5 +53,11 @@
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
     "vitest": "^4.0.18"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "fsevents@2.3.3": true,
+    "sharp@0.35.3": true,
+    "electron-winstaller@5.4.0": true
   }
 }

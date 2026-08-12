@@ -3,12 +3,12 @@
 
   # Nebula Music
 
-  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser and as a native Windows desktop app.**
+  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser or the (experimental) desktop app.**
 
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
   a responsive interface built for desktop, mobile, and Windows.
 
-  [![Version](https://img.shields.io/badge/version-2.3.4-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.4.1-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
@@ -16,7 +16,7 @@
   [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](./docker/README.md)
   [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](./LICENSE.txt)
 
-  [Features](#features) · [Desktop for Windows](#desktop-for-windows) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
+  [Features](#features) · [Desktop App](#desktop-app-windows--macos) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
 </div>
 
 ---
@@ -42,26 +42,51 @@
   </tr>
 </table>
 
-## Desktop for Windows
+## Desktop App (Windows & macOS)
 
-Nebula is also distributed as a **native Windows desktop app** built with Electron.
-It includes everything in the web player plus:
+Nebula is also distributed as a **native desktop app** built with Electron, on
+Windows and macOS. It includes everything in the web player plus:
 
 - A custom frameless title bar with native window controls and a system tray
 - **Automatic updates** delivered from GitHub Releases, with an in-app
-  Restart & Install banner and a tray notification when a new version is ready
+  Restart & Install banner and a tray/menu-bar notification when a new version is ready
 - **Windows taskbar integration**: playback progress, thumbnail transport
   buttons (previous, play/pause, next), and global media keys
 - A native **always-on-top mini-player** window
 - **Secure credential storage** through the OS credential vault (Windows DPAPI)
-- The Nebula logo as the app and taskbar icon
+- The Nebula logo as the app, taskbar, and menu-bar icon
+
+### Windows
 
 Download the latest installer from the
 [**Nebula Releases page**](https://github.com/lilremark/Nebula-Music/releases/latest)
-(`Nebula-2.3.4-setup.exe`, NSIS installer) or sideload the unsigned
-`Nebula-2.3.4-setup.appx` package with Windows Developer Mode enabled. Once
+(`Nebula-2.4.1-setup.exe`, NSIS installer) or sideload the unsigned
+`Nebula-2.4.1-setup.appx` package with Windows Developer Mode enabled. Once
 installed, Nebula checks GitHub Releases for updates and notifies you when a
 new version is available.
+
+### macOS
+
+The macOS edition is distributed as a `.dmg` installer and adds the native
+features of the platform:
+
+- Native **macOS traffic lights** with a hidden-inset title bar and a
+  drag-to-move window chrome
+- A native **application menu** (About, Settings `⌘,`, Edit shortcuts,
+  Playback controls) and a **Dock menu**
+- A **menu-bar status item** whose icon adapts to dark/light appearance, with
+  quick controls (Show Nebula, Play/Pause, Next, Previous, Mini Player, Quit)
+- **Now Playing** in Control Center and on the lock screen, plus keyboard
+  media keys via the system Media Session
+- **Notification Center** banners when an update is downloaded
+- A floating **panel mini-player** that stays above other apps and is hidden
+  from Cmd-Tab
+
+> **macOS builds ship unsigned.** On first launch, right-click the app and
+> choose **Open** (or allow it in System Settings → Privacy & Security) to
+> bypass Gatekeeper. Automatic updates require code signing; the update check,
+> download, and in-app banner work unsigned, but "Restart & Install" may not
+> complete until the app is signed with a Developer ID.
 
 ## Features
 
@@ -98,7 +123,7 @@ new version is available.
 - Responsive light and dark themes with system-preference detection
 - IndexedDB caching for API responses, settings, credentials, and local play statistics
 - Docker, Vercel, and static-hosting deployment options for the web player
-- Native Windows desktop app (Electron) with automatic updates, tray, taskbar controls, media keys, and OS credential vault
+- Native Windows desktop app (Electron) with automatic updates, tray, taskbar controls, media keys, and OS credential vault; macOS edition with traffic lights, app/Dock menus, a menu-bar status item, Now Playing and media keys, and a panel mini-player
 - Optional authenticated localhost bridge for the Nebula Music Stream Deck plugin
 
 ### Stream Deck
@@ -133,12 +158,14 @@ correct CORS configuration are strongly recommended.
 
 ## Quick Start
 
-### Desktop (Windows)
+### Desktop (Windows & macOS)
 
 Download and run the latest installer from the
 [Nebula Releases page](https://github.com/lilremark/Nebula-Music/releases/latest).
-No setup beyond the installer is required — Nebula updates itself from GitHub
-Releases. To run the desktop app from source during development:
+Windows ships an NSIS installer (`Nebula-2.4.1-setup.exe`); macOS ships a
+`.dmg` installer (`Nebula-2.4.1-arm64.dmg`). No setup beyond the installer is
+required — Nebula updates itself from GitHub Releases. To run the desktop app
+from source during development:
 
 ```bash
 npm install
@@ -347,22 +374,18 @@ permitted by the music server's CORS policy.
 
 ## Changelog
 
-### v2.3.4 — August 8, 2026
+### v2.4.1 - August 12, 2026
 
-- Fixed the desktop freeze after a few tracks — upstream stream requests are now serialized so the media proxy can never exhaust Chromium's per-host connection pool.
-- Aborted streams (track changes, seeks) now release their server connection immediately, and hung requests time out instead of blocking playback forever.
+- Fixed desktop playback stalling after a few tracks — media now loads directly from your server instead of the proxy, so streams and cover art no longer exhaust their connection pool.
+- Opening a related album under "More by" now returns to the top of the album page, showing the album art, info, and tracklist (web, Windows, and macOS).
+- Waveform previews fall back gracefully on servers that do not send CORS headers, matching the web build.
 
-### v2.3.3 — August 8, 2026
+### v2.4.0 - August 11, 2026
 
-- Fixed the desktop freeze after a few tracks — aborted streams now release their server connections properly.
-- Added a disk media cache so previously-played tracks start instantly on replay, with automatic LRU cleanup and a size limit so it can never fill your disk.
-- Fixed Stream Deck pairing from the desktop app by reporting the loopback origin the plugin expects.
-
-### v2.3.2 — August 8, 2026
-
-- Fixed Stream Deck pairing from the desktop app by sending a valid loopback origin on the bridge WebSocket.
-- Improved the update status labels: "Up to Date", "Update available", and "Error" with the message.
-- Download progress now shows whole-number percentages.
+- Added a native macOS arm64 edition with a dedicated title strip, traffic lights, app menu, Dock menu, menu-bar controls, media keys, and Notification Center updates.
+- Added live Now Playing metadata and sanitized cover art to the macOS Playback menu.
+- Added reproducible Windows and macOS release artifacts with platform-specific GitHub update feeds.
+- Kept automatic Windows updates and added safe update checks with manual GitHub downloads for unsigned macOS builds.
 
 ### v2.3.1 — August 8, 2026
 
@@ -438,5 +461,3 @@ Security vulnerabilities must not be reported publicly. Email
 ## License
 
 Distributed under the [MIT License](./LICENSE.txt).
-
-
