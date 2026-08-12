@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: desktop-release-${{ github.ref }}
   cancel-in-progress: false
@@ -136,7 +139,7 @@ jobs:
 
           Windows updates download and install automatically. Unsigned macOS builds check for updates but open this GitHub release for manual DMG installation.
           EOF
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.2.2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           draft: true
           generate_release_notes: true

@@ -16,11 +16,15 @@ export const readVersionSources = (rootDir) => {
   };
 };
 
+const VERSION_SHAPE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/;
+
 export const validateVersionSources = (sources, tag) => {
   const expected = tag?.startsWith('v') ? tag.slice(1) : sources.packageVersion;
   const errors = [];
   for (const key of ['packageVersion', 'lockVersion', 'rootLockVersion', 'appVersion']) {
-    if (sources[key] !== expected) {
+    if (!VERSION_SHAPE.test(sources[key])) {
+      errors.push(`${key} ${sources[key]} is not a valid semver version`);
+    } else if (sources[key] !== expected) {
       errors.push(`${key} ${sources[key]} does not match ${expected}`);
     }
   }

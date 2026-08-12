@@ -41,6 +41,27 @@ describe('release version contract', () => {
     expect(validateVersionSources(synced)).toEqual([]);
   });
 
+  it('rejects consistent sources that do not match the semver shape', () => {
+    const malformed = {
+      packageVersion: '2.4',
+      lockVersion: '2.4',
+      rootLockVersion: '2.4',
+      appVersion: '2.4',
+    };
+    expect(validateVersionSources(malformed))
+      .toContain('packageVersion 2.4 is not a valid semver version');
+  });
+
+  it.each(['2.4.0', '2.5.0-beta.1'])('accepts the semver shape for %s', (version) => {
+    const sources = {
+      packageVersion: version,
+      lockVersion: version,
+      rootLockVersion: version,
+      appVersion: version,
+    };
+    expect(validateVersionSources(sources)).toEqual([]);
+  });
+
   it('rejects --tag without a value', () => {
     const result = spawnSync(process.execPath, [scriptPath, '--tag'], {
       cwd: rootDir,
