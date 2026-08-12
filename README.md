@@ -8,7 +8,7 @@
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
   a responsive interface built for desktop, mobile, and Windows.
 
-  [![Version](https://img.shields.io/badge/version-2.4.0-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.4.1-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
@@ -60,8 +60,8 @@ Windows and macOS. It includes everything in the web player plus:
 
 Download the latest installer from the
 [**Nebula Releases page**](https://github.com/lilremark/Nebula-Music/releases/latest)
-(`Nebula-2.4.0-setup.exe`, NSIS installer) or sideload the unsigned
-`Nebula-2.4.0-setup.appx` package with Windows Developer Mode enabled. Once
+(`Nebula-2.4.1-setup.exe`, NSIS installer) or sideload the unsigned
+`Nebula-2.4.1-setup.appx` package with Windows Developer Mode enabled. Once
 installed, Nebula checks GitHub Releases for updates and notifies you when a
 new version is available.
 
@@ -162,8 +162,8 @@ correct CORS configuration are strongly recommended.
 
 Download and run the latest installer from the
 [Nebula Releases page](https://github.com/lilremark/Nebula-Music/releases/latest).
-Windows ships an NSIS installer (`Nebula-2.4.0-setup.exe`); macOS ships a
-`.dmg` installer (`Nebula-2.4.0-arm64.dmg`). No setup beyond the installer is
+Windows ships an NSIS installer (`Nebula-2.4.1-setup.exe`); macOS ships a
+`.dmg` installer (`Nebula-2.4.1-arm64.dmg`). No setup beyond the installer is
 required — Nebula updates itself from GitHub Releases. To run the desktop app
 from source during development:
 
@@ -373,6 +373,12 @@ permitted by the music server's CORS policy.
 </details>
 
 ## Changelog
+
+### v2.4.1 - August 12, 2026
+
+- Fixed desktop playback stalling after a few tracks — media now loads directly from your server instead of the proxy, so streams and cover art no longer exhaust their connection pool.
+- Opening a related album under "More by" now returns to the top of the album page, showing the album art, info, and tracklist (web, Windows, and macOS).
+- Waveform previews fall back gracefully on servers that do not send CORS headers, matching the web build.
 
 ### v2.4.0 - August 11, 2026
 
