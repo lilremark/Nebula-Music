@@ -3,7 +3,7 @@
 
   # Nebula Music
 
-  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser and as a native Windows desktop app.**
+  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser or the (experimental) desktop app.**
 
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
   a responsive interface built for desktop, mobile, and Windows.
