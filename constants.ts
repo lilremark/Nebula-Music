@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.4.2';
+export const APP_VERSION = '2.4.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,18 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.4.3',
+    date: '2026-08-12',
+    title: 'Auto-Update Fix',
+    changes: [
+      'Fixed the auto-update check failing with "net::ERR_HTTP2_SERVER_REFUSED_STREAM" by forcing update requests over HTTP/1.1, which GitHub serves reliably.'
+    ],
+    link: {
+      label: 'Download Nebula 2.4.3',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.3'
+    }
+  },
   {
     version: '2.4.2',
     date: '2026-08-12',

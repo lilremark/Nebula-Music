@@ -539,6 +539,12 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
+  // GitHub/Fastly intermittently refuses Electron's HTTP/2 streams during the
+  // auto-update check (net::ERR_HTTP2_SERVER_REFUSED_STREAM), which silently
+  // breaks update discovery. Force the Chromium network stack to HTTP/1.1 so
+  // update requests always succeed — GitHub serves these fine over HTTP/1.1.
+  app.commandLine.appendSwitch('disable-http2');
+
   // On Windows, the taskbar groups windows by AppUserModelID. Without a
   // matching ID, secondary windows (mini-player, dialogs) can appear as a
   // second, overlapping Nebula icon in the taskbar. Set it up front so every

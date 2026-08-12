@@ -8,7 +8,7 @@
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
   a responsive interface built for desktop, mobile, and Windows.
 
-  [![Version](https://img.shields.io/badge/version-2.4.2-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
+  [![Version](https://img.shields.io/badge/version-2.4.3-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
@@ -60,8 +60,8 @@ Windows and macOS. It includes everything in the web player plus:
 
 Download the latest installer from the
 [**Nebula Releases page**](https://github.com/lilremark/Nebula-Music/releases/latest)
-(`Nebula-2.4.2-setup.exe`, NSIS installer) or sideload the unsigned
-`Nebula-2.4.2-setup.appx` package with Windows Developer Mode enabled. Once
+(`Nebula-2.4.3-setup.exe`, NSIS installer) or sideload the unsigned
+`Nebula-2.4.3-setup.appx` package with Windows Developer Mode enabled. Once
 installed, Nebula checks GitHub Releases for updates and notifies you when a
 new version is available.
 
@@ -162,8 +162,8 @@ correct CORS configuration are strongly recommended.
 
 Download and run the latest installer from the
 [Nebula Releases page](https://github.com/lilremark/Nebula-Music/releases/latest).
-Windows ships an NSIS installer (`Nebula-2.4.2-setup.exe`); macOS ships a
-`.dmg` installer (`Nebula-2.4.2-arm64.dmg`). No setup beyond the installer is
+Windows ships an NSIS installer (`Nebula-2.4.3-setup.exe`); macOS ships a
+`.dmg` installer (`Nebula-2.4.3-arm64.dmg`). No setup beyond the installer is
 required — Nebula updates itself from GitHub Releases. To run the desktop app
 from source during development:
 
@@ -374,6 +374,10 @@ permitted by the music server's CORS policy.
 
 ## Changelog
 
+### v2.4.3 - August 12, 2026
+
+- Fixed the auto-update check failing with `net::ERR_HTTP2_SERVER_REFUSED_STREAM` by forcing update requests over HTTP/1.1, which GitHub serves reliably.
+
 ### v2.4.2 - August 12, 2026
 
 - Reworked the always-on-top mini-player: it now shows the current album art, progress, and transport controls, plus an "Up Next" list of the next five queued tracks with their cover art.
@@ -467,4 +471,5 @@ Security vulnerabilities must not be reported publicly. Email
 ## License
 
 Distributed under the [MIT License](./LICENSE.txt).
+
 
