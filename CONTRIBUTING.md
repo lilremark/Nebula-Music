@@ -108,17 +108,25 @@ them together to avoid drift:
 - `docker/README.md` — pinned image tag, when a web/Docker release is cut
 
 Desktop releases are built natively by `.github/workflows/release-desktop.yml`.
-After release-prep changes merge and before tagging, run a manual
-`workflow_dispatch` of the Desktop release workflow (Actions > Desktop release >
-Run workflow) and confirm the `verify`, `windows`, and `macos` jobs all pass on
-their native runners. The Windows `.appx` target requires the Windows SDK on the
-runner, so ensure it is installed before dispatching. Only after that manual
-confirmation, create and push an annotated `v<version>` tag that matches the
-synchronized package version. The tagged run verifies the version, tests, audit,
-Windows installer/feed, and macOS DMG/ZIP/feed, then creates one draft GitHub
-Release. Inspect every draft asset and update the metadata file before
-publishing it. Native build jobs must use `--publish never`; do not publish one
-platform independently.
+The workflow is dynamic: it runs on any pushed `v*` tag and on manual
+`workflow_dispatch`. After release-prep changes merge and before tagging, run a
+manual `workflow_dispatch` of the Desktop release workflow (Actions > Desktop
+release > Run workflow) and confirm the `verify`, `windows`, and `macos` jobs
+all pass on their native runners. The Windows `.appx` target requires the
+Windows SDK on the runner, so ensure it is installed before dispatching. Only
+after that manual confirmation, create and push an annotated `v<version>` tag
+that matches the synchronized package version. The tagged run verifies the
+version, tests, audit, Windows installer/feed, and macOS DMG/ZIP/feed, then
+creates one draft GitHub Release. Inspect every draft asset and update the
+metadata file before publishing it. Native build jobs must use `--publish
+never`; do not publish one platform independently.
+
+The version guard is resilient to tag drift: if a tag name does not exactly
+match the committed `package.json` version, the workflow logs a warning and
+still builds from the checked-out source (artifacts are named by the source
+version). A hard failure only occurs if the four version sources
+(`package.json`, `package-lock.json`, its root entry, and `constants.ts`)
+disagree with each other.
 
 ## Bug Reports
 

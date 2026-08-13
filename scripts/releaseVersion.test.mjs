@@ -14,31 +14,37 @@ const synced = {
 };
 
 describe('release version contract', () => {
-  it('accepts synchronized v2.4.0 sources and tag', () => {
-    expect(validateVersionSources(synced, 'v2.4.0')).toEqual([]);
+  it('accepts synchronized v2.4.0 sources and matching tag', () => {
+    expect(validateVersionSources(synced, 'v2.4.0')).toEqual({ errors: [], warnings: [] });
   });
 
   it.each([
-    ['packageVersion', '2.3.4'],
     ['lockVersion', '2.3.1'],
     ['rootLockVersion', '2.3.1'],
     ['appVersion', '2.3.1'],
-  ])('rejects drift in %s', (key, value) => {
-    expect(validateVersionSources({ ...synced, [key]: value }, 'v2.4.0'))
+  ])('rejects drift in %s against package.json', (key, value) => {
+    expect(validateVersionSources({ ...synced, [key]: value }, 'v2.4.0').errors)
       .toContain(`${key} ${value} does not match 2.4.0`);
   });
 
-  it('rejects a tag that does not match the package version', () => {
-    expect(validateVersionSources(synced, 'v2.4.1'))
-      .toContain('tag v2.4.1 does not match v2.4.0');
+  it('rejects drift in packageVersion against the other sources', () => {
+    const { errors } = validateVersionSources({ ...synced, packageVersion: '2.3.4' }, 'v2.4.0');
+    expect(errors).toContain('lockVersion 2.4.0 does not match 2.3.4');
+    expect(errors).toContain('appVersion 2.4.0 does not match 2.3.4');
+  });
+
+  it('warns (does not fail) when a tag does not match the package version', () => {
+    const { errors, warnings } = validateVersionSources(synced, 'v2.4.1');
+    expect(errors).toEqual([]);
+    expect(warnings).toContain('tag v2.4.1 does not match v2.4.0 (building source as 2.4.0)');
   });
 
   it('rejects an explicitly empty tag', () => {
-    expect(validateVersionSources(synced, '')).toContain('tag value is required');
+    expect(validateVersionSources(synced, '').errors).toContain('tag value is required');
   });
 
   it('allows validation without a tag for pull requests', () => {
-    expect(validateVersionSources(synced)).toEqual([]);
+    expect(validateVersionSources(synced)).toEqual({ errors: [], warnings: [] });
   });
 
   it('rejects consistent sources that do not match the semver shape', () => {
@@ -48,7 +54,7 @@ describe('release version contract', () => {
       rootLockVersion: '2.4',
       appVersion: '2.4',
     };
-    expect(validateVersionSources(malformed))
+    expect(validateVersionSources(malformed).errors)
       .toContain('packageVersion 2.4 is not a valid semver version');
   });
 
@@ -59,7 +65,7 @@ describe('release version contract', () => {
       rootLockVersion: version,
       appVersion: version,
     };
-    expect(validateVersionSources(sources)).toEqual([]);
+    expect(validateVersionSources(sources)).toEqual({ errors: [], warnings: [] });
   });
 
   it('rejects --tag without a value', () => {
