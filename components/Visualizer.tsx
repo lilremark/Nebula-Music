@@ -105,10 +105,12 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
   primaryColor = '#06b6d4',
   secondaryColor = '#8b5cf6',
 }) => {
-  const { analyser, visualizerMode } = useStore();
+  const { analyser, visualizerMode, isPlaying } = useStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number>(0);
   const warnedFrameErrorsRef = useRef<Set<string>>(new Set());
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
 
   const stateRef = useRef({
     angle: 0,
@@ -154,6 +156,10 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
 
     const renderFrame = () => {
       animationIdRef.current = requestAnimationFrame(renderFrame);
+
+      // Skip drawing while paused or hidden (backgroundThrottling is disabled,
+      // so this loop keeps firing even when the window is minimized/trayed).
+      if (!isPlayingRef.current || document.visibilityState !== 'visible') return;
 
       try {
         const displayWidth = canvas.clientWidth;

@@ -4,6 +4,7 @@ import {
   ipcMain,
   nativeImage,
   net,
+  powerMonitor,
   protocol,
   shell,
 } from 'electron';
@@ -70,38 +71,72 @@ const broadcastSnapshotToMiniPlayer = (snapshot: DesktopSnapshot): void => {
   miniPlayerWindow?.webContents.send(IPC.playback.snapshotToClient, snapshot);
 };
 
+// Snapshots arrive up to ~4x/sec (on `timeupdate`). Re-creating native images
+// from disk and poking the Windows taskbar on every snapshot is measurable
+// overhead and a known taskbar-freeze trigger, so the progress bar is only
+// updated when it moves meaningfully and the thumbar buttons are re-applied
+// only when the play/pause button actually changes.
+let lastTaskbarProgress = -1;
+
 const updateTaskbarProgress = (snapshot: DesktopSnapshot): void => {
   if (!mainWindow || settingsStore.get('taskbarProgressEnabled') !== true) return;
   if (snapshot.playing && snapshot.durationSeconds > 0) {
-    mainWindow.setProgressBar(Math.min(1, snapshot.positionSeconds / snapshot.durationSeconds));
-  } else {
+    const value = Math.min(1, snapshot.positionSeconds / snapshot.durationSeconds);
+    if (lastTaskbarProgress === -1 || Math.abs(value - lastTaskbarProgress) >= 0.01) {
+      lastTaskbarProgress = value;
+      mainWindow.setProgressBar(value);
+    }
+  } else if (lastTaskbarProgress !== -1) {
+    lastTaskbarProgress = -1;
     mainWindow.setProgressBar(-1);
   }
+};
+
+let thumbarImages: {
+  prev: Electron.NativeImage;
+  next: Electron.NativeImage;
+  play: Electron.NativeImage;
+  pause: Electron.NativeImage;
+} | null = null;
+let thumbarState: { playing: boolean } | null = null;
+
+const getThumbarImages = (): NonNullable<typeof thumbarImages> => {
+  if (thumbarImages) return thumbarImages;
+  thumbarImages = {
+    prev: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-prev.png')),
+    next: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-next.png')),
+    play: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-play.png')),
+    pause: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-pause.png')),
+  };
+  return thumbarImages;
 };
 
 const updateThumbarButtons = (snapshot: DesktopSnapshot | null): void => {
   if (!mainWindow || process.platform !== 'win32') return;
   if (!snapshot) {
-    mainWindow.setThumbarButtons([]);
+    if (thumbarState !== null) {
+      thumbarState = null;
+      mainWindow.setThumbarButtons([]);
+    }
     return;
   }
+  if (thumbarState && thumbarState.playing === snapshot.playing) return;
+  thumbarState = { playing: snapshot.playing };
+  const images = getThumbarImages();
   const send = (command: DesktopCommand): void => forwardCommand(thumbarClient.send(command));
-  const playIcon = snapshot.playing
-    ? nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-pause.png'))
-    : nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-play.png'));
   mainWindow.setThumbarButtons([
     {
-      icon: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-prev.png')),
+      icon: images.prev,
       tooltip: 'Previous',
       click: () => send({ name: 'previous' }),
     },
     {
-      icon: playIcon,
+      icon: snapshot.playing ? images.pause : images.play,
       tooltip: snapshot.playing ? 'Pause' : 'Play',
       click: () => send({ name: 'togglePlayback' }),
     },
     {
-      icon: nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'thumb-next.png')),
+      icon: images.next,
       tooltip: 'Next',
       click: () => send({ name: 'next' }),
     },
@@ -211,6 +246,11 @@ const createWindow = (): BrowserWindow => {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
+      // Keep the playback pipeline (hls.js buffering, crossfade, snapshot
+      // publishing) alive while the window is minimized or hidden to tray.
+      // Without this, Chromium pauses rAF and throttles timers to 1/sec, which
+      // stalls live streams and leaves the app frozen after long minimize/sleep.
+      backgroundThrottling: false,
     },
   });
 
@@ -233,6 +273,7 @@ const createWindow = (): BrowserWindow => {
       event.preventDefault();
       win.hide();
     } else {
+      thumbarState = null;
       mainWindow?.setThumbarButtons([]);
     }
   });
@@ -291,6 +332,7 @@ const createMiniPlayerWindow = (): BrowserWindow => {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
+      backgroundThrottling: false,
     },
   });
 
@@ -628,6 +670,15 @@ if (!gotLock) {
         void updater.check();
       }, 10_000);
     }
+
+    // After the machine wakes from sleep the renderer's rAF/timer state can
+    // lag the audio clock. Tell the owner bridge to re-publish a fresh
+    // snapshot and re-sync the mini-player so tray/media-key/taskbar state and
+    // the mini-player's progress reflect the real position again.
+    powerMonitor.on('resume', () => {
+      mainWindow?.webContents.send(IPC.power.resumed);
+      if (lastSnapshot) broadcastSnapshotToMiniPlayer(lastSnapshot);
+    });
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();

@@ -284,6 +284,13 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     return platform.playback.onCommand((envelope) => handleCommandRef.current(envelope));
   }, [platform]);
 
+  // Re-publish a fresh snapshot after the machine wakes from sleep so the tray,
+  // media keys, and mini-player re-sync to the real audio position.
+  useEffect(() => {
+    if (!platform) return;
+    return platform.power.onResumed(() => publishSnapshotRef.current());
+  }, [platform]);
+
   // Bump the epoch when the playback session resets: credentials change or a
   // fresh queue/song starts. Stale-epoch commands are then rejected.
   const credentialsRef = useRef(credentials);

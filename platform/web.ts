@@ -5,6 +5,7 @@ import type {
   Platform,
   PlatformApp,
   PlatformInfo,
+  PlatformPower,
   UpdaterApi,
   WindowControl,
 } from './types';
@@ -46,6 +47,10 @@ const webPlayback: PlaybackTransport = {
 const webMiniPlayer = {
   toggle: async () => {},
   showMain: async () => {},
+};
+
+const webPower: PlatformPower = {
+  onResumed: () => noopUnsubscribe,
 };
 
 const webUpdater: UpdaterApi = {
@@ -97,6 +102,7 @@ export const createWebPlatform = (): Platform => ({
   playback: webPlayback,
   app: webApp,
   miniPlayer: webMiniPlayer,
+  power: webPower,
   updater: webUpdater,
   fetchJson: webFetchJson,
   resolveMediaUrl: (url) => url,
