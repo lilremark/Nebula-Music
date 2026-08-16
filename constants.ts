@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.4.3';
+export const APP_VERSION = '2.4.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,21 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.4.4',
+    date: '2026-08-16',
+    title: 'Performance and Reliability',
+    changes: [
+      'Fixed playback hanging after the app was minimized or hidden for a long time (or after the PC woke from sleep) by keeping the playback pipeline alive while the window is in the background.',
+      'Reduced idle CPU and smoothed animations: the now-playing panel, mini-player, cover flow, and visualizer no longer re-render every frame while paused or hidden.',
+      'Stopped constant Windows taskbar churn — thumbnail buttons and the taskbar progress bar now update only when they actually change.',
+      'Re-syncs tray, media-key, and mini-player state after waking from sleep.'
+    ],
+    link: {
+      label: 'Download Nebula 2.4.4',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.4'
+    }
+  },
   {
     version: '2.4.3',
     date: '2026-08-12',
