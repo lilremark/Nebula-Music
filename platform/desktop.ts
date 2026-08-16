@@ -5,6 +5,7 @@ import type {
   Platform,
   PlatformApp,
   PlatformInfo,
+  PlatformPower,
   WindowControl,
 } from './types';
 
@@ -72,6 +73,10 @@ export const createDesktopPlatform = (): Platform => {
     onOpenSettings: (handler) => bridge.app.onOpenSettings(handler),
   };
 
+  const power: PlatformPower = {
+    onResumed: (handler) => bridge.power.onResumed(handler),
+  };
+
   const info: PlatformInfo = {
     kind: 'desktop',
     os: bridge.info.os,
@@ -91,6 +96,7 @@ export const createDesktopPlatform = (): Platform => {
       toggle: () => bridge.miniPlayer.toggle(),
       showMain: () => bridge.miniPlayer.showMain(),
     },
+    power,
     updater: {
       getState: () => bridge.updater.getState(),
       check: () => bridge.updater.check(),

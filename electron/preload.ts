@@ -82,6 +82,15 @@ const bridge: DesktopBridge = {
     toggle: () => ipcRenderer.invoke(IPC.miniPlayer.toggle),
     showMain: () => ipcRenderer.invoke(IPC.miniPlayer.showMain),
   },
+  power: {
+    onResumed: (handler: () => void) => {
+      const listener = (): void => handler();
+      ipcRenderer.on(IPC.power.resumed, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC.power.resumed, listener);
+      };
+    },
+  },
   updater: {
     getState: () => ipcRenderer.invoke(IPC.updater.getState) as Promise<UpdaterState>,
     check: () => ipcRenderer.invoke(IPC.updater.check) as Promise<boolean>,

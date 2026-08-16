@@ -49,10 +49,13 @@ export const CoverFlow: React.FC = () => {
         let raf = 0;
         let last = performance.now();
         const tick = (now: number) => {
+            raf = requestAnimationFrame(tick);
+            // backgroundThrottling is disabled, so pause the carousel re-render
+            // loop while the window is minimized/trayed.
+            if (document.visibilityState !== 'visible') return;
             const dt = Math.min((now - last) / 1000, 0.05);
             last = now;
             setProgress((p) => p + dt * 0.12);
-            raf = requestAnimationFrame(tick);
         };
         raf = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf);

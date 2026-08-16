@@ -65,10 +65,23 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
         const audio = audioRef.current;
         if (!audio) return;
         let raf = 0;
+        let lastTime = -1;
+        let lastDuration = -1;
         const tick = () => {
-            setCurrentTime(audio.currentTime);
-            setDuration(audio.duration || 0);
             raf = requestAnimationFrame(tick);
+            // Skip work while hidden (backgroundThrottling is disabled, so the
+            // frame loop keeps firing even when the window is minimized/trayed).
+            if (document.visibilityState !== 'visible') return;
+            const time = audio.currentTime;
+            if (Math.abs(time - lastTime) >= 0.1) {
+                lastTime = time;
+                setCurrentTime(time);
+            }
+            const dur = audio.duration || 0;
+            if (dur !== lastDuration) {
+                lastDuration = dur;
+                setDuration(dur);
+            }
         };
         raf = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf);

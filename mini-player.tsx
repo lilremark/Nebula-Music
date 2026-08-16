@@ -69,18 +69,29 @@ const MiniPlayerContent: React.FC = () => {
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      // Skip work while hidden (backgroundThrottling is disabled, so the frame
+      // loop keeps firing even when the mini-player is hidden).
+      if (document.visibilityState !== 'visible') return;
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
+      const snap = snapshotRef.current;
       const target =
-        snapshot && snapshot.durationSeconds > 0
-          ? Math.min(100, (snapshot.positionSeconds / snapshot.durationSeconds) * 100)
+        snap && snap.durationSeconds > 0
+          ? Math.min(100, (snap.positionSeconds / snap.durationSeconds) * 100)
           : 0;
-      setDisplayProgress((prev) => prev + (target - prev) * Math.min(1, dt * 6));
-      raf = requestAnimationFrame(tick);
+      setDisplayProgress((prev) => {
+        // Bail out (React skips the re-render) once converged, so a paused
+        // mini-player does not re-render at 60fps forever.
+        if (Math.abs(target - prev) < 0.01) return prev;
+        const next = prev + (target - prev) * Math.min(1, dt * 6);
+        return Math.abs(next - prev) < 0.01 ? prev : next;
+      });
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [snapshot]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const send = (name: 'togglePlayback' | 'next' | 'previous' | 'setPlayback') => {
     platform?.playback.sendCommand(

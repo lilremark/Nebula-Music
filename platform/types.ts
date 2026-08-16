@@ -68,6 +68,12 @@ export interface MiniPlayerControl {
   showMain(): Promise<void>;
 }
 
+/** System power notifications (desktop only; inert on the web). */
+export interface PlatformPower {
+  /** Subscribes to the machine waking from sleep. */
+  onResumed(handler: () => void): () => void;
+}
+
 /** Auto-update surface. Inert (enabled: false) in the web build and in dev. */
 export interface UpdaterApi {
   getState(): Promise<UpdaterState>;
@@ -95,6 +101,7 @@ export interface Platform {
   readonly vault: CredentialVault;
   readonly playback: PlaybackTransport;
   readonly miniPlayer: MiniPlayerControl;
+  readonly power: PlatformPower;
   readonly updater: UpdaterApi;
   /** JSON fetch routed through the main process on desktop (bypasses CORS and
    * mixed-content policy for Subsonic servers). Web build uses global fetch. */

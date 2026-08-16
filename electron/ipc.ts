@@ -41,6 +41,9 @@ export const IPC = {
     toggle: 'nebula:mini-player:toggle',
     showMain: 'nebula:mini-player:show-main',
   },
+  power: {
+    resumed: 'nebula:power:resumed',
+  },
   updater: {
     getState: 'nebula:updater:get-state',
     check: 'nebula:updater:check',

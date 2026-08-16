@@ -51,6 +51,9 @@ export interface DesktopBridge {
     toggle(): Promise<void>;
     showMain(): Promise<void>;
   };
+  power: {
+    onResumed(handler: () => void): () => void;
+  };
   updater: {
     getState(): Promise<UpdaterState>;
     check(): Promise<boolean>;
