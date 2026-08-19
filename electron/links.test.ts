@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAllowedExternalUrl } from './links';
+import { isAllowedExternalUrl, isStreamDeckBridgeUrl } from './links';
 
 describe('isAllowedExternalUrl', () => {
   it('accepts https URLs', () => {
@@ -28,5 +28,36 @@ describe('isAllowedExternalUrl', () => {
 
   it('rejects oversized URLs', () => {
     expect(isAllowedExternalUrl(`https://example.com/${'a'.repeat(5000)}`)).toBe(false);
+  });
+});
+
+describe('isStreamDeckBridgeUrl', () => {
+  it('accepts the default Stream Deck bridge endpoint', () => {
+    expect(isStreamDeckBridgeUrl('ws://127.0.0.1:37921/nebula/v1')).toBe(true);
+  });
+
+  it('accepts a custom loopback port on the bridge path', () => {
+    expect(isStreamDeckBridgeUrl('ws://127.0.0.1:40222/nebula/v1')).toBe(true);
+  });
+
+  it('rejects the same host on a non-bridge path', () => {
+    expect(isStreamDeckBridgeUrl('ws://127.0.0.1:37921/nebula/other')).toBe(false);
+    expect(isStreamDeckBridgeUrl('ws://127.0.0.1:37921/')).toBe(false);
+  });
+
+  it('rejects non-WebSocket schemes', () => {
+    expect(isStreamDeckBridgeUrl('http://127.0.0.1:37921/nebula/v1')).toBe(false);
+    expect(isStreamDeckBridgeUrl('https://127.0.0.1:37921/nebula/v1')).toBe(false);
+  });
+
+  it('rejects non-loopback hosts', () => {
+    expect(isStreamDeckBridgeUrl('ws://localhost:37921/nebula/v1')).toBe(false);
+    expect(isStreamDeckBridgeUrl('ws://192.168.1.10:37921/nebula/v1')).toBe(false);
+  });
+
+  it('rejects malformed or empty input', () => {
+    expect(isStreamDeckBridgeUrl('')).toBe(false);
+    expect(isStreamDeckBridgeUrl('not a url')).toBe(false);
+    expect(isStreamDeckBridgeUrl(42 as unknown as string)).toBe(false);
   });
 });

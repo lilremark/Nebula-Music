@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.4.4';
+export const APP_VERSION = '2.4.5';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,18 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.4.5',
+    date: '2026-08-16',
+    title: 'Stream Deck Fix',
+    changes: [
+      'Fixed Stream Deck pairing on the Windows desktop app: the bridge handshake now again sends a valid loopback origin the plugin accepts, so the plugin connects and pairs reliably.',
+    ],
+    link: {
+      label: 'Download Nebula 2.4.5',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.5'
+    }
+  },
   {
     version: '2.4.4',
     date: '2026-08-16',
