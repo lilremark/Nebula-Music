@@ -14,6 +14,7 @@ import { PlaybackProgress } from './player/PlaybackProgress';
 import { VISUALIZER_MODES } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { WindowControls } from './window/WindowControls';
+import { usePlatform } from '../platform/PlatformContext';
 
 interface SyncedLine {
     time: number;
@@ -82,6 +83,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const { colors } = useAdaptiveColors(coverArt);
     const { image: artistImage } = useArtistImage(currentSong?.artistId, currentSong?.artist);
     const isLightMode = mode === 'light';
+    const platform = usePlatform();
+    const isWindows = platform?.info.os === 'win32';
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -228,6 +231,21 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         <div className={`fixed inset-0 z-[60] flex flex-col bg-neutral-200 dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded || isZenMode ? 'translate-y-0' : 'translate-y-full'}`}
             style={playerBackground}
         >
+            {isWindows && (
+                <div
+                    className="relative z-20 h-8 flex items-center justify-between px-3 border-b border-white/10"
+                    style={appRegion('drag')}
+                >
+                    <div className="pointer-events-none absolute inset-0 -z-10 bg-black/40 backdrop-blur-xl" />
+                    <div className="w-24 shrink-0" aria-hidden="true" />
+                    <span className="text-sm font-bold tracking-tight text-white">
+                        Nebula
+                    </span>
+                    <div className="w-24 shrink-0 flex justify-end">
+                        <WindowControls />
+                    </div>
+                </div>
+            )}
             {/* Dot pattern background */}
             <div
                 className={`absolute inset-0 pointer-events-none ${isLightMode ? 'opacity-45' : 'opacity-30'}`}
@@ -313,7 +331,6 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                     >
                         {isZenMode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
-                    <WindowControls />
                 </div>
             </header>
 
