@@ -124,7 +124,7 @@ jobs:
 
   draft-release:
     name: Assemble draft release
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' && !cancelled() && needs.verify.result == 'success' && needs.windows.result == 'success'
     needs: [verify, windows, macos]
     runs-on: ubuntu-latest
     timeout-minutes: 15
