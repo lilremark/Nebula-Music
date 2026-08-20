@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.4.6';
+export const APP_VERSION = '2.5.0-beta.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,19 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.1',
+    date: '2026-08-20',
+    title: 'Beta Channel',
+    changes: [
+      'Introduced the beta release channel: pre-release builds published from the beta branch are delivered to users who switch the update channel to Beta in Settings.',
+      'Stable users continue to receive only published stable releases.',
+    ],
+    link: {
+      label: 'About the beta channel',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.1'
+    }
+  },
   {
     version: '2.4.6',
     date: '2026-08-19',
