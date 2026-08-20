@@ -1,3 +1,4 @@
 export { TopBar } from './TopBar';
 export { SplitLayout } from './SplitLayout';
 export { MacTitleBar } from './MacTitleBar';
+export { WindowsTitleBar } from './WindowsTitleBar';
