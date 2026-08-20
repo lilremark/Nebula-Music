@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.2';
+export const APP_VERSION = '2.5.0-beta.3';
 
 export interface ChangelogEntry {
   version: string;
@@ -16,7 +16,7 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '2.5.0-beta.2',
+    version: '2.5.0-beta.3',
     date: '2026-08-20',
     title: 'Beta Channel',
     changes: [
@@ -25,7 +25,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
     link: {
       label: 'About the beta channel',
-      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.2'
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.3'
     }
   },
   {
