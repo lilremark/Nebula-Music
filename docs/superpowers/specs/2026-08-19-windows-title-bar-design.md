@@ -22,8 +22,9 @@ surface — reuse the existing `WindowControls` component.
 - **Scope**: main window + full-screen player. The sign-in screen keeps its
   current inline controls (unchanged).
 - **Bar contents**: main window shows a centered "Nebula" wordmark with window
-  controls on the right; the full-screen player shows a controls-only strip
-  (no wordmark).
+  controls on the right; the full-screen player shows the same — a centered
+  "Nebula" wordmark with window controls on the right (no separate wordmark
+  variant; both strips read identically).
 - **Button styling**: keep the existing app-consistent style (rounded-xl,
   neutral hover, no red close tint).
 
@@ -43,7 +44,7 @@ Full-screen player, Windows only:
 
 ```
 ┌──────────────────────────────────────────┐
-│                              ─  ▢  ×    │  ← controls-only strip (drag region)
+│              Nebula            ─  ▢  ×  │  ← title-bar strip (drag region)
 ├──────────────────────────────────────────┤
 │ ⌄          Now Playing   tab  ...  ⧉  ⌾ │  ← existing player header (unchanged)
 └──────────────────────────────────────────┘
@@ -66,10 +67,10 @@ Full-screen player, Windows only:
 
 ### Full-screen player strip (`components/Player.tsx`)
 
-- A controls-only strip rendered above the existing header (line ~269), visible
+- A title-bar strip rendered above the existing header (line ~269), visible
   only on Windows (gate on `platform.info.os === 'win32'`).
-- Same `h-8`, blur, border, and drag-region treatment as the main window strip.
-- Right: `<WindowControls />`; no wordmark.
+- Same `h-8`, blur, border, centered wordmark, and drag-region treatment as the
+  main window strip; right side holds `<WindowControls />`.
 - Must respect the player's zen-mode hide behavior only if it doesn't conflict
   with the strip being the drag region — the strip stays visible (window must
   stay draggable).
