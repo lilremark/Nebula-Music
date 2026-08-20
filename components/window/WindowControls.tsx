@@ -28,7 +28,7 @@ export const WindowControls: React.FC<WindowControlsProps> = ({
 
     if (!isWindows) return null;
 
-    const buttonClass = `p-2.5 rounded-xl hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-all duration-200 active:scale-95 ${buttonClassName}`;
+    const buttonClass = `p-1 rounded-xl hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-all duration-200 active:scale-95 ${buttonClassName}`;
 
     return (
         <div className={`flex items-center gap-2 ${className}`}>

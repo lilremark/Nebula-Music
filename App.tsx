@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StoreProvider, useStore } from './context/Store';
-import { SplitLayout, TopBar, MacTitleBar } from './components/layout';
+import { SplitLayout, TopBar, MacTitleBar, WindowsTitleBar } from './components/layout';
 import { NavDrawer } from './components/navigation';
 import { NowPlayingPanel } from './components/player/NowPlayingPanel';
 import { FloatingMiniPlayer } from './components/player/FloatingMiniPlayer';
@@ -141,6 +141,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
+      <WindowsTitleBar />
       <MacTitleBar />
 
       {/* Navigation Drawer */}

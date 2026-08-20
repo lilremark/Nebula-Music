@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nebula — Windows Title Bar Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #e8e8e8;
+    --bg-secondary: #d4d4d4;
+    --bg-tertiary: #c0c0c0;
+    --text: #0a0a0a;
+    --text-secondary: #404040;
+    --text-tertiary: #737373;
+    --border: #b0b0b0;
+    --hover: #d0d0d0;
+  }
+  html.dark {
+    --bg: #0a0a0a;
+    --bg-secondary: #171717;
+    --bg-tertiary: #262626;
+    --text: #fafafa;
+    --text-secondary: #a3a3a3;
+    --text-tertiary: #525252;
+    --border: #404040;
+    --hover: #262626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #1a1a1f;
+    color: var(--text);
+    padding: 32px 24px 64px;
+  }
+  .header { max-width: 1080px; margin: 0 auto 20px; }
+  .header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; color: #fafafa; }
+  .header p { color: #a3a3a3; font-size: 13px; margin-top: 4px; }
+  .controls { max-width: 1080px; margin: 0 auto 24px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .controls button {
+    font-family: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px;
+    border-radius: 10px; border: 1px solid #3a3a42; background: #26262b; color: #e8e8ea;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s;
+  }
+  .controls button:hover { background: #33333a; border-color: #4a4a52; }
+  .controls button.active { background: #4f46e5; border-color: #6d64ff; }
+  .stage { max-width: 1080px; margin: 0 auto; display: grid; gap: 28px; }
+  .card { border-radius: 16px; overflow: hidden; border: 1px solid #33333a; background: var(--bg); box-shadow: 0 12px 40px rgba(0,0,0,0.35); }
+  .card-title { padding: 12px 18px; font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: #c9c9ce; background: #202026; border-bottom: 1px solid #33333a; text-transform: uppercase; }
+  .app { display: flex; flex-direction: column; height: 430px; }
+  .app.light { --bg: #e8e8e8; --bg-secondary: #d4d4d4; --bg-tertiary: #c0c0c0; --text: #0a0a0a; --text-secondary: #404040; --text-tertiary: #737373; --border: #b0b0b0; --hover: #d0d0d0; --bar-glass: rgba(255,255,255,0.8); }
+  .app.dark { --bg: #0a0a0a; --bg-secondary: #171717; --bg-tertiary: #262626; --text: #fafafa; --text-secondary: #a3a3a3; --text-tertiary: #525252; --border: #404040; --hover: #262626; --bar-glass: rgba(0,0,0,0.2); }
+
+  /* ===== Shared chrome ===== */
+  .titlebar, .player-strip {
+    position: relative;
+    height: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  }
+  .titlebar .blur, .player-strip .blur {
+    position: absolute; inset: 0; z-index: -1;
+    background: var(--bar-glass);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .titlebar .wordmark, .player-strip .wordmark {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    font-size: 13px; font-weight: 800; letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .player .player-strip .wordmark { color: rgba(255,255,255,0.9); }
+  .win-btns { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .win-btn {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 12px; cursor: pointer;
+    background: transparent;
+    color: var(--text-secondary);
+    transition: background 0.2s, color 0.2s, transform 0.2s;
+  }
+  .win-btn:hover { background: var(--hover); color: var(--text); transform: scale(0.95); }
+  .win-btn svg { width: 20px; height: 20px; }
+
+  /* ===== TopBar (app functions) ===== */
+  .topbar {
+    position: relative; height: 64px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  }
+  .topbar .blur {
+    position: absolute; inset: 0; z-index: -1;
+    background: var(--bar-glass);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+  .topbar .group { display: flex; align-items: center; gap: 16px; }
+  .topbar .group.right { gap: 8px; }
+  .icon-btn {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; border-radius: 12px; cursor: pointer;
+    background: transparent; color: var(--text-secondary);
+    transition: background 0.2s, color 0.2s, transform 0.2s;
+  }
+  .icon-btn:hover { background: var(--hover); color: var(--text); transform: scale(0.95); }
+  .icon-btn svg { width: 20px; height: 20px; }
+  .logo { width: 32px; height: 32px; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; }
+  .logo svg { width: 16px; height: 16px; stroke: #000; }
+  .page-title { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+
+  /* ===== Content ===== */
+  .content { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+  .main { flex: 1; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+  .placeholder {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    color: var(--text-tertiary); font-size: 13px; font-weight: 500;
+  }
+  .placeholder .dot-grid {
+    width: 72px; height: 72px; border-radius: 18px;
+    background-image: radial-gradient(circle, color-mix(in srgb, var(--text) 18%, transparent) 1px, transparent 1px);
+    background-size: 16px 16px;
+    opacity: 0.5;
+  }
+  .sidebar {
+    width: 300px; flex-shrink: 0;
+    background: var(--bg-secondary);
+    border-left: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-tertiary); font-size: 12px; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  /* ===== Full-screen player ===== */
+  .player { display: flex; flex-direction: column; height: 470px; background: #101016; }
+  .player .player-strip { border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .player .player-strip .blur { background: rgba(16,16,22,0.6); backdrop-filter: blur(24px); }
+  .player .player-strip .win-btn { color: rgba(255,255,255,0.6); }
+  .player .player-strip .win-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .player .player-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px;
+  }
+  .round-btn {
+    width: 40px; height: 40px; border-radius: 10px; border: none; cursor: pointer;
+    background: rgba(255,255,255,0.1); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .round-btn:hover { background: rgba(255,255,255,0.2); transform: scale(0.95); }
+  .round-btn svg { width: 20px; height: 20px; }
+  .tabs {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 4px; background: rgba(255,255,255,0.05);
+    border-radius: 8px; padding: 4px;
+  }
+  .tab { padding: 8px 16px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+  .tab.active { background: #fff; color: #000; }
+  .player .header-actions { display: flex; align-items: center; gap: 8px; }
+  .player-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; color: rgba(255,255,255,0.85); }
+  .art { width: 120px; height: 120px; border-radius: 18px; background: linear-gradient(135deg, #6d64ff, #2dd4bf); opacity: 0.85; }
+  .song-title { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+  .artist { font-size: 13px; color: rgba(255,255,255,0.5); }
+
+  .footnote { max-width: 1080px; margin: 28px auto 0; font-size: 12px; color: #8a8a92; line-height: 1.6; }
+  .footnote code { background: #26262b; padding: 1px 6px; border-radius: 6px; color: #c9c9ce; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Nebula — Windows Title Bar Mockup</h1>
+    <p>Proposed: window controls move to a slim dedicated bar above the app functions, following the existing macOS title-bar pattern.</p>
+  </div>
+
+  <div class="controls">
+    <button id="darkBtn" class="active" onclick="setMode('dark')">Dark mode</button>
+    <button id="lightBtn" onclick="setMode('light')">Light mode</button>
+  </div>
+
+  <div class="stage">
+    <!-- ================= MAIN WINDOW ================= -->
+    <div class="card">
+      <div class="card-title">Main window</div>
+      <div id="mainApp" class="app dark">
+        <!-- NEW: Windows title bar strip -->
+        <div class="titlebar">
+          <div class="blur"></div>
+          <span class="wordmark">Nebula</span>
+          <div class="win-btns">
+            <button class="win-btn" aria-label="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button class="win-btn" aria-label="Maximize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></button>
+            <button class="win-btn" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+          </div>
+        </div>
+
+        <!-- Existing TopBar (window controls removed) -->
+        <div class="topbar">
+          <div class="blur"></div>
+          <div class="group">
+            <button class="icon-btn" aria-label="Open navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></button>
+            <div class="group" style="gap:12px">
+              <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><path d="M4 10v4" opacity="0.4"/><path d="M8 7v10" opacity="0.6"/><path d="M12 3v18"/><path d="M16 7v10" opacity="0.6"/><path d="M20 10v4" opacity="0.4"/></svg></div>
+              <span class="page-title">Home</span>
+            </div>
+          </div>
+          <div class="group right">
+            <button class="icon-btn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
+            <button class="icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.09a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+            <!-- WindowControls REMOVED from here -->
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="main">
+            <div class="placeholder">
+              <div class="dot-grid"></div>
+              <span>Main content</span>
+            </div>
+          </div>
+          <div class="sidebar">Now Playing</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= FULL-SCREEN PLAYER ================= -->
+    <div class="card">
+      <div class="card-title">Full-screen Now Playing (Windows)</div>
+      <div class="player">
+        <!-- NEW: controls-only strip -->
+        <div class="player-strip">
+          <div class="blur"></div>
+          <span class="wordmark">Nebula</span>
+          <div class="win-btns">
+            <button class="win-btn" aria-label="Minimize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <button class="win-btn" aria-label="Maximize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg></button>
+            <button class="win-btn" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+          </div>
+        </div>
+
+        <!-- Existing player header (unchanged) -->
+        <div class="player-header" style="position:relative">
+          <button class="round-btn" aria-label="Close player"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="tabs">
+            <span class="tab active">Now Playing</span>
+            <span class="tab">Lyrics</span>
+            <span class="tab">Queue</span>
+          </div>
+          <div class="header-actions">
+            <button class="round-btn" aria-label="Visualizer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="5" y2="12"/><line x1="7" y1="8" x2="9" y2="8"/><line x1="11" y1="15" x2="13" y2="15"/><line x1="15" y1="5" x2="17" y2="5"/><line x1="19" y1="10" x2="21" y2="10"/></svg></button>
+            <button class="round-btn" aria-label="Zen mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg></button>
+          </div>
+        </div>
+
+        <div class="player-body">
+          <div class="art"></div>
+          <div class="song-title">Midnight City Lights</div>
+          <div class="artist">Nebula Ensemble</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    <p>Notes: the new strip is <code>h-8</code> (32px), draggable, with the same glass blur + border treatment as the macOS title bar and TopBar. Window buttons keep the app's rounded neutral hover style (no red close). The sign-in screen is unchanged. Nav drawer offset on Windows shifts to <code>top-8</code> to clear the strip.</p>
+  </div>
+
+  <script>
+    function setMode(mode) {
+      document.documentElement.classList.toggle('dark', mode === 'dark');
+      const app = document.getElementById('mainApp');
+      app.className = 'app ' + mode;
+      document.getElementById('darkBtn').classList.toggle('active', mode === 'dark');
+      document.getElementById('lightBtn').classList.toggle('active', mode === 'light');
+    }
+  </script>
+</body>
+</html>

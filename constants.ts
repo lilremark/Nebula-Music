@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.4.5';
+export const APP_VERSION = '2.4.6';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.4.6',
+    date: '2026-08-19',
+    title: 'Windows Title Bar',
+    changes: [
+      'Added a dedicated Windows title bar with the Nebula wordmark and window controls above the app, matching the macOS layout.',
+      'Moved the window controls out of the top bar into the new title strip in the main window and the full-screen player, and tightened their hover highlights so they fit within the strip.',
+      'The navigation drawer now clears the new Windows title bar instead of overlapping it.'
+    ],
+    link: {
+      label: 'Download Nebula 2.4.6',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.4.6'
+    }
+  },
   {
     version: '2.4.5',
     date: '2026-08-16',

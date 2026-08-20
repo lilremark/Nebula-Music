@@ -1,7 +1,6 @@
 import React from 'react';
 import type { CSSProperties } from 'react';
 import { Menu, Search, Settings } from 'lucide-react';
-import { WindowControls } from '../window/WindowControls';
 import { useStore } from '../../context/Store';
 import { usePlatform } from '../../platform/PlatformContext';
 
@@ -101,8 +100,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }
                     <Settings className="w-5 h-5" />
                 </button>
 
-                {/* Custom window controls (Windows only), directly after Settings, no divider */}
-                <WindowControls />
             </div>
         </header>
     );
