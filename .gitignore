@@ -17,6 +17,7 @@ coverage
 electron/dist
 release
 out
+!docs/release/
 
 # Editor directories and files
 .vscode/*
