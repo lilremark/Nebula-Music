@@ -163,9 +163,14 @@ jobs:
           fi
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
-          draft: ${{ needs.verify.outputs.is-beta != 'true' }}
+          draft: true
           prerelease: ${{ needs.verify.outputs.is-beta == 'true' }}
           generate_release_notes: true
           body_path: release-notes.md
           files: release-assets/*/*
           fail_on_unmatched_files: true
+      - if: needs.verify.outputs.is-beta == 'true'
+        name: Publish beta pre-release
+        run: gh release edit "v${RELEASE_VERSION}" --draft=false --prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
