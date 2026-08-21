@@ -26,9 +26,11 @@
     "blueimp-md5": "^2.19.0",
     "clsx": "^2.1.1",
     "d3": "^7.9.0",
+    "echogarden": "^3.2.0",
     "framer-motion": "^12.40.0",
     "hls.js": "^1.6.16",
     "lucide-react": "^1.21.0",
+    "onnxruntime-node": "^1.21.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "tailwind-merge": "^3.6.0",
@@ -58,6 +60,8 @@
     "esbuild@0.28.1": true,
     "fsevents@2.3.3": true,
     "sharp@0.35.3": true,
-    "electron-winstaller@5.4.0": true
+    "electron-winstaller@5.4.0": true,
+    "onnxruntime-node@1.21.1": true,
+    "wtf_wikipedia@10.4.2": true
   }
 }

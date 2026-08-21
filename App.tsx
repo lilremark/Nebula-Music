@@ -21,6 +21,7 @@ import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { MobilePlayerBar } from './components/MobilePlayerBar';
 import { UpdateBanner } from './components/UpdateBanner';
+import { DjSpeechPlayer } from './components/DjSpeechPlayer';
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
@@ -236,6 +237,7 @@ const AppContent: React.FC = () => {
       <PlaylistModal />
       <SearchModal />
       <WhatsNewModal />
+      <DjSpeechPlayer />
     </div>
   );
 };

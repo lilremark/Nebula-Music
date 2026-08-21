@@ -30,6 +30,8 @@ import {
   type DesktopCommandEnvelope,
   type DesktopSnapshot,
 } from '../playback/desktopProtocol';
+import { AVAILABLE_DJ_VOICES, DEFAULT_DJ_VOICE, createDjSpeechController } from './aiDj/speech';
+import { createEchogardenSynth } from './aiDj/echogardenSynth';
 
 const SCHEME = 'app';
 const PROTOCOL_URL = 'app://nebula/';
@@ -70,6 +72,43 @@ const forwardCommand = (envelope: DesktopCommandEnvelope): void => {
 
 const broadcastSnapshotToMiniPlayer = (snapshot: DesktopSnapshot): void => {
   miniPlayerWindow?.webContents.send(IPC.playback.snapshotToClient, snapshot);
+};
+
+const broadcastDjAudio = (payload: { wavBase64: string; mimeType: string } | null): void => {
+  const message = payload ?? { wavBase64: '', mimeType: 'audio/wav' };
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(IPC.aiDj.audio, message);
+  }
+};
+
+let djSpeechController: ReturnType<typeof createDjSpeechController> | null = null;
+
+const getDjSpeechController = (): ReturnType<typeof createDjSpeechController> => {
+  if (djSpeechController) return djSpeechController;
+  const cacheDir = path.join(app.getPath('userData'), 'aiDj', 'voices');
+  const synth = createEchogardenSynth({ cacheDir });
+  const player = {
+    play: (wavBytes: Uint8Array): void => {
+      const wavBase64 = Buffer.from(wavBytes).toString('base64');
+      broadcastDjAudio({ wavBase64, mimeType: 'audio/wav' });
+    },
+    stop: (): void => {
+      broadcastDjAudio(null);
+    },
+  };
+  djSpeechController = createDjSpeechController({
+    synth,
+    player,
+    getVoice: () => {
+      try {
+        const aiDj = settingsStore.get('aiDj') as { voice?: string } | undefined;
+        return aiDj?.voice ?? DEFAULT_DJ_VOICE;
+      } catch {
+        return DEFAULT_DJ_VOICE;
+      }
+    },
+  });
+  return djSpeechController;
 };
 
 // Snapshots arrive up to ~4x/sec (on `timeupdate`). Re-creating native images
@@ -556,6 +595,32 @@ const registerIpc = (): void => {
     const url = releaseUrlForVersion(state.newVersion);
     return url ? openExternalSafely(url) : false;
   });
+
+  ipcMain.handle(IPC.aiDj.voices, async () => ({
+    voices: [...AVAILABLE_DJ_VOICES],
+    defaultVoice: DEFAULT_DJ_VOICE,
+  }));
+
+  ipcMain.handle(IPC.aiDj.speak, async (event, text: unknown, voiceId: unknown) => {
+    if (!isTrustedSender(event.sender)) return { ok: false, error: 'Unauthorized.' };
+    if (typeof text !== 'string' || text.trim().length === 0) {
+      return { ok: false, error: 'Text is required.' };
+    }
+    // Voice is validated loosely: any non-empty string is accepted so custom
+    // Piper voices can be used; the schema validates the persisted value.
+    const voice = typeof voiceId === 'string' && voiceId.trim().length > 0 ? voiceId.trim() : undefined;
+    try {
+      await getDjSpeechController().speak(text, voice);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: (error as Error)?.message ?? 'Speech synthesis failed.' };
+    }
+  });
+
+  ipcMain.handle(IPC.aiDj.cancel, async (event) => {
+    if (!isTrustedSender(event.sender)) return;
+    getDjSpeechController().cancel();
+  });
 };
 
 /**
@@ -719,6 +784,11 @@ if (!gotLock) {
     unregisterMediaKeys();
     destroyTray();
     updater?.dispose();
+    try {
+      djSpeechController?.dispose();
+    } catch {
+      // ignore
+    }
     miniPlayerWindow?.destroy();
     miniPlayerWindow = null;
   });

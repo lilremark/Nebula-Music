@@ -353,6 +353,7 @@ interface AiDjConfig {
   model: string;
   baseUrl: string;
   interval: number;
+  voice: string;
 }
 
 const AI_DJ_VAULT_KEY = 'aiDj:apiKey';
@@ -368,6 +369,15 @@ const AI_DJ_PROVIDERS = [
   { value: 'custom', label: 'Custom', baseUrl: '' },
 ];
 
+const AI_DJ_VOICES = [
+  { value: 'en_US-ryan-high', label: 'Ryan — US English (high, DJ default)' },
+  { value: 'en_US-amy-medium', label: 'Amy — US English (medium)' },
+  { value: 'en_US-lessac-medium', label: 'Lessac — US English (medium)' },
+  { value: 'en_GB-alan-medium', label: 'Alan — UK English (medium)' },
+];
+
+const AI_DJ_PREVIEW_LINE = "Hey, you're listening to Nebula — here's a taste of your next queue.";
+
 const AiDjPanel = () => {
   const platform = usePlatform();
   // The main-process settings store always returns a complete aiDj object with
@@ -377,6 +387,8 @@ const AiDjPanel = () => {
   const [hasKey, setHasKey] = useState(false);
   const [keyInput, setKeyInput] = useState('');
   const [keySaving, setKeySaving] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [speakError, setSpeakError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!platform || platform.info.kind !== 'desktop') return;
@@ -499,6 +511,54 @@ const AiDjPanel = () => {
           onChange={(e) => save({ interval: Number(e.target.value) || config?.interval || 6 })}
           className={`${inputClass} w-24 shrink-0`}
         />
+      </div>
+
+      <div className={rowClass}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">DJ Voice</span>
+          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+            Local Piper voice for spoken lines. Downloads on first use, then works offline. Default is Ryan (natural DJ persona).
+          </span>
+        </span>
+        <div className="w-64 shrink-0">
+          <CustomDropdown
+            value={config?.voice ?? 'en_US-ryan-high'}
+            onChange={(v) => save({ voice: v })}
+            options={AI_DJ_VOICES}
+            disabled={!loaded}
+          />
+        </div>
+      </div>
+
+      <div className={rowClass}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Voice Preview</span>
+          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+            Synthesized locally via Piper — no API call or network. New preview cancels any in-flight line and does not interrupt playback.
+          </span>
+          {speakError && <span className="mt-1 block text-xs font-medium text-red-600 dark:text-red-400">{speakError}</span>}
+        </span>
+        <button
+          type="button"
+          onClick={async () => {
+            if (!platform || platform.info.kind !== 'desktop' || !platform.aiDj) return;
+            setSpeakError(null);
+            setSpeaking(true);
+            try {
+              const result = await platform.aiDj.speak(AI_DJ_PREVIEW_LINE, config?.voice);
+              if (!result.ok) setSpeakError(result.error ?? 'Speech failed.');
+            } catch (error) {
+              setSpeakError(error instanceof Error ? error.message : 'Speech failed.');
+            } finally {
+              setSpeaking(false);
+            }
+          }}
+          disabled={!loaded || speaking}
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-neutral-900 px-4 py-3 text-xs font-bold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
+        >
+          {speaking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Headphones className="h-3.5 w-3.5" />}
+          {speaking ? 'Speaking…' : 'Preview voice'}
+        </button>
       </div>
 
       <div className={rowClass}>

@@ -5,7 +5,7 @@ const shared = {
   target: 'node22',
   bundle: true,
   sourcemap: 'inline',
-  external: ['electron'],
+  external: ['electron', 'echogarden', 'onnxruntime-node', 'sharp'],
   outdir: 'electron/dist',
   outExtension: { '.js': '.cjs' },
   logLevel: 'info',

@@ -107,6 +107,22 @@ const bridge: DesktopBridge = {
       };
     },
   },
+  aiDj: {
+    speak: (text: string, voiceId?: string) =>
+      ipcRenderer.invoke(IPC.aiDj.speak, text, voiceId) as Promise<{ ok: boolean; error?: string }>,
+    cancel: () => ipcRenderer.invoke(IPC.aiDj.cancel) as Promise<void>,
+    voices: () =>
+      ipcRenderer.invoke(IPC.aiDj.voices) as Promise<{ voices: string[]; defaultVoice: string }>,
+    onAudio: (handler: (payload: { wavBase64: string; mimeType: string }) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+        handler(payload as { wavBase64: string; mimeType: string });
+      };
+      ipcRenderer.on(IPC.aiDj.audio, listener);
+      return () => {
+        ipcRenderer.removeListener(IPC.aiDj.audio, listener);
+      };
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('desktop', bridge);

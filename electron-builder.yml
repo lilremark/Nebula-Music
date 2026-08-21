@@ -8,6 +8,11 @@ files:
   - electron/assets/**/*
   - package.json
 asar: true
+asarUnpack:
+  - "**/node_modules/onnxruntime-node/**/*"
+  - "**/node_modules/echogarden/**/*"
+  - "**/node_modules/@echogarden/**/*"
+  - "**/node_modules/sharp/**/*"
 win:
   icon: electron/assets/icon.ico
   target:

@@ -51,6 +51,12 @@ export const IPC = {
     openDownloadPage: 'nebula:updater:open-download-page',
     status: 'nebula:updater:status',
   },
+  aiDj: {
+    speak: 'nebula:aiDj:speak',
+    cancel: 'nebula:aiDj:cancel',
+    voices: 'nebula:aiDj:voices',
+    audio: 'nebula:aiDj:speech-audio',
+  },
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC][keyof (typeof IPC)[keyof typeof IPC]];

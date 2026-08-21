@@ -10,6 +10,7 @@ describe('desktopSettingsSchema aiDj settings', () => {
       model: 'openai/gpt-oss-20b',
       baseUrl: 'https://api.groq.com/openai/v1',
       interval: 6,
+      voice: 'en_US-ryan-high',
     });
   });
 
@@ -36,6 +37,7 @@ describe('desktopSettingsSchema aiDj settings', () => {
       model: 'gpt-5.6-luna',
       baseUrl: 'https://api.openai.com/v1',
       interval: 12,
+      voice: 'en_US-ryan-high',
     });
   });
 

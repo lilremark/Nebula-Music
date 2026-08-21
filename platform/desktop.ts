@@ -104,6 +104,14 @@ export const createDesktopPlatform = (): Platform => {
       openDownloadPage: () => bridge.updater.openDownloadPage(),
       onStatus: (handler) => bridge.updater.onStatus(handler),
     },
+    aiDj: bridge.aiDj
+      ? {
+          speak: (text, voiceId) => bridge.aiDj!.speak(text, voiceId),
+          cancel: () => bridge.aiDj!.cancel(),
+          voices: () => bridge.aiDj!.voices(),
+          onAudio: (handler) => bridge.aiDj!.onAudio(handler),
+        }
+      : undefined,
     fetchJson,
     resolveMediaUrl,
   };

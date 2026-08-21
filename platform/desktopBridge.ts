@@ -61,6 +61,12 @@ export interface DesktopBridge {
     openDownloadPage(): Promise<boolean>;
     onStatus(handler: (state: UpdaterState) => void): () => void;
   };
+  aiDj?: {
+    speak(text: string, voiceId?: string): Promise<{ ok: boolean; error?: string }>;
+    cancel(): Promise<void>;
+    voices(): Promise<{ voices: string[]; defaultVoice: string }>;
+    onAudio(handler: (payload: { wavBase64: string; mimeType: string }) => void): () => void;
+  };
 }
 
 declare global {

@@ -9,10 +9,22 @@ export const windowBoundsSchema = z
   })
   .nullable();
 
+export const DEFAULT_DJ_VOICE = 'en_US-ryan-high';
+
+export const AVAILABLE_DJ_VOICES = [
+  'en_US-ryan-high',
+  'en_US-amy-medium',
+  'en_US-lessac-medium',
+  'en_GB-alan-medium',
+] as const;
+
+export type DjVoiceId = (typeof AVAILABLE_DJ_VOICES)[number] | (string & {});
+
 /**
  * AI DJ configuration. The provider/baseUrl/model select which OpenAI-compatible
  * endpoint the DJ calls; the API key itself lives in the OS credential vault,
  * never here. `interval` is the number of tracks between DJ interludes.
+ * `voice` selects the local Piper/VITS voice used for spoken lines.
  */
 export const aiDjSettingsSchema = z.object({
   enabled: z.boolean().default(false),
@@ -20,6 +32,7 @@ export const aiDjSettingsSchema = z.object({
   model: z.string().default('openai/gpt-oss-20b'),
   baseUrl: z.string().default('https://api.groq.com/openai/v1'),
   interval: z.number().int().min(1).max(50).default(6),
+  voice: z.string().min(1).default(DEFAULT_DJ_VOICE),
 });
 
 export const AI_DJ_SETTINGS_DEFAULTS: z.infer<typeof aiDjSettingsSchema> = {
@@ -28,6 +41,7 @@ export const AI_DJ_SETTINGS_DEFAULTS: z.infer<typeof aiDjSettingsSchema> = {
   model: 'openai/gpt-oss-20b',
   baseUrl: 'https://api.groq.com/openai/v1',
   interval: 6,
+  voice: DEFAULT_DJ_VOICE,
 };
 
 export const desktopSettingsSchema = z.object({

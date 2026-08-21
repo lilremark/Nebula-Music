@@ -87,6 +87,13 @@ export interface UpdaterApi {
   onStatus(handler: (state: UpdaterState) => void): () => void;
 }
 
+export interface AiDjApi {
+  speak(text: string, voiceId?: string): Promise<{ ok: boolean; error?: string }>;
+  cancel(): Promise<void>;
+  voices(): Promise<{ voices: string[]; defaultVoice: string }>;
+  onAudio(handler: (payload: { wavBase64: string; mimeType: string }) => void): () => void;
+}
+
 /**
  * Platform is the boundary between the renderer and the host. The web build
  * uses `web.ts`; the Electron build uses `desktop.ts` on top of the preload
@@ -103,6 +110,7 @@ export interface Platform {
   readonly miniPlayer: MiniPlayerControl;
   readonly power: PlatformPower;
   readonly updater: UpdaterApi;
+  readonly aiDj?: AiDjApi;
   /** JSON fetch routed through the main process on desktop (bypasses CORS and
    * mixed-content policy for Subsonic servers). Web build uses global fetch. */
   fetchJson(url: string): Promise<JsonFetchResult>;
