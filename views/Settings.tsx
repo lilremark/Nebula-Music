@@ -11,6 +11,12 @@ import { VISUALIZER_MODES } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { CustomDropdown } from '../components/CustomDropdown';
 import { getUpdateAction } from '../components/updateAction';
+import { AVAILABLE_DJ_VOICES as AVAILABLE_DJ_VOICE_IDS } from '../electron/settingsSchema';
+import {
+  PROVIDER_CATALOG,
+  getProviderById,
+  isCustomProvider,
+} from '../electron/aiDj/providerCatalog';
 import {
     AutoEqIndexEntry,
     fetchAutoEqIndex,
@@ -358,23 +364,17 @@ interface AiDjConfig {
 
 const AI_DJ_VAULT_KEY = 'aiDj:apiKey';
 
-// A small starter set for T1; the full provider/model catalog ships with the
-// catalog ticket. Custom accepts any OpenAI-compatible endpoint.
-const AI_DJ_PROVIDERS = [
-  { value: 'groq', label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1' },
-  { value: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
-  { value: 'anthropic', label: 'Anthropic', baseUrl: 'https://api.anthropic.com/v1/' },
-  { value: 'google', label: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
-  { value: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
-  { value: 'custom', label: 'Custom', baseUrl: '' },
-];
+const AI_DJ_VOICE_LABELS: Record<string, string> = {
+  'en_US-ryan-high': 'Ryan — US English (high, DJ default)',
+  'en_US-amy-medium': 'Amy — US English (medium)',
+  'en_US-lessac-medium': 'Lessac — US English (medium)',
+  'en_GB-alan-medium': 'Alan — UK English (medium)',
+};
 
-const AI_DJ_VOICES = [
-  { value: 'en_US-ryan-high', label: 'Ryan — US English (high, DJ default)' },
-  { value: 'en_US-amy-medium', label: 'Amy — US English (medium)' },
-  { value: 'en_US-lessac-medium', label: 'Lessac — US English (medium)' },
-  { value: 'en_GB-alan-medium', label: 'Alan — UK English (medium)' },
-];
+const AI_DJ_VOICES = (AVAILABLE_DJ_VOICE_IDS as readonly string[]).map((id) => ({
+  value: id,
+  label: AI_DJ_VOICE_LABELS[id] ?? id,
+}));
 
 const AI_DJ_PREVIEW_LINE = "Hey, you're listening to Nebula — here's a taste of your next queue.";
 
@@ -421,8 +421,17 @@ const AiDjPanel = () => {
 
   const changeProvider = async (provider: string) => {
     if (!config) return;
-    const preset = AI_DJ_PROVIDERS.find(p => p.value === provider);
-    await save({ provider, baseUrl: preset?.baseUrl ?? config.baseUrl });
+    const preset = getProviderById(provider);
+    if (!preset) {
+      await save({ provider });
+      return;
+    }
+    if (isCustomProvider(provider)) {
+      await save({ provider, baseUrl: preset.baseUrl });
+      return;
+    }
+    const nextModel = preset.models[0]?.id ?? config.model;
+    await save({ provider, baseUrl: preset.baseUrl, model: nextModel });
   };
 
   const saveKey = async () => {
@@ -464,39 +473,71 @@ const AiDjPanel = () => {
           <CustomDropdown
             value={config?.provider ?? ''}
             onChange={changeProvider}
-            options={AI_DJ_PROVIDERS.map(p => ({ value: p.value, label: p.label }))}
+            options={PROVIDER_CATALOG.map(p => ({ value: p.id, label: p.label }))}
             disabled={!loaded}
           />
         </div>
       </div>
 
-      <div className={rowClass}>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Model</span>
-          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">Model ID used for the DJ.</span>
-        </span>
-        <input
-          type="text"
-          value={config?.model ?? ''}
-          onChange={(e) => save({ model: e.target.value })}
-          placeholder="e.g. openai/gpt-oss-20b"
-          className={`${inputClass} w-48 shrink-0`}
-        />
-      </div>
-
-      <div className={rowClass}>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Base URL</span>
-          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">OpenAI-compatible API base URL.</span>
-        </span>
-        <input
-          type="text"
-          value={config?.baseUrl ?? ''}
-          onChange={(e) => save({ baseUrl: e.target.value })}
-          placeholder="https://api.groq.com/openai/v1"
-          className={`${inputClass} w-48 shrink-0`}
-        />
-      </div>
+      {isCustomProvider(config?.provider ?? '') ? (
+        <>
+          <div className={rowClass}>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Model</span>
+              <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">Free-form model ID for your custom endpoint.</span>
+            </span>
+            <input
+              type="text"
+              value={config?.model ?? ''}
+              onChange={(e) => save({ model: e.target.value })}
+              placeholder="e.g. my-custom-model"
+              className={`${inputClass} w-48 shrink-0`}
+            />
+          </div>
+          <div className={rowClass}>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Base URL</span>
+              <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">OpenAI-compatible API base URL.</span>
+            </span>
+            <input
+              type="text"
+              value={config?.baseUrl ?? ''}
+              onChange={(e) => save({ baseUrl: e.target.value })}
+              placeholder="https://api.example.com/v1"
+              className={`${inputClass} w-48 shrink-0`}
+            />
+          </div>
+        </>
+      ) : (
+        <div className={rowClass}>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Model</span>
+            <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">Model for the selected provider.</span>
+          </span>
+          <div className="w-48 shrink-0">
+            {(() => {
+              const entry = getProviderById(config?.provider ?? '');
+              const models = entry?.models ?? [];
+              const currentModel = config?.model ?? '';
+              const hasCurrent = models.some(m => m.id === currentModel);
+              const options = hasCurrent
+                ? models.map(m => ({ value: m.id, label: m.label }))
+                : currentModel
+                  ? [...models.map(m => ({ value: m.id, label: m.label })), { value: currentModel, label: `${currentModel} (current)` }]
+                  : models.map(m => ({ value: m.id, label: m.label }));
+              return (
+                <CustomDropdown
+                  value={currentModel}
+                  onChange={(v) => save({ model: v })}
+                  options={options}
+                  disabled={!loaded || models.length === 0}
+                  placeholder="Select model"
+                />
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       <div className={rowClass}>
         <span className="min-w-0">
