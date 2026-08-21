@@ -9,6 +9,27 @@ export const windowBoundsSchema = z
   })
   .nullable();
 
+/**
+ * AI DJ configuration. The provider/baseUrl/model select which OpenAI-compatible
+ * endpoint the DJ calls; the API key itself lives in the OS credential vault,
+ * never here. `interval` is the number of tracks between DJ interludes.
+ */
+export const aiDjSettingsSchema = z.object({
+  enabled: z.boolean().default(false),
+  provider: z.string().min(1).default('groq'),
+  model: z.string().default('openai/gpt-oss-20b'),
+  baseUrl: z.string().default('https://api.groq.com/openai/v1'),
+  interval: z.number().int().min(1).max(50).default(6),
+});
+
+export const AI_DJ_SETTINGS_DEFAULTS: z.infer<typeof aiDjSettingsSchema> = {
+  enabled: false,
+  provider: 'groq',
+  model: 'openai/gpt-oss-20b',
+  baseUrl: 'https://api.groq.com/openai/v1',
+  interval: 6,
+};
+
 export const desktopSettingsSchema = z.object({
   schemaVersion: z.number().int().min(1).default(1),
   trayOnClose: z.boolean().default(true),
@@ -23,6 +44,7 @@ export const desktopSettingsSchema = z.object({
   permitInsecureHttp: z.boolean().default(true),
   windowBounds: windowBoundsSchema.default(null),
   updateChannel: z.enum(['stable', 'beta']).default('stable'),
+  aiDj: aiDjSettingsSchema.default(AI_DJ_SETTINGS_DEFAULTS),
 });
 
 export type DesktopSettings = z.infer<typeof desktopSettingsSchema>;
@@ -37,4 +59,5 @@ export const DESKTOP_SETTINGS_DEFAULTS: DesktopSettings = {
   permitInsecureHttp: true,
   windowBounds: null,
   updateChannel: 'stable',
+  aiDj: { ...AI_DJ_SETTINGS_DEFAULTS },
 };

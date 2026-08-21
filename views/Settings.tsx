@@ -347,6 +347,189 @@ const DesktopUpdatesPanel = () => {
     );
 };
 
+interface AiDjConfig {
+  enabled: boolean;
+  provider: string;
+  model: string;
+  baseUrl: string;
+  interval: number;
+}
+
+const AI_DJ_VAULT_KEY = 'aiDj:apiKey';
+
+// A small starter set for T1; the full provider/model catalog ships with the
+// catalog ticket. Custom accepts any OpenAI-compatible endpoint.
+const AI_DJ_PROVIDERS = [
+  { value: 'groq', label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1' },
+  { value: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
+  { value: 'anthropic', label: 'Anthropic', baseUrl: 'https://api.anthropic.com/v1/' },
+  { value: 'google', label: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/' },
+  { value: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
+  { value: 'custom', label: 'Custom', baseUrl: '' },
+];
+
+const AiDjPanel = () => {
+  const platform = usePlatform();
+  // The main-process settings store always returns a complete aiDj object with
+  // schema defaults, so there is no separate renderer-side default constant.
+  const [config, setConfig] = useState<AiDjConfig | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [hasKey, setHasKey] = useState(false);
+  const [keyInput, setKeyInput] = useState('');
+  const [keySaving, setKeySaving] = useState(false);
+
+  useEffect(() => {
+    if (!platform || platform.info.kind !== 'desktop') return;
+    let cancelled = false;
+    Promise.all([
+      platform.settings.get('aiDj'),
+      platform.vault.getSecret(AI_DJ_VAULT_KEY),
+    ]).then(([stored, key]) => {
+      if (cancelled) return;
+      setConfig((stored as AiDjConfig | null) ?? null);
+      setHasKey(Boolean(key));
+      setLoaded(true);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [platform]);
+
+  if (!platform || platform.info.kind !== 'desktop') return null;
+
+  const save = async (patch: Partial<AiDjConfig>) => {
+    if (!config) return;
+    const next = { ...config, ...patch };
+    setConfig(next);
+    try {
+      await platform.settings.set('aiDj', next);
+    } catch (error) {
+      console.warn('[nebula] failed to persist AI DJ settings', error);
+      setConfig(config);
+    }
+  };
+
+  const changeProvider = async (provider: string) => {
+    if (!config) return;
+    const preset = AI_DJ_PROVIDERS.find(p => p.value === provider);
+    await save({ provider, baseUrl: preset?.baseUrl ?? config.baseUrl });
+  };
+
+  const saveKey = async () => {
+    const value = keyInput.trim();
+    setKeySaving(true);
+    try {
+      if (value) {
+        await platform.vault.setSecret(AI_DJ_VAULT_KEY, value);
+        setHasKey(true);
+      } else {
+        await platform.vault.clearSecret(AI_DJ_VAULT_KEY);
+        setHasKey(false);
+      }
+      setKeyInput('');
+    } catch (error) {
+      console.warn('[nebula] failed to save AI DJ API key', error);
+    } finally {
+      setKeySaving(false);
+    }
+  };
+
+  return (
+    <SettingPanel icon={Headphones} title="AI DJ">
+      <ToggleRow
+        label="Enable AI DJ"
+        description="A local voice curates your up-next queue from your listening history and chimes in between tracks."
+        checked={loaded ? config?.enabled ?? false : false}
+        onChange={(v) => save({ enabled: v })}
+      />
+
+      <div className={rowClass}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">LLM Provider</span>
+          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+            Powered by your own API key. Custom accepts any OpenAI-compatible endpoint.
+          </span>
+        </span>
+        <div className="w-48 shrink-0">
+          <CustomDropdown
+            value={config?.provider ?? ''}
+            onChange={changeProvider}
+            options={AI_DJ_PROVIDERS.map(p => ({ value: p.value, label: p.label }))}
+            disabled={!loaded}
+          />
+        </div>
+      </div>
+
+      <div className={rowClass}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Model</span>
+          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">Model ID used for the DJ.</span>
+        </span>
+        <input
+          type="text"
+          value={config?.model ?? ''}
+          onChange={(e) => save({ model: e.target.value })}
+          placeholder="e.g. openai/gpt-oss-20b"
+          className={`${inputClass} w-48 shrink-0`}
+        />
+      </div>
+
+      <div className={rowClass}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Base URL</span>
+          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">OpenAI-compatible API base URL.</span>
+        </span>
+        <input
+          type="text"
+          value={config?.baseUrl ?? ''}
+          onChange={(e) => save({ baseUrl: e.target.value })}
+          placeholder="https://api.groq.com/openai/v1"
+          className={`${inputClass} w-48 shrink-0`}
+        />
+      </div>
+
+      <div className={rowClass}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Chime every</span>
+          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">Tracks between DJ interludes.</span>
+        </span>
+        <input
+          type="number"
+          min={1}
+          max={50}
+          value={config?.interval ?? 6}
+          onChange={(e) => save({ interval: Number(e.target.value) || config?.interval || 6 })}
+          className={`${inputClass} w-24 shrink-0`}
+        />
+      </div>
+
+      <div className={rowClass}>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">API Key</span>
+          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+            {hasKey ? 'A key is saved in the OS credential vault.' : 'No key saved yet. The DJ is disabled until you add one.'}
+          </span>
+        </span>
+        <div className="flex w-64 shrink-0 items-center gap-2">
+          <input
+            type="password"
+            value={keyInput}
+            onChange={(e) => setKeyInput(e.target.value)}
+            placeholder={hasKey ? '•••••••••••• (saved)' : 'Enter API key'}
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={() => void saveKey()}
+            disabled={keySaving || (!keyInput.trim() && !hasKey)}
+            className="shrink-0 rounded-lg bg-primary px-3 py-3 text-xs font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {keySaving ? 'Saving…' : (keyInput.trim() ? 'Save' : 'Clear')}
+          </button>
+        </div>
+      </div>
+    </SettingPanel>
+  );
+};
+
 export const SettingsView: React.FC = () => {
     const { settings, updateSettings, connectToSubsonic, isDemoMode, credentials, visualizerMode, setVisualizerMode, disconnect } = useStore();
     const { mode, setTheme } = useTheme();
@@ -1036,6 +1219,7 @@ export const SettingsView: React.FC = () => {
 
                         <DesktopSettingsPanel />
                         <DesktopUpdatesPanel />
+                        <AiDjPanel />
                 </div>
             </div>
         </div>
