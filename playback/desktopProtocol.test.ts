@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   acceptEnvelope,
+  buildUpcomingList,
   desktopCommandEnvelopeSchema,
   desktopSnapshotSchema,
   DESKTOP_PROTOCOL_VERSION,
@@ -279,5 +280,30 @@ describe('Snapshot helpers', () => {
     const parsed = desktopCommandEnvelopeSchema.safeParse(JSON.parse(JSON.stringify(input)));
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data).toEqual(input);
+  });
+});
+
+describe('buildUpcomingList', () => {
+  const songs = [{ id: '1', title: 'A', artist: 'x' }, { id: '2', title: 'B', artist: 'y' }, { id: '3', title: 'C', artist: 'z' }];
+
+  it('returns the tracks after the current song, stopping at the end in repeat OFF', () => {
+    const upcoming = buildUpcomingList(songs, 0, 'OFF', new Map());
+    expect(upcoming.map((t) => t.id)).toEqual(['2', '3']);
+  });
+
+  it('wraps to the start when repeat is ALL', () => {
+    const upcoming = buildUpcomingList(songs, 2, 'ALL', new Map());
+    expect(upcoming.map((t) => t.id)).toEqual(['1', '2']);
+  });
+
+  it('returns an empty list when the queue is empty or index is invalid', () => {
+    expect(buildUpcomingList([], 0, 'OFF', new Map())).toEqual([]);
+    expect(buildUpcomingList(songs, -1, 'OFF', new Map())).toEqual([]);
+  });
+
+  it('resolves cover art from the coverArtById map', () => {
+    const cover = new Map([['2', 'data:image/jpeg;base64,AAAA']]);
+    const upcoming = buildUpcomingList(songs, 0, 'OFF', cover);
+    expect(upcoming[0]?.coverArtUrl).toBe('data:image/jpeg;base64,AAAA');
   });
 });
