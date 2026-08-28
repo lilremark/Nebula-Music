@@ -6,6 +6,7 @@ import { createDesktopSubsonicTransport } from '../services/subsonicTransport';
 import { usePlatform } from '../platform/PlatformContext';
 import type { Platform } from '../platform/types';
 import { MOCK_PLAYLISTS } from '../constants';
+import { computeNextPlaybackIndex, pushNavigationStack, popNavigationStack } from './storeQueueLogic';
 import { db } from '../services/db';
 import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
@@ -945,12 +946,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (audioRef.current) audioRef.current.volume = stateRef.current.volume;
   }, [stopCrossfadeAudio]);
 
-  const getNextPlaybackIndex = useCallback((songIndex: number, songQueue: ISong[], mode: RepeatMode) => {
-    if (songQueue.length === 0) return -1;
-    if (songIndex < songQueue.length - 1) return songIndex + 1;
-    if (mode === 'ALL') return 0;
-    return -1;
-  }, []);
+  const getNextPlaybackIndex = useCallback((songIndex: number, songQueue: ISong[], mode: RepeatMode) => computeNextPlaybackIndex(songIndex, songQueue, mode), []);
 
   const getMagicFadeSeconds = useCallback((duration: number) => {
     if (!Number.isFinite(duration) || duration <= 0) return 3;
@@ -1930,7 +1926,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       navigationStackRef.current = [];
       setNavigationStack([]);
     } else if (!options?.replace) {
-      const nextStack = [...navigationStackRef.current, { view: currentView, data: viewData }].slice(-50);
+      const nextStack = pushNavigationStack(navigationStackRef.current, { view: currentView, data: viewData });
       navigationStackRef.current = nextStack;
       setNavigationStack(nextStack);
     }
@@ -1947,12 +1943,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    const target = stack[stack.length - 1];
-    const nextStack = stack.slice(0, -1);
+    const { stack: nextStack, entry: target } = popNavigationStack(navigationStackRef.current);
     navigationStackRef.current = nextStack;
     setNavigationStack(nextStack);
-    setCurrentView(target.view);
-    setViewData(target.data);
+    if (target) {
+      setCurrentView(target.view);
+      setViewData(target.data);
+    }
   }, []);
   const performSearch = async (query: string) => {
     setLastSearchQuery(query); setIsSearching(true);
