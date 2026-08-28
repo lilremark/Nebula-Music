@@ -17,21 +17,19 @@ import {
 } from './coverArtLoadState';
 import {
   acceptEnvelope,
+  buildUpcomingList,
   clamp,
   DESKTOP_PROTOCOL_VERSION,
   parseCommandEnvelope,
   toRepeatMode,
   toTrackSummary,
-  toUpcomingSummary,
   type CommandCursor,
   type DesktopCommandEnvelope,
   type DesktopSnapshot,
-  type DesktopUpcomingTrack,
 } from './desktopProtocol';
 
 const OWNER_ID = 'nebula-desktop-owner';
 const SNAPSHOT_INTERVAL_MS = 1_000;
-const UPCOMING_LIST_SIZE = 5;
 
 interface DesktopOwnerBridgeContextValue {
   snapshotEpoch: number;
@@ -42,51 +40,6 @@ const DesktopOwnerBridgeContext = createContext<DesktopOwnerBridgeContextValue>(
   snapshotEpoch: 0,
   isConnected: false,
 });
-
-interface QueueSongLike {
-  id: string;
-  title: string;
-  artist: string;
-  album?: string;
-  duration?: number;
-  coverArt?: string;
-}
-
-/** Computes the up-to-5 tracks queued after the current one. */
-const buildUpcomingList = (
-  queue: QueueSongLike[],
-  currentSongIndex: number,
-  repeatMode: 'OFF' | 'ALL' | 'ONE',
-  coverArtById: Map<string, string | undefined>,
-): DesktopUpcomingTrack[] => {
-  if (queue.length === 0 || currentSongIndex < 0) return [];
-  const result: DesktopUpcomingTrack[] = [];
-  let index = currentSongIndex + 1;
-  let guard = 0;
-  while (result.length < UPCOMING_LIST_SIZE && guard < queue.length + UPCOMING_LIST_SIZE) {
-    guard += 1;
-    if (index >= queue.length) {
-      if (repeatMode !== 'ALL') break;
-      index = 0;
-    }
-    if (index === currentSongIndex) break;
-    const song = queue[index];
-    if (song) {
-      result.push(
-        toUpcomingSummary({
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          ...(song.album ? { album: song.album } : {}),
-          durationSeconds: song.duration,
-          coverArtUrl: coverArtById.get(song.id),
-        }),
-      );
-    }
-    index += 1;
-  }
-  return result;
-};
 
 /**
  * The renderer-side playback owner for desktop remote clients (tray, media
