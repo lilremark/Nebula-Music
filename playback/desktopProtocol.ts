@@ -201,3 +201,50 @@ export const toUpcomingSummary = (song: {
     ...(coverArtUrl.success ? { coverArtUrl: coverArtUrl.data } : {}),
   };
 };
+
+/** A minimimal track shape sufficient to derive an "Up Next" entry. */
+export interface QueueSongLike {
+  id: string;
+  title: string;
+  artist: string;
+  album?: string;
+  duration?: number;
+  coverArt?: string;
+}
+
+/** Computes the up-to-5 tracks queued after the current one. */
+export const buildUpcomingList = (
+  queue: QueueSongLike[],
+  currentSongIndex: number,
+  repeatMode: 'OFF' | 'ALL' | 'ONE',
+  coverArtById: Map<string, string | undefined>,
+): DesktopUpcomingTrack[] => {
+  if (queue.length === 0 || currentSongIndex < 0) return [];
+  const result: DesktopUpcomingTrack[] = [];
+  let index = currentSongIndex + 1;
+  let guard = 0;
+  const UPCOMING_LIST_SIZE = 5;
+  while (result.length < UPCOMING_LIST_SIZE && guard < queue.length + UPCOMING_LIST_SIZE) {
+    guard += 1;
+    if (index >= queue.length) {
+      if (repeatMode !== 'ALL') break;
+      index = 0;
+    }
+    if (index === currentSongIndex) break;
+    const song = queue[index];
+    if (song) {
+      result.push(
+        toUpcomingSummary({
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          ...(song.album ? { album: song.album } : {}),
+          durationSeconds: song.duration,
+          coverArtUrl: coverArtById.get(song.id),
+        }),
+      );
+    }
+    index += 1;
+  }
+  return result;
+};
