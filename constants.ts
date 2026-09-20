@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.3';
+export const APP_VERSION = '2.5.0-beta.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,18 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.4',
+    date: '2026-09-19',
+    title: 'Playback Stability',
+    changes: [
+      'Cancelled stale waveform downloads between tracks so long queues continue loading streams without exhausting the server connection pool.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.4'
+    }
+  },
   {
     version: '2.5.0-beta.3',
     date: '2026-08-20',
