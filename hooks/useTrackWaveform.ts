@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createTrackWaveformLoader, type TrackWaveformSubscription } from './trackWaveformLoader';
 
 const STORAGE_PREFIX = 'nebula_waveform_v4:';
 const WAVEFORM_SAMPLES = 180;
@@ -10,7 +11,6 @@ interface WaveformCacheEntry {
 }
 
 const memoryCache = new Map<string, number[]>();
-const inFlight = new Map<string, Promise<number[]>>();
 
 const FALLBACK_WAVEFORM = Array.from({ length: WAVEFORM_SAMPLES }, (_, i) => {
     const phase = i / WAVEFORM_SAMPLES;
@@ -106,8 +106,8 @@ const buildWaveformFromBuffer = (audioBuffer: AudioBuffer) => {
     return normalizePeaks(compressed);
 };
 
-const decodeWaveform = async (streamUrl: string) => {
-    const response = await fetch(streamUrl, { cache: 'force-cache' });
+const decodeWaveform = async (streamUrl: string, signal: AbortSignal) => {
+    const response = await fetch(streamUrl, { cache: 'force-cache', signal });
     if (!response.ok) throw new Error(`Waveform fetch failed: ${response.status}`);
 
     const audioData = await response.arrayBuffer();
@@ -122,30 +122,8 @@ const decodeWaveform = async (streamUrl: string) => {
         audioContext.close().catch(() => undefined);
     }
 };
-const getOrCreateWaveform = async (cacheKey: string, streamUrl: string) => {
-    if (memoryCache.has(cacheKey)) return memoryCache.get(cacheKey)!;
 
-    const cached = readCachedWaveform(cacheKey);
-    if (cached) return cached;
-
-    if (inFlight.has(cacheKey)) return inFlight.get(cacheKey)!;
-
-    const promise = decodeWaveform(streamUrl)
-        .then((peaks) => {
-            writeCachedWaveform(cacheKey, peaks);
-            return peaks;
-        })
-        .catch((error) => {
-            console.warn('Waveform unavailable, using fallback for this session', error);
-            return [...FALLBACK_WAVEFORM];
-        })
-        .finally(() => {
-            inFlight.delete(cacheKey);
-        });
-
-    inFlight.set(cacheKey, promise);
-    return promise;
-};
+const waveformLoader = createTrackWaveformLoader(decodeWaveform);
 
 export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => {
     const [waveform, setWaveform] = useState<number[] | null>(FALLBACK_WAVEFORM);
@@ -154,6 +132,7 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
         let cancelled = false;
         let timeoutId: number | null = null;
         let idleId: number | null = null;
+        let subscription: TrackWaveformSubscription<number[]> | null = null;
 
         if (!songId || !streamUrl) {
             setWaveform(FALLBACK_WAVEFORM);
@@ -171,9 +150,21 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
         }
 
         const loadWaveform = () => {
-            getOrCreateWaveform(cacheKey, streamUrl).then((peaks) => {
-                if (!cancelled) setWaveform(peaks);
-            });
+            subscription = waveformLoader.subscribe(cacheKey, streamUrl);
+            subscription.promise
+                .then((peaks) => {
+                    writeCachedWaveform(cacheKey, peaks);
+                    return peaks;
+                })
+                .catch((error) => {
+                    if (!(error instanceof Error && error.name === 'AbortError')) {
+                        console.warn('Waveform unavailable, using fallback for this session', error);
+                    }
+                    return [...FALLBACK_WAVEFORM];
+                })
+                .then((peaks) => {
+                    if (!cancelled) setWaveform(peaks);
+                });
         };
 
         const requestIdle = (window as any).requestIdleCallback as ((callback: () => void, options?: { timeout: number }) => number) | undefined;
@@ -188,6 +179,7 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
             cancelled = true;
             if (timeoutId !== null) window.clearTimeout(timeoutId);
             if (idleId !== null && cancelIdle) cancelIdle(idleId);
+            subscription?.release();
         };
     }, [songId, streamUrl]);
 
