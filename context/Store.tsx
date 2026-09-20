@@ -1239,6 +1239,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Audio Event Listeners
   useEffect(() => {
     const audio = audioRef.current;
+    const crossfadeAudio = crossfadeAudioRef.current;
     if (!audio) return;
 
     const clearEndAdvanceTimer = () => {
@@ -1294,7 +1295,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (queue.length === 0) return;
       const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
       if (nextIndex >= 0) {
-        if (activatePreparedTrack(nextIndex)) return;
+        if (stateRef.current.magicCrossfade && activatePreparedTrack(nextIndex)) return;
         if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
         if (reason !== 'ended') console.warn(`Advancing after ${reason} near track end.`);
         setCurrentSongIndex(nextIndex);
@@ -1370,6 +1371,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       advanceAfterTrackEnd('ended');
     };
 
+    const onCrossfadeEnded = () => {
+      const handoff = crossfadeHandoffRef.current;
+      const { queue, currentSongIndex, isPlaying, magicCrossfade } = stateRef.current;
+      if (
+        !handoff ||
+        !isPlaying ||
+        !magicCrossfade ||
+        queue[currentSongIndex]?.id !== handoff.songId
+      ) return;
+
+      advanceAfterTrackEnd('crossfade ended');
+    };
+
     const onError = (e: any) => {
       console.error("Playback Error Detected:", audio.error);
       if (audio.error?.code === 4) {
@@ -1405,6 +1419,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('waiting', onLoadingTrouble);
     audio.addEventListener('stalled', onLoadingTrouble);
     audio.addEventListener('suspend', onLoadingTrouble);
+    crossfadeAudio?.addEventListener('ended', onCrossfadeEnded);
 
     return () => {
       clearEndAdvanceTimer();
@@ -1419,6 +1434,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audio.removeEventListener('waiting', onLoadingTrouble);
       audio.removeEventListener('stalled', onLoadingTrouble);
       audio.removeEventListener('suspend', onLoadingTrouble);
+      crossfadeAudio?.removeEventListener('ended', onCrossfadeEnded);
     };
   }, [activatePreparedTrack, cancelCrossfade, getMagicFadeSeconds, getNextPlaybackIndex, initAudioContext, startCrossfade]);
 
@@ -1706,7 +1722,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (isCrossfadingRef.current || isCrossfadeStartingRef.current) return;
 
-    if (!isPlaying || repeatMode === 'ONE') {
+    if (!isPlaying || repeatMode === 'ONE' || !settings.magicCrossfade) {
       stopCrossfadeAudio();
       return;
     }
@@ -1714,7 +1730,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
     if (nextIndex >= 0) prepareCrossfadeTrack(nextIndex);
     else stopCrossfadeAudio();
-  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, stopCrossfadeAudio]);
+  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, settings.magicCrossfade, stopCrossfadeAudio]);
 
   // Handle Playback State
   useEffect(() => {
