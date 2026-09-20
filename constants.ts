@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.5';
+export const APP_VERSION = '2.5.0-beta.6';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,19 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.6',
+    date: '2026-09-20',
+    title: 'Queue Playback Reliability',
+    changes: [
+      'Stopped opening an unused crossfade stream for every track when Magic Crossfade is disabled, preventing stream connections from accumulating during long queues.',
+      'Added end-of-track recovery to the active crossfade player so the queue keeps advancing if the primary stream handoff stalls.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.6'
+    }
+  },
   {
     version: '2.5.0-beta.5',
     date: '2026-09-19',
