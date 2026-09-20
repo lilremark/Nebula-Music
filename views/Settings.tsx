@@ -378,6 +378,10 @@ const AI_DJ_VOICES = (AVAILABLE_DJ_VOICE_IDS as readonly string[]).map((id) => (
 
 const AI_DJ_PREVIEW_LINE = "Hey, you're listening to Nebula — here's a taste of your next queue.";
 
+// Temporarily keep the AI DJ configuration surface out of beta builds while
+// the feature is being prepared for a later release.
+const AI_DJ_SETTINGS_ENABLED = false;
+
 const AiDjPanel = () => {
   const platform = usePlatform();
   // The main-process settings store always returns a complete aiDj object with
@@ -1320,7 +1324,7 @@ export const SettingsView: React.FC = () => {
 
                         <DesktopSettingsPanel />
                         <DesktopUpdatesPanel />
-                        <AiDjPanel />
+                        {AI_DJ_SETTINGS_ENABLED && <AiDjPanel />}
                 </div>
             </div>
         </div>
