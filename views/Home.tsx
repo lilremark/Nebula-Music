@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useReducedMotion } from 'motion/react';
+import { Arc } from 'loading-dev';
 import { useStore } from '../context/Store';
+import { StepPlayer } from '../components/vendor/rare-step-player';
+import { Tabs } from '../components/vendor/aceternity-tabs';
+import SpotlightCard from '../components/vendor/reactbits-spotlight-card';
 import { ISong, IAlbum } from '../types';
-import { Play, Plus, Clock, Flame, Compass, ListPlus, RefreshCw, ChevronRight, ChevronDown, BarChart2 } from 'lucide-react';
+import { Play, Plus, Clock, Flame, Compass, ListPlus, RefreshCw, ChevronRight, BarChart2 } from 'lucide-react';
 
 // Album Card Component - Square, minimal rounding
 const AlbumCard: React.FC<{ album: IAlbum; onClick: () => void }> = ({ album, onClick }) => {
@@ -34,43 +39,35 @@ const AlbumCard: React.FC<{ album: IAlbum; onClick: () => void }> = ({ album, on
 
 
 // Song Card Component - Square with overlay
-const SongCard: React.FC<{ song: ISong; songs: ISong[]; index: number }> = ({ song, songs, index }) => {
+const SongCard: React.FC<{ song: ISong; songs: ISong[] }> = ({ song, songs }) => {
     const { service, playSong, openPlaylistModal } = useStore();
 
     return (
-        <div
-            className="group cursor-pointer relative aspect-square rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-900"
-            onClick={() => playSong(song, songs)}
+        <SpotlightCard
+            className="nebula-quick-song group"
+            spotlightColor="rgba(255, 255, 255, 0.16)"
         >
             <img
                 src={service.getCoverArtUrl(song.coverArt || song.id, 400)}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                alt={song.album}
+                className="nebula-quick-song-art"
+                alt=""
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-
-            {/* Play button on hover */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="w-14 h-14 bg-white text-black rounded-lg flex items-center justify-center shadow-xl">
-                    <Play className="w-6 h-6 fill-current ml-0.5" />
-                </div>
+            <div className="nebula-quick-song-copy">
+                <h3>{song.title}</h3>
+                <p>{song.artist}</p>
             </div>
-
-            {/* Song info */}
-            <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h3 className="font-semibold text-white text-sm truncate">{song.title}</h3>
-                <p className="text-xs text-white/50 truncate mt-1">{song.artist}</p>
-            </div>
-
-            {/* Add to playlist */}
-            <button
-                onClick={(e) => { e.stopPropagation(); openPlaylistModal(song); }}
-                className="absolute top-3 right-3 p-2 rounded bg-black/50 text-white opacity-0 group-hover:opacity-100 transition hover:bg-white/20 backdrop-blur-xs"
-                aria-label="Add to playlist"
-            >
-                <ListPlus className="w-4 h-4" />
+            <button type="button" className="nebula-quick-song-play" onClick={() => playSong(song, songs)} aria-label={`Play ${song.title}`}>
+                <Play size={17} fill="currentColor" aria-hidden="true" />
             </button>
-        </div>
+            <button
+                type="button"
+                onClick={() => openPlaylistModal(song)}
+                className="nebula-quick-song-add"
+                aria-label={`Add ${song.title} to playlist`}
+            >
+                <ListPlus size={16} aria-hidden="true" />
+            </button>
+        </SpotlightCard>
     );
 };
 
@@ -111,17 +108,11 @@ const SectionHeader: React.FC<{
 
 // Hero Section - Featured Track
 const HeroSection: React.FC<{ songs: ISong[] }> = ({ songs }) => {
-    const { service, playSong, setView, homeData, refreshHomeData, getMostPlayedSongs } = useStore();
+    const { service, playSong, setView } = useStore();
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [carouselPlaying, setCarouselPlaying] = useState(true);
+    const reducedMotion = useReducedMotion();
     const heroSongs = songs.slice(0, 5);
-
-    useEffect(() => {
-        if (heroSongs.length === 0) return;
-        const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % heroSongs.length);
-        }, 8000);
-        return () => clearInterval(interval);
-    }, [heroSongs.length]);
 
     if (heroSongs.length === 0) return null;
 
@@ -129,7 +120,7 @@ const HeroSection: React.FC<{ songs: ISong[] }> = ({ songs }) => {
     const artUrl = service.getCoverArtUrl(featured.coverArt || featured.id, 800);
 
     return (
-        <div className="relative rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 mb-10">
+        <div data-nebula-home-hero className="relative rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 mb-10">
             {/* Background */}
             <div className="absolute inset-0">
                 <img src={artUrl} className="w-full h-full object-cover opacity-30 blur-2xl scale-110" alt="" />
@@ -150,12 +141,12 @@ const HeroSection: React.FC<{ songs: ISong[] }> = ({ songs }) => {
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-primary/20 text-primary text-xs font-bold uppercase tracking-wider mb-4">
                         <Flame className="w-3 h-3 fill-current" /> Featured
                     </div>
-                    <h1
+                    <h2
                         className="text-3xl md:text-5xl font-black text-neutral-900 dark:text-white mb-3 cursor-pointer hover:text-neutral-700 dark:hover:text-white/80 transition"
                         onClick={() => { if (featured.albumId) setView('ALBUM_DETAIL', featured.albumId); }}
                     >
                         {featured.title}
-                    </h1>
+                    </h2>
                     <p className="text-lg text-neutral-600 dark:text-white/50 mb-6">
                         <span
                             className="hover:text-neutral-900 cursor-pointer transition dark:hover:text-white"
@@ -183,18 +174,19 @@ const HeroSection: React.FC<{ songs: ISong[] }> = ({ songs }) => {
                 </div>
             </div>
 
-            {/* Indicators */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                {heroSongs.map((_, idx) => (
-                    <button
-                        key={idx}
-                        onClick={() => setCurrentIndex(idx)}
-                        className={`h-1.5 rounded-full transition-all ${idx === currentIndex ? 'w-8 bg-primary' : 'w-2 bg-neutral-300 hover:bg-neutral-400 dark:bg-white/20 dark:hover:bg-white/40'
-                            }`}
-                        aria-label={`Show featured track ${idx + 1} of ${heroSongs.length}`}
-                    />
-                ))}
-            </div>
+            <StepPlayer
+                className="nebula-featured-steps"
+                steps={heroSongs.map(song => ({ label: `Show ${song.title}` }))}
+                value={currentIndex}
+                onValueChange={setCurrentIndex}
+                playing={!reducedMotion && carouselPlaying}
+                onPlayingChange={setCarouselPlaying}
+                duration={8000}
+                loop
+                seekable
+                controlPosition="left"
+                size={27}
+            />
         </div>
     );
 };
@@ -252,7 +244,6 @@ export const HomeView: React.FC = () => {
     const [loadingExplore, setLoadingExplore] = useState(false);
     const [loadingQuickPicks, setLoadingQuickPicks] = useState(false);
     const [activeTab, setActiveTab] = useState<'played' | 'recommended'>('played');
-    const [mostPlayedOpen, setMostPlayedOpen] = useState(false);
 
     useEffect(() => {
         // Wait for Store initialization to complete before fetching data
@@ -267,15 +258,26 @@ export const HomeView: React.FC = () => {
         init();
     }, [refreshHomeData, isInitialized]);
 
-    const displaySongs = activeTab === 'played' ? [] : homeData.recommendedTracks;
     const { randomSongs, exploreAlbums, recentAlbums, newestAlbums } = homeData;
 
     return (
-        <div className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
+        <div data-nebula-view="home" className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
+            <div className="nebula-home-intro">
+                <div>
+                    <p className="nebula-home-eyebrow">YOUR MUSIC, ON YOUR SERVER</p>
+                    <h1>Listen Now</h1>
+                    <p>Pick up where you left off or find something new in your library.</p>
+                </div>
+                <div className="nebula-home-shortcuts" aria-label="Library shortcuts">
+                    <button type="button" onClick={() => setView('ALBUMS')}>Albums <ChevronRight size={15} aria-hidden="true" /></button>
+                    <button type="button" onClick={() => setView('PLAYLISTS')}>Playlists <ChevronRight size={15} aria-hidden="true" /></button>
+                    <button type="button" onClick={() => setView('RADIO')}>Radio <ChevronRight size={15} aria-hidden="true" /></button>
+                </div>
+            </div>
             <HeroSection songs={randomSongs} />
 
             {/* Quick Picks & Most Played */}
-            <div className="grid grid-cols-1 gap-6 mb-12">
+            <div data-nebula-home-picks className="grid grid-cols-1 gap-6 mb-12">
                 {/* Quick Picks Grid */}
                 <div>
                     <div className="flex items-center justify-between mb-4">
@@ -288,56 +290,37 @@ export const HomeView: React.FC = () => {
                             className="p-2 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 transition dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/60 dark:hover:text-white"
                             aria-label="Refresh quick picks"
                         >
-                            <RefreshCw className={`w-4 h-4 ${loadingQuickPicks ? 'animate-spin' : ''}`} />
+                            {loadingQuickPicks ? <Arc size={18} /> : <RefreshCw className="w-4 h-4" />}
                         </button>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="nebula-quick-grid">
                         {randomSongs.slice(0, 8).map((song, i) => (
-                            <SongCard key={`${song.id}-${i}`} song={song} songs={randomSongs} index={i} />
+                            <SongCard key={`${song.id}-${i}`} song={song} songs={randomSongs} />
                         ))}
                     </div>
                 </div>
 
-                {/* Most Played / For You (collapsible) */}
-                <div className="bg-neutral-100 dark:bg-neutral-900/50 rounded-lg overflow-hidden border border-neutral-200 dark:border-white/5">
-                    <button
-                        onClick={() => setMostPlayedOpen(!mostPlayedOpen)}
-                        className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-neutral-200/70 dark:hover:bg-white/5"
-                        aria-expanded={mostPlayedOpen}
-                        aria-controls="most-played-panel"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <BarChart2 className="w-4 h-4 text-primary" />
-                            </div>
-                            <div>
-                                <h2 className="text-sm font-bold text-neutral-900 dark:text-white">Most Played / For You</h2>
-                                <p className="text-xs text-neutral-600 dark:text-white/50">
-                                    {activeTab === 'played'
-                                        ? `${getMostPlayedSongs().length} most-played tracks`
-                                        : `${homeData.recommendedTracks.length} recommended tracks`}
-                                </p>
-                            </div>
+                {/* Listening history and personal recommendations */}
+                <section className="nebula-home-rotation" aria-labelledby="nebula-home-rotation-heading">
+                    <div className="nebula-home-rotation-heading">
+                        <div>
+                            <p className="nebula-home-eyebrow">FROM YOUR LISTENING</p>
+                            <h2 id="nebula-home-rotation-heading">Your rotation</h2>
                         </div>
-                        <ChevronDown className={`w-4 h-4 text-neutral-500 dark:text-white/50 transition-transform ${mostPlayedOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {mostPlayedOpen && (
-                        <div id="most-played-panel" className="border-t border-neutral-200 dark:border-white/5">
-                            <div className="flex border-b border-white/5 shrink-0">
-                                <button
-                                    onClick={() => setActiveTab('played')}
-                                    className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition ${activeTab === 'played' ? 'bg-neutral-200 text-neutral-900 dark:bg-white/5 dark:text-white' : 'text-neutral-600 hover:text-neutral-900 dark:text-white/70 dark:hover:text-white'}`}
-                                >
-                                    Most Played Songs
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('recommended')}
-                                    className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition ${activeTab === 'recommended' ? 'bg-neutral-200 text-neutral-900 dark:bg-white/5 dark:text-white' : 'text-neutral-600 hover:text-neutral-900 dark:text-white/70 dark:hover:text-white'}`}
-                                >
-                                    For You
-                                </button>
-                            </div>
+                        <span>{activeTab === 'played'
+                            ? `${getMostPlayedSongs().length} most-played tracks`
+                            : `${homeData.recommendedTracks.length} tracks for you`}</span>
+                    </div>
+                    <div id="most-played-panel">
+                            <Tabs
+                                tabs={[{ title: 'Most Played', value: 'played' }, { title: 'For You', value: 'recommended' }]}
+                                value={activeTab}
+                                onValueChange={value => setActiveTab(value as 'played' | 'recommended')}
+                                showContent={false}
+                                containerClassName="nebula-home-tabs"
+                                tabClassName="nebula-home-tab"
+                                activeTabClassName="nebula-home-tab-active"
+                            />
 
                             <div className="max-h-[400px] overflow-y-auto p-4 custom-scrollbar">
                                 {activeTab === 'played' ? (
@@ -352,7 +335,7 @@ export const HomeView: React.FC = () => {
                                         ))}
                                         {getMostPlayedSongs().length === 0 && (
                                             <div className="text-center py-8 text-neutral-600 dark:text-white/60 text-sm">
-                                                No stats yet.
+                                                Your most-played music will appear here as you listen.
                                             </div>
                                         )}
                                     </div>
@@ -369,9 +352,8 @@ export const HomeView: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                </section>
             </div>
 
 

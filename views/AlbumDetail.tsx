@@ -65,6 +65,11 @@ export const AlbumDetailView: React.FC = () => {
         return hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
     };
 
+    const displayedSongCount = album.songs?.length || album.songCount;
+    const displayedDuration = album.songs?.length
+        ? album.songs.reduce((total, song) => total + song.duration, 0)
+        : album.duration;
+
     const getQualityBadge = (suffix?: string) => {
         if (!suffix) return null;
         const s = suffix.toUpperCase();
@@ -121,11 +126,11 @@ export const AlbumDetailView: React.FC = () => {
     })();
 
     return (
-        <div className="min-h-full pb-32 w-full">
+        <div className="min-h-full pb-32 w-full" data-nebula-view="album-detail">
             {/* Hero Header - full width */}
-            <div className="relative pt-4">
+            <div className="relative pt-4" data-nebula-detail-hero>
                 {/* Background with artist image and blur */}
-                <div className="absolute inset-x-0 top-0 h-[420px] overflow-hidden pointer-events-none">
+                <div className="absolute inset-x-0 top-0 h-[420px] overflow-hidden pointer-events-none" data-nebula-detail-backdrop>
                     {artistImage ? (
                         <img
                             src={artistImage}
@@ -143,7 +148,7 @@ export const AlbumDetailView: React.FC = () => {
                     <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-neutral-200/90 to-neutral-200 dark:from-neutral-950/40 dark:via-neutral-950/85 dark:to-neutral-950" />
                 </div>
 
-                <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10">
+                <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10" data-nebula-detail-hero-inner>
                     {/* Back button */}
                     <button
                         onClick={() => goBack('ALBUMS')}
@@ -153,9 +158,9 @@ export const AlbumDetailView: React.FC = () => {
                         {backLabel}
                     </button>
 
-                    <div className="flex flex-col md:flex-row gap-8">
+                    <div className="flex flex-col md:flex-row gap-8" data-nebula-detail-layout>
                         {/* Cover Art */}
-                        <div className="shrink-0 w-56 h-56 md:w-72 md:h-72 rounded-xl overflow-hidden shadow-2xl bg-neutral-200 dark:bg-neutral-900">
+                        <div className="shrink-0 w-56 h-56 md:w-72 md:h-72 rounded-xl overflow-hidden shadow-2xl bg-neutral-200 dark:bg-neutral-900" data-nebula-detail-cover>
                             <img
                                 src={service.getCoverArtUrl(album.coverArt || album.id, 500)}
                                 alt={album.name}
@@ -164,8 +169,7 @@ export const AlbumDetailView: React.FC = () => {
                         </div>
 
                         {/* Info */}
-                        <div className="flex-1 flex flex-col justify-end">
-                            <p className="text-[10px] font-bold text-neutral-600 dark:text-white/60 uppercase tracking-widest mb-1">Album</p>
+                        <div className="flex-1 flex flex-col justify-end" data-nebula-detail-info>
                             <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white mb-2 leading-tight">{album.name}</h1>
 
                             <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-white/60 mb-4">
@@ -182,7 +186,7 @@ export const AlbumDetailView: React.FC = () => {
                                     </>
                                 )}
                                 <span className="text-neutral-400 dark:text-white/50">•</span>
-                                <span>{album.songCount} songs, {formatTotalTime(album.duration)}</span>
+                                <span>{displayedSongCount} {displayedSongCount === 1 ? 'song' : 'songs'}, {formatTotalTime(displayedDuration)}</span>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
@@ -221,16 +225,17 @@ export const AlbumDetailView: React.FC = () => {
             </div>
 
             {/* Separator */}
-            <div className="px-6 lg:px-10">
+            <div className="px-6 lg:px-10" data-nebula-detail-separator>
                 <div className="border-t border-neutral-200 dark:border-white/10 my-2" />
             </div>
 
             {/* Main Content - full width */}
-            <div className="px-6 lg:px-10 pt-4">
+            <div className="px-6 lg:px-10 pt-4" data-nebula-detail-content>
                 {/* About Section */}
                 {album.info?.notes && (
                     <div className="mb-8 mt-4">
                         <div
+                            data-nebula-about
                             className="flex items-start gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-200 transition dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/[0.07]"
                             onClick={() => setShowFullNotes(!showFullNotes)}
                         >
@@ -252,14 +257,15 @@ export const AlbumDetailView: React.FC = () => {
 
                 {/* Track List Section - with album-colored accent */}
                 <section
+                    data-nebula-track-section
                     className="mb-8 rounded-xl overflow-hidden"
                     style={{
                         background: `linear-gradient(135deg, ${albumColors.surface} 0%, transparent 100%)`,
                     }}
                 >
-                    <div className="p-4">
+                    <div className="p-4" data-nebula-track-section-inner>
                         <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-3">Tracks</h2>
-                        <div className="border border-neutral-300 dark:border-white/10 rounded-lg overflow-hidden" style={{ borderColor: albumColors.primaryMuted }}>
+                        <div className="border border-neutral-300 dark:border-white/10 rounded-lg overflow-hidden" style={{ borderColor: albumColors.primaryMuted }} data-nebula-track-list>
                             {album.songs?.map((song, idx) => {
                                 const isCurrent = currentSong?.id === song.id;
                                 const discNumber = song.discNumber || 1;
@@ -275,6 +281,7 @@ export const AlbumDetailView: React.FC = () => {
                                             </div>
                                         )}
                                         <div
+                                            data-nebula-track-row
                                             className={`group flex items-center gap-4 px-5 py-4 cursor-pointer transition border-b border-neutral-200 dark:border-white/5 last:border-0 hover:bg-neutral-100 dark:hover:bg-white/5 ${isCurrent ? 'bg-neutral-100 dark:bg-white/5' : ''}`}
                                             onClick={() => album.songs && playSong(song, album.songs)}
                                         >
@@ -322,7 +329,7 @@ export const AlbumDetailView: React.FC = () => {
                                             </span>
 
                                             {/* Actions - always visible */}
-                                            <div className="flex items-center gap-2 shrink-0">
+                                            <div className="flex items-center gap-2 shrink-0" data-nebula-track-actions>
                                                 {/* Quality badge - moved here */}
                                                 <div className="shrink-0">
                                                     {getQualityBadge(song.suffix)}
@@ -354,7 +361,7 @@ export const AlbumDetailView: React.FC = () => {
 
                 {/* Related Albums */}
                 {relatedAlbums.length > 0 && (
-                    <section className="mb-8">
+                    <section className="mb-8" data-nebula-related>
                         <div className="border-t border-neutral-200 dark:border-white/10 pt-6 mb-4" />
                         <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-4">More by {album.artist}</h2>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">

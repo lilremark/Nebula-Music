@@ -61,8 +61,9 @@ export class SettingsStore {
   }
 
   private persist(): Promise<void> {
-    this.writeChain = this.writeChain.then(() => this.atomicWrite());
-    return this.writeChain;
+    const write = this.writeChain.then(() => this.atomicWrite());
+    this.writeChain = write.catch(() => undefined);
+    return write;
   }
 
   private async atomicWrite(): Promise<void> {

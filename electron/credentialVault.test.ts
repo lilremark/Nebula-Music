@@ -59,6 +59,34 @@ describe('CredentialVault', () => {
     expect(await reopened.get('https://demo.example')).toEqual(passwordCreds());
   });
 
+  it('serializes concurrent credential and secret saves without losing records', async () => {
+    const file = path.join(dir, 'vault.json');
+    const vault = await CredentialVault.open(file, fakeCipher(true));
+    await Promise.all(Array.from({ length: 20 }, (_, index) => index % 2
+      ? vault.setSecret(`secret-${index}`, `value-${index}`)
+      : vault.set(passwordCreds(`https://server-${index}.example`))));
+    const reopened = await CredentialVault.open(file, fakeCipher(true));
+    for (let index = 0; index < 20; index += 1) {
+      if (index % 2) expect(await reopened.getSecret(`secret-${index}`)).toBe(`value-${index}`);
+      else expect(await reopened.get(`https://server-${index}.example`)).toEqual(passwordCreds(`https://server-${index}.example`));
+    }
+  });
+
+  it('recovers from a failed write on the next save', async () => {
+    const file = path.join(dir, 'vault.json');
+    let failEncryption = true;
+    const cipher = fakeCipher(true);
+    const vault = await CredentialVault.open(file, { ...cipher, encryptString: (plain) => {
+      if (failEncryption) throw new Error('Temporary encryption failure');
+      return cipher.encryptString(plain);
+    } });
+    await expect(vault.setSecret('first', 'one')).rejects.toThrow('Temporary encryption failure');
+    failEncryption = false;
+    await vault.setSecret('second', 'two');
+    const reopened = await CredentialVault.open(file, fakeCipher(true));
+    expect(await reopened.getSecret('second')).toBe('two');
+  });
+
   it('clears a single server', async () => {
     const file = path.join(dir, 'vault.json');
     const vault = await CredentialVault.open(file, fakeCipher(true));

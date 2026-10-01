@@ -105,11 +105,11 @@ export const PlaylistDetailView: React.FC = () => {
     })();
 
     return (
-        <div className="min-h-full pb-32 w-full">
+        <div className="min-h-full pb-32 w-full" data-nebula-view="playlist-detail">
             {/* Hero Header - full width */}
-            <div className="relative pt-4">
+            <div className="relative pt-4" data-nebula-detail-hero>
                 {/* Background with playlist image and blur */}
-                <div className="absolute inset-x-0 top-0 h-[420px] overflow-hidden pointer-events-none">
+                <div className="absolute inset-x-0 top-0 h-[420px] overflow-hidden pointer-events-none" data-nebula-detail-backdrop>
                     {playlist.coverArt ? (
                         <img
                             src={service.getCoverArtUrl(playlist.coverArt, 400)}
@@ -122,7 +122,7 @@ export const PlaylistDetailView: React.FC = () => {
                     <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-neutral-200/90 to-neutral-200 dark:from-neutral-950/40 dark:via-neutral-950/85 dark:to-neutral-950" />
                 </div>
 
-                <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10">
+                <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10" data-nebula-detail-hero-inner>
                     {/* Back button */}
                     <button
                         onClick={() => goBack(defaultBackView)}
@@ -132,9 +132,9 @@ export const PlaylistDetailView: React.FC = () => {
                         {backLabel}
                     </button>
 
-                    <div className="flex flex-col md:flex-row gap-8">
+                    <div className="flex flex-col md:flex-row gap-8" data-nebula-detail-layout>
                         {/* Cover Art */}
-                        <div className="shrink-0 w-56 h-56 md:w-72 md:h-72 rounded-xl overflow-hidden shadow-2xl bg-neutral-200 dark:bg-neutral-900">
+                        <div className="shrink-0 w-56 h-56 md:w-72 md:h-72 rounded-xl overflow-hidden shadow-2xl bg-neutral-200 dark:bg-neutral-900" data-nebula-detail-cover>
                             {playlist.coverArt ? (
                                 <img
                                     src={service.getCoverArtUrl(playlist.coverArt, 500)}
@@ -149,8 +149,7 @@ export const PlaylistDetailView: React.FC = () => {
                         </div>
 
                         {/* Info */}
-                        <div className="flex-1 flex flex-col justify-end">
-                            <p className="text-[10px] font-bold text-neutral-600 dark:text-white/60 uppercase tracking-widest mb-1">Playlist</p>
+                        <div className="flex-1 flex flex-col justify-end" data-nebula-detail-info>
                             <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white mb-2 leading-tight">{playlist.name}</h1>
 
                             <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-white/60 mb-4">
@@ -223,11 +222,12 @@ export const PlaylistDetailView: React.FC = () => {
             </div>
 
             {/* Main Content - full width */}
-            <div className="px-6 lg:px-10 pt-4">
+            <div className="px-6 lg:px-10 pt-4" data-nebula-detail-content>
                 {/* About Section */}
                 {comment && (
                     <div className="mb-8 mt-4">
                         <div
+                            data-nebula-about
                             className="flex items-start gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-200 transition dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/[0.07]"
                             onClick={() => setShowFullNotes(!showFullNotes)}
                         >
@@ -249,19 +249,21 @@ export const PlaylistDetailView: React.FC = () => {
 
                 {/* Track List Section - with playlist-colored accent */}
                 <section
+                    data-nebula-track-section
                     className="mb-8 rounded-xl overflow-hidden"
                     style={{
                         background: `linear-gradient(135deg, ${playlistColors.surface} 0%, transparent 100%)`,
                     }}
                 >
-                    <div className="p-4">
+                    <div className="p-4" data-nebula-track-section-inner>
                         <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-3">Tracks</h2>
-                        <div className="border border-neutral-200 dark:border-white/10 rounded-lg overflow-hidden" style={{ borderColor: playlistColors.primaryMuted }}>
+                        <div className="border border-neutral-200 dark:border-white/10 rounded-lg overflow-hidden" style={{ borderColor: playlistColors.primaryMuted }} data-nebula-track-list>
                             {playlist.songs?.map((song, idx) => {
                                 const isCurrent = currentSong?.id === song.id;
 
                                 return (
                                     <div
+                                        data-nebula-track-row
                                         key={`${song.id}-${idx}`}
                                         className={`group flex items-center gap-4 px-5 py-4 cursor-pointer transition border-b border-neutral-200 dark:border-white/5 last:border-0 hover:bg-neutral-200 dark:hover:bg-white/5 ${isCurrent ? 'bg-neutral-200 dark:bg-white/5' : ''}`}
                                         onClick={() => playlist.songs && playSong(song, playlist.songs)}
@@ -310,7 +312,7 @@ export const PlaylistDetailView: React.FC = () => {
                                         </span>
 
                                         {/* Actions - always visible */}
-                                        <div className="flex items-center gap-2 shrink-0">
+                                        <div className="flex items-center gap-2 shrink-0" data-nebula-track-actions>
                                             {/* Quality badge */}
                                             <div className="shrink-0">
                                                 {getQualityBadge(song.suffix)}

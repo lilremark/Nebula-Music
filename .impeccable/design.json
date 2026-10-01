@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-12T12:00:00-04:00",
+  "title": "Design System: Nebula Studio — Precision Rail",
+  "extensions": {
+    "colorMeta": {
+      "listening-canvas": {
+        "role": "neutral",
+        "displayName": "Listening Canvas",
+        "canonical": "#070707",
+        "tonalRamp": ["#010101", "#030303", "#070707", "#171717", "#303030", "#5f5f5f", "#a7a7a7", "#f2f2f2"]
+      },
+      "instrument-panel": {
+        "role": "neutral",
+        "displayName": "Instrument Panel",
+        "canonical": "#0d0d0e",
+        "tonalRamp": ["#020202", "#060607", "#0d0d0e", "#1d1d1f", "#38383a", "#68686b", "#adadaf", "#f3f3f4"]
+      },
+      "raised-panel": {
+        "role": "neutral",
+        "displayName": "Raised Panel",
+        "canonical": "#131315",
+        "tonalRamp": ["#040405", "#0a0a0b", "#131315", "#27272a", "#444448", "#747478", "#b6b6b9", "#f5f5f6"]
+      },
+      "control-well": {
+        "role": "neutral",
+        "displayName": "Control Well",
+        "canonical": "#1a1a1d",
+        "tonalRamp": ["#050506", "#0e0e10", "#1a1a1d", "#303034", "#4f4f54", "#7f7f85", "#bebec2", "#f7f7f8"]
+      },
+      "control-hover": {
+        "role": "neutral",
+        "displayName": "Control Hover",
+        "canonical": "#222226",
+        "tonalRamp": ["#070708", "#131315", "#222226", "#3a3a40", "#5b5b62", "#898990", "#c5c5c9", "#f8f8f9"]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Dark Hairline",
+        "canonical": "rgba(255,255,255,.1)",
+        "tonalRamp": ["rgba(255,255,255,.03)", "rgba(255,255,255,.05)", "rgba(255,255,255,.08)", "rgba(255,255,255,.1)", "rgba(255,255,255,.16)", "rgba(255,255,255,.28)", "rgba(255,255,255,.52)", "rgba(255,255,255,.84)"]
+      },
+      "hairline-strong": {
+        "role": "neutral",
+        "displayName": "Strong Dark Hairline",
+        "canonical": "rgba(255,255,255,.18)",
+        "tonalRamp": ["rgba(255,255,255,.04)", "rgba(255,255,255,.08)", "rgba(255,255,255,.12)", "rgba(255,255,255,.18)", "rgba(255,255,255,.27)", "rgba(255,255,255,.42)", "rgba(255,255,255,.65)", "rgba(255,255,255,.9)"]
+      },
+      "warm-white": {
+        "role": "neutral",
+        "displayName": "Warm White",
+        "canonical": "#f8f7f3",
+        "tonalRamp": ["#242320", "#484641", "#6d6a63", "#928f87", "#b5b2ab", "#d4d1cb", "#e9e7e2", "#f8f7f3"]
+      },
+      "warm-muted": {
+        "role": "neutral",
+        "displayName": "Warm Muted",
+        "canonical": "#aba8a2",
+        "tonalRamp": ["#1f1e1c", "#3d3b37", "#5b5954", "#77746e", "#918e87", "#aba8a2", "#d0cdc8", "#f3f1ed"]
+      },
+      "warm-faint": {
+        "role": "neutral",
+        "displayName": "Warm Faint",
+        "canonical": "#aaa69f",
+        "tonalRamp": ["#1f1e1c", "#3c3a36", "#5a5751", "#76726b", "#908c85", "#aaa69f", "#cfcbc5", "#f2efeb"]
+      },
+      "ember": {
+        "role": "primary",
+        "displayName": "Ember Action",
+        "canonical": "#ff5a36",
+        "tonalRamp": ["#351009", "#5d1a10", "#862419", "#ad3020", "#d4402a", "#ff5a36", "#ff967f", "#ffd7cd"]
+      },
+      "ember-hot": {
+        "role": "primary",
+        "displayName": "Hot Ember",
+        "canonical": "#ff3d1f",
+        "tonalRamp": ["#350b05", "#5e1209", "#88190d", "#b12112", "#dc2b17", "#ff3d1f", "#ff8973", "#ffd1c6"]
+      },
+      "ember-ink": {
+        "role": "primary",
+        "displayName": "Ember Ink",
+        "canonical": "#200702",
+        "tonalRamp": ["#0f0201", "#200702", "#3b1008", "#5d2116", "#823a2c", "#ad6252", "#d99d90", "#f6ddd8"]
+      },
+      "connected-green": {
+        "role": "tertiary",
+        "displayName": "Connected Green",
+        "canonical": "#63ca79",
+        "tonalRamp": ["#102c18", "#1b4828", "#28673a", "#36874e", "#49a862", "#63ca79", "#9de2ae", "#d8f3df"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Featured Display", "purpose": "One active music object in the Featured bar." },
+      "headline": { "displayName": "Editorial Headline", "purpose": "Route, album, playlist, and artist titles." },
+      "title": { "displayName": "Instrument Title", "purpose": "Shelf, Settings, and dialog headings." },
+      "body": { "displayName": "Interface Body", "purpose": "Route descriptions and supporting copy." },
+      "control-label": { "displayName": "Control Label", "purpose": "Actions, navigation, tracks, and settings names." },
+      "section-label": { "displayName": "Section Label", "purpose": "Uppercase rail and command-result groups." },
+      "caption": { "displayName": "Warm Metadata", "purpose": "Artist, album, count, format, and help text." }
+    },
+    "shadows": [
+      { "name": "featured-depth", "value": "0 20px 55px rgba(0,0,0,.42)", "purpose": "Lifts the Featured music room from the route canvas." },
+      { "name": "artwork-compact", "value": "0 9px 20px rgba(0,0,0,.34)", "purpose": "Separates compact cover art from its blurred artwork field." },
+      { "name": "shelf-artwork", "value": "0 12px 26px rgba(0,0,0,.23)", "purpose": "Provides low lift under collection artwork only." },
+      { "name": "detail-cover", "value": "0 24px 55px rgba(0,0,0,.5)", "purpose": "Gives album and playlist covers depth over the image-derived sleeve." },
+      { "name": "mobile-drawer", "value": "18px 0 60px rgba(0,0,0,.5)", "purpose": "Separates the modal mobile navigation from the inert canvas." },
+      { "name": "floating-player", "value": "0 18px 46px rgba(0,0,0,.48)", "purpose": "Keeps the persistent compact player legible over route content." },
+      { "name": "immersive-cover", "value": "0 30px 70px rgba(0,0,0,.54)", "purpose": "Provides the strongest artwork lift in Large Now Playing." },
+      { "name": "modal", "value": "0 28px 80px rgba(0,0,0,.6)", "purpose": "Lifts Command Search and playlist dialogs over the scrim." },
+      { "name": "switch-knob", "value": "0 3px 8px rgba(0,0,0,.25)", "purpose": "Separates the switch knob from its visual track." }
+    ],
+    "motion": [
+      { "name": "rail-reveal", "value": "320ms cubic-bezier(.16,1,.3,1)", "purpose": "Slides the navigation rail while the grid column changes immediately." },
+      { "name": "control-state", "value": "160ms ease", "purpose": "Default color, border, background, and short lift transition." },
+      { "name": "artwork-reveal", "value": "280ms cubic-bezier(.16,1,.3,1)", "purpose": "Shifts artwork and reveals the peeking record." },
+      { "name": "feature-change", "value": "500ms cubic-bezier(.16,1,.3,1)", "purpose": "Fades and settles the next Featured artwork." },
+      { "name": "command-enter", "value": "280ms cubic-bezier(.16,1,.3,1)", "purpose": "Clips and drops Command Search into place." },
+      { "name": "large-player-enter", "value": "450ms cubic-bezier(.16,1,.3,1)", "purpose": "Settles the primary Large Now Playing content." },
+      { "name": "route-change", "value": "240ms cubic-bezier(.16,1,.3,1)", "purpose": "Clips and settles a newly selected Studio route without disturbing the shell." },
+      { "name": "segment-spring", "value": "spring stiffness 430, damping 36, mass .7", "purpose": "Moves one centered, shadow-free equal-width selector indicator between options." },
+      { "name": "vinyl-reveal", "value": "520ms cubic-bezier(.16,1,.3,1)", "purpose": "Slides only the record horizontally from behind stationary immersive artwork." },
+      { "name": "record-spin", "value": "8s linear infinite with paused and running states", "purpose": "Rotates the revealed immersive record during playback and holds its position while paused." },
+      { "name": "hook-spring", "value": "spring stiffness 420, damping 34, mass .7", "purpose": "Moves the RareUI-inspired navigation hook." },
+      { "name": "switch-spring", "value": "spring stiffness 500, damping 30", "purpose": "Moves and stretches the Spectrum-inspired switch knob." },
+      { "name": "featured-clock", "value": "6500ms duration, 80ms progress interval", "purpose": "Advances five Featured tracks while not paused or reduced." },
+      { "name": "reduced-motion", "value": ".01ms, one iteration", "purpose": "Collapses transitions and arrivals, stops the record, hides the ambient visualizer, updates Framer motion immediately, and stops Featured autoplay." }
+    ],
+    "breakpoints": [
+      { "name": "compact-desktop-max", "value": "1260px" },
+      { "name": "mobile-max", "value": "900px" },
+      { "name": "small-max", "value": "620px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Studio Button",
+      "kind": "button",
+      "refersTo": "action-primary",
+      "description": "A shared 44px action primitive with primary, secondary, quiet, and danger variants and stable hover geometry.",
+      "html": "<button class='ds-action' type='button'><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M8 5v14l11-7z' fill='currentColor'/></svg><span>Play track</span></button>",
+      "css": ".ds-action { display:inline-flex;min-height:44px;align-items:center;justify-content:center;gap:8px;padding:0 17px;color:#200702;border:1px solid transparent;border-radius:11px;background:#ff5a36;font:700 12px/1 'DM Sans',sans-serif;cursor:pointer;transition:background .16s ease; }.ds-action svg { width:16px;height:16px; }.ds-action:hover { background:#ff3d1f; }.ds-action:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }.ds-action:disabled { opacity:.45;cursor:not-allowed; }.ds-action[data-variant='secondary'] { color:#f8f7f3;border-color:rgba(255,255,255,.1);background:#0d0d0e; }.ds-action[data-variant='quiet'] { color:#aba8a2;background:transparent; }.ds-action[data-variant='danger'] { color:#fff;background:#ff3d1f; }"
+    },
+    {
+      "name": "RareUI-inspired Hook Navigation",
+      "kind": "nav",
+      "refersTo": "hook-navigation-item",
+      "description": "A measured dashed hook rail marks one current destination without filling the whole item with accent.",
+      "html": "<nav class='ds-hook-nav' aria-label='Explore'><p class='ds-hook-label'>Explore</p><div class='ds-hook-list'><span class='ds-hook-rail' aria-hidden='true'><i class='ds-hook-line'></i><svg viewBox='0 0 13 8'><path d='M.5 0A6.5 6.5 0 0 0 7 6.5H13' fill='none' stroke='currentColor' stroke-dasharray='2 2'/></svg></span><button class='ds-hook-item' type='button'>Listen now</button><button class='ds-hook-item' type='button' aria-current='page'>Browse</button><button class='ds-hook-item' type='button'>Albums</button></div></nav>",
+      "css": ".ds-hook-nav { width:220px;padding:20px 13px 6px;color:#f8f7f3;background:#0d0d0e;font-family:'DM Sans',sans-serif; }.ds-hook-label { margin:0 0 9px;padding-left:7px;color:#aaa69f;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase; }.ds-hook-list { position:relative;display:flex;flex-direction:column; }.ds-hook-item { position:relative;z-index:2;display:flex;width:100%;min-height:44px;align-items:center;padding:7px 10px 7px 21px;color:#aba8a2;border:0;border-radius:10px;background:transparent;font-size:13px;font-weight:550;text-align:left;cursor:pointer;transition:color .16s ease,background .16s ease; }.ds-hook-item:hover,.ds-hook-item:focus-visible { color:#f8f7f3;background:#1a1a1d; }.ds-hook-item:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }.ds-hook-item[aria-current='page'] { color:#f8f7f3; }.ds-hook-rail { position:absolute;z-index:3;top:0;left:3px;width:13px;height:66px;color:#ff5a36;pointer-events:none; }.ds-hook-line { position:absolute;top:0;left:0;width:1px;height:59px;background-image:repeating-linear-gradient(to top,transparent 0 2px,currentColor 2px 4px); }.ds-hook-rail svg { position:absolute;top:58px;left:0;width:13px;height:8px; }"
+    },
+    {
+      "name": "RareUI-inspired Step Player",
+      "kind": "custom",
+      "refersTo": "step-player-control",
+      "description": "The five-step Featured controller combines a 44px rotation toggle with direct step targets and timed fill.",
+      "html": "<div class='ds-step-player' aria-label='Featured track 2 of 5'><button class='ds-step-toggle' type='button' aria-label='Pause featured tracks'><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M7 5h4v14H7zm6 0h4v14h-4z' fill='currentColor'/></svg></button><div class='ds-step-track'><button class='ds-step' type='button' aria-label='Show featured track 1'><i class='ds-step-dot ds-step-complete'></i></button><button class='ds-step ds-step-active' type='button' aria-label='Show featured track 2'><i class='ds-step-dot'><span class='ds-step-fill'></span></i></button><button class='ds-step' type='button' aria-label='Show featured track 3'><i class='ds-step-dot'></i></button><button class='ds-step' type='button' aria-label='Show featured track 4'><i class='ds-step-dot'></i></button><button class='ds-step' type='button' aria-label='Show featured track 5'><i class='ds-step-dot'></i></button></div></div>",
+      "css": ".ds-step-player { display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px;color:#fff;border-radius:16px;background:#2b0c06;font-family:'DM Sans',sans-serif; }.ds-step-toggle { display:grid;width:44px;height:44px;flex:0 0 auto;place-items:center;color:#200702;border:0;border-radius:999px;background:#f8f7f3;cursor:pointer; }.ds-step-toggle svg { width:15px; }.ds-step-track { display:flex;align-items:center; }.ds-step { display:grid;min-width:44px;height:44px;place-items:center;padding:0 7px;border:0;background:transparent;cursor:pointer; }.ds-step-dot { position:relative;display:block;width:8px;height:8px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.36); }.ds-step-complete { background:rgba(255,255,255,.88); }.ds-step-active { width:74px; }.ds-step-active .ds-step-dot { width:100%;background:rgba(255,255,255,.28); }.ds-step-fill { position:absolute;inset:0;border-radius:inherit;background:#fff;transform:scaleX(.58);transform-origin:left; }.ds-step-toggle:hover { background:#fff; }.ds-step-toggle:focus-visible,.ds-step:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }.ds-step-toggle:active { transform:scale(.95); }"
+    },
+    {
+      "name": "Spectrum-inspired Command Search",
+      "kind": "input",
+      "refersTo": "command-search",
+      "description": "A focus-contained command palette with a combobox, grouped Store destinations, active option, and keyboard help.",
+      "html": "<section class='ds-command' role='dialog' aria-modal='true' aria-label='Search Nebula'><label class='ds-command-input'><svg viewBox='0 0 24 24' aria-hidden='true'><circle cx='11' cy='11' r='7' fill='none' stroke='currentColor' stroke-width='2'/><path d='m16 16 5 5' stroke='currentColor' stroke-width='2'/></svg><input role='combobox' aria-expanded='true' aria-controls='ds-command-results' aria-autocomplete='list' value='night' aria-label='Search Nebula'/><kbd>Esc</kbd></label><div class='ds-command-results' id='ds-command-results' role='listbox' aria-label='Search suggestions'><p>Go to</p><button type='button' role='option' aria-selected='true'><span>Browse</span><small>Open view</small></button><button type='button' role='option' aria-selected='false'><span>Night Drive</span><small>8 tracks</small></button></div><footer class='ds-command-footer'><span>↑ ↓ Navigate</span><span>↵ Select</span></footer></section>",
+      "css": ".ds-command { display:flex;width:min(650px,100%);max-height:min(610px,80vh);flex-direction:column;overflow:hidden;color:#f8f7f3;border:1px solid rgba(255,255,255,.18);border-radius:16px;background:#131315;box-shadow:0 28px 80px rgba(0,0,0,.6);font-family:'DM Sans',sans-serif; }.ds-command-input { display:flex;min-height:56px;align-items:center;gap:11px;padding:0 15px;border-bottom:1px solid rgba(255,255,255,.1); }.ds-command-input svg { width:18px;color:#aba8a2; }.ds-command-input input { min-width:0;flex:1;color:#f8f7f3;border:0;outline:0;background:transparent;font:400 14px/1 'DM Sans',sans-serif; }.ds-command-input kbd { padding:4px 7px;color:#aaa69f;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:#1a1a1d;font-size:9px; }.ds-command-results { padding:7px; }.ds-command-results>p { margin:0;padding:11px 10px 6px;color:#aaa69f;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase; }.ds-command-results button { display:grid;width:100%;min-height:48px;grid-template-columns:1fr auto;align-items:center;padding:7px 10px;color:#aba8a2;border:0;border-radius:10px;background:transparent;text-align:left;cursor:pointer; }.ds-command-results button[aria-selected='true'],.ds-command-results button:hover { color:#f8f7f3;background:#1a1a1d; }.ds-command-results button:focus-visible,.ds-command-input input:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }.ds-command-results small { color:#aaa69f;font-size:9px; }.ds-command-footer { display:flex;min-height:42px;align-items:center;gap:18px;padding:0 15px;color:#aaa69f;border-top:1px solid rgba(255,255,255,.1);font-size:9px; }"
+    },
+    {
+      "name": "Spectrum-inspired Animated Switch",
+      "kind": "custom",
+      "refersTo": "animated-switch",
+      "description": "A 44px switch target with a spring knob, pressed stretch, native disabled state, and reduced-motion fallback.",
+      "html": "<button class='ds-switch' type='button' role='switch' aria-checked='true' aria-label='Magic crossfade'><span class='ds-switch-knob' aria-hidden='true'></span></button>",
+      "css": ".ds-switch { position:relative;width:48px;height:44px;padding:0;border:0;border-radius:999px;background:transparent;cursor:pointer; }.ds-switch::before { content:'';position:absolute;top:11px;left:3px;width:42px;height:22px;border-radius:999px;background:#ff5a36;transition:background .2s ease; }.ds-switch-knob { position:absolute;z-index:1;top:13px;left:25px;width:18px;height:18px;border-radius:999px;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.25);transition:left .2s cubic-bezier(.16,1,.3,1),width .16s ease; }.ds-switch:hover::before { background:#ff3d1f; }.ds-switch:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }.ds-switch:active .ds-switch-knob { width:23px;left:20px; }.ds-switch:disabled { opacity:.45;cursor:not-allowed; }@media (prefers-reduced-motion:reduce){.ds-switch::before,.ds-switch-knob{transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Spell-inspired Artwork Track Card",
+      "kind": "card",
+      "refersTo": "artwork-track-card",
+      "description": "A compact art-led track card with blurred color, shifting cover, peeking record, and shared-player action.",
+      "html": "<article class='ds-art-card'><div class='ds-art-glow' aria-hidden='true'></div><button class='ds-art-cover' type='button' aria-label='Play Midnight Circuit by Neon Void'><span class='ds-art-record' aria-hidden='true'><i></i></span><svg class='ds-art-image' viewBox='0 0 80 80' aria-hidden='true'><defs><linearGradient id='ds-art-gradient' x1='0' y1='0' x2='1' y2='1'><stop stop-color='#ff5a36'/><stop offset='.48' stop-color='#5d1022'/><stop offset='1' stop-color='#09090a'/></linearGradient></defs><rect width='80' height='80' rx='10' fill='url(#ds-art-gradient)'/><circle cx='53' cy='27' r='13' fill='rgba(255,255,255,.18)'/></svg><span class='ds-art-play'>▶</span></button><div class='ds-art-copy'><button type='button'><strong>Midnight Circuit</strong><span>Neon Void</span></button></div></article>",
+      "css": ".ds-art-card { position:relative;display:grid;min-height:112px;grid-template-columns:84px minmax(0,1fr);align-items:center;gap:15px;overflow:hidden;padding:13px;color:#f8f7f3;border-radius:14px;background:#0d0d0e;isolation:isolate;font-family:'DM Sans',sans-serif; }.ds-art-glow { position:absolute;z-index:-1;inset:-60%;opacity:.2;filter:blur(40px);background:#ff5a36; }.ds-art-cover { position:relative;width:78px;height:78px;padding:0;border:0;background:transparent;cursor:pointer; }.ds-art-image { position:relative;z-index:2;width:100%;height:100%;border-radius:10px;box-shadow:0 9px 20px rgba(0,0,0,.34);transition:transform .28s cubic-bezier(.16,1,.3,1); }.ds-art-record { position:absolute;z-index:1;top:8%;left:14%;width:84%;height:84%;border-radius:999px;background:repeating-radial-gradient(circle,#111 0 2px,#242424 3px 4px,#111 5px 7px);transition:transform .3s cubic-bezier(.16,1,.3,1); }.ds-art-record i { position:absolute;inset:36%;border-radius:999px;background:#ff5a36; }.ds-art-play { position:absolute;z-index:4;inset:0;display:grid;place-items:center;color:#fff;opacity:0;transition:opacity .16s ease; }.ds-art-card:hover .ds-art-image { transform:translateX(-5px); }.ds-art-card:hover .ds-art-record { transform:translateX(28px) rotate(55deg); }.ds-art-card:hover .ds-art-play { opacity:1; }.ds-art-cover:focus-visible,.ds-art-copy button:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }.ds-art-copy button { display:flex;min-width:0;flex-direction:column;padding:0;color:inherit;border:0;background:transparent;text-align:left;cursor:pointer; }.ds-art-copy strong { font-size:13px;font-weight:650; }.ds-art-copy span { margin-top:4px;color:#aba8a2;font-size:11px; }@media (prefers-reduced-motion:reduce){.ds-art-image,.ds-art-record,.ds-art-play{transition-duration:.01ms;}}"
+    },
+    {
+      "name": "Wide Sidebar Player",
+      "kind": "custom",
+      "refersTo": "sidebar-player",
+      "description": "The wide-desktop player fades a masked artwork ambience into the semantic panel and combines a full-width thumb-free timeline, open centered transport, queue, and sound modes in one Store-owned instrument.",
+      "html": "<aside class='ds-sidebar-player' aria-label='Now playing sidebar'><header class='ds-sidebar-header'><span>Now playing</span><button type='button' aria-label='Collapse player'>⌃</button></header><div class='ds-sidebar-art' aria-label='Album artwork'></div><div class='ds-sidebar-copy'><strong>Sorting Array</strong><span>The Algorithms</span></div><div class='ds-sidebar-transport'><button type='button' aria-label='Previous track'>◀</button><button class='ds-sidebar-play' type='button' aria-label='Pause'>Ⅱ</button><button type='button' aria-label='Next track'>▶</button></div><label class='ds-sidebar-timeline'><span>1:17</span><input type='range' min='0' max='100' value='38' aria-label='Track position'/><span>3:24</span></label><div class='ds-sidebar-tabs' role='group' aria-label='Player details'><button type='button' aria-pressed='true'>Up next</button><button type='button' aria-pressed='false'>Sound</button></div><button class='ds-sidebar-queue' type='button'><i></i><span><strong>Neon Highway</strong><small>Neon Void</small></span><time>4:05</time></button></aside>",
+      "css": ".ds-sidebar-player { display:flex;width:326px;min-height:620px;flex-direction:column;overflow:hidden;color:#f8f7f3;border-left:1px solid rgba(255,255,255,.1);background:#0d0d0e;font-family:'DM Sans',sans-serif; }.ds-sidebar-header { display:flex;min-height:70px;align-items:center;justify-content:space-between;padding:0 16px 0 18px;border-bottom:1px solid rgba(255,255,255,.1);font-size:11px;font-weight:650; }.ds-sidebar-header button,.ds-sidebar-transport button { display:grid;width:44px;height:44px;place-items:center;color:#aba8a2;border:0;border-radius:11px;background:transparent;cursor:pointer; }.ds-sidebar-header button:hover,.ds-sidebar-transport button:hover { color:#f8f7f3;background:#1a1a1d; }.ds-sidebar-art { margin:18px 18px 14px;aspect-ratio:1;border-radius:14px;background:linear-gradient(145deg,#ff5a36,#45100b 48%,#070707);box-shadow:0 9px 20px rgba(0,0,0,.34); }.ds-sidebar-copy { display:flex;flex-direction:column;padding:0 18px; }.ds-sidebar-copy strong { font:700 16px/1.2 Manrope,sans-serif; }.ds-sidebar-copy span { margin-top:4px;color:#aba8a2;font-size:11px; }.ds-sidebar-transport { display:flex;align-items:center;justify-content:center;gap:9px;padding-top:13px; }.ds-sidebar-transport .ds-sidebar-play { width:48px;height:48px;color:#200702;border-radius:999px;background:#ff5a36; }.ds-sidebar-timeline { display:grid;grid-template-columns:34px 1fr 34px;align-items:center;gap:7px;padding:0 18px;color:#aaa69f;font-size:9px; }.ds-sidebar-timeline input { width:100%;accent-color:#ff5a36; }.ds-sidebar-tabs { display:flex;gap:3px;margin:12px 18px 9px;padding:3px;border:1px solid rgba(255,255,255,.1);border-radius:11px;background:#0d0d0e; }.ds-sidebar-tabs button { min-height:44px;flex:1;color:#aba8a2;border:0;border-radius:8px;background:transparent;cursor:pointer; }.ds-sidebar-tabs button[aria-pressed='true'] { color:#f8f7f3;background:#1a1a1d; }.ds-sidebar-queue { display:grid;min-height:52px;grid-template-columns:34px 1fr auto;align-items:center;gap:9px;margin:0 10px;padding:7px 8px;color:#aba8a2;border:0;border-radius:10px;background:transparent;text-align:left;cursor:pointer; }.ds-sidebar-queue:hover { background:#1a1a1d; }.ds-sidebar-queue i { width:34px;height:34px;border-radius:8px;background:linear-gradient(145deg,#ff5a36,#171719); }.ds-sidebar-queue span { display:flex;flex-direction:column; }.ds-sidebar-queue strong { color:#f8f7f3;font-size:10px; }.ds-sidebar-queue small,.ds-sidebar-queue time { margin-top:2px;color:#aaa69f;font-size:8px; }.ds-sidebar-player button:focus-visible,.ds-sidebar-player input:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }"
+    },
+    {
+      "name": "Persistent Floating Player",
+      "kind": "custom",
+      "refersTo": "floating-player",
+      "description": "The compact and mobile dock preserves readable identity, a full-width thumb-free timeline, and the same centered primary transport when the right sidebar is unavailable.",
+      "html": "<section class='ds-floating-player' aria-label='Compact player'><button class='ds-floating-art' type='button' aria-label='Open full player'></button><div class='ds-floating-copy'><strong>Sorting Array</strong><span>The Algorithms</span></div><div class='ds-floating-transport'><button type='button' aria-label='Previous track'>◀</button><button class='ds-floating-play' type='button' aria-label='Pause'>Ⅱ</button><button type='button' aria-label='Next track'>▶</button></div><input class='ds-floating-progress' type='range' min='0' max='100' value='38' aria-label='Track position'/><label class='ds-floating-volume'>Volume<input type='range' min='0' max='100' value='72'/></label><button class='ds-floating-restore' type='button' aria-label='Restore sidebar player'>⌃</button></section>",
+      "css": ".ds-floating-player { display:grid;width:min(850px,100%);min-height:70px;grid-template-columns:46px minmax(120px,1fr) auto minmax(130px,1.35fr) 100px 44px;align-items:center;gap:12px;padding:9px 11px;color:#f8f7f3;border:1px solid rgba(255,255,255,.18);border-radius:16px;background:rgba(15,15,16,.96);box-shadow:0 18px 46px rgba(0,0,0,.48);backdrop-filter:blur(18px);font-family:'DM Sans',sans-serif; }.ds-floating-art { width:46px;height:46px;border:0;border-radius:10px;background:linear-gradient(145deg,#ff5a36,#45100b 50%,#070707);cursor:pointer; }.ds-floating-copy { display:flex;min-width:0;flex-direction:column; }.ds-floating-copy strong,.ds-floating-copy span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }.ds-floating-copy strong { font-size:11px; }.ds-floating-copy span { margin-top:3px;color:#aba8a2;font-size:9px; }.ds-floating-transport { display:flex;align-items:center;gap:5px; }.ds-floating-transport button,.ds-floating-restore { display:grid;width:44px;height:44px;place-items:center;color:#aba8a2;border:0;border-radius:11px;background:transparent;cursor:pointer; }.ds-floating-transport .ds-floating-play { color:#200702;border-radius:999px;background:#ff5a36; }.ds-floating-progress,.ds-floating-volume input { width:100%;accent-color:#ff5a36; }.ds-floating-volume { display:flex;align-items:center;gap:6px;color:#aaa69f;font-size:9px; }.ds-floating-player button:hover { color:#f8f7f3;background:#1a1a1d; }.ds-floating-player .ds-floating-play:hover { color:#200702;background:#ff3d1f; }.ds-floating-player button:focus-visible,.ds-floating-player input:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }@media(max-width:900px){.ds-floating-player{grid-template-columns:46px minmax(120px,1fr) auto 44px;}.ds-floating-progress,.ds-floating-volume{display:none;}}"
+    },
+    {
+      "name": "Studio Settings Surface",
+      "kind": "custom",
+      "refersTo": "settings-surface",
+      "description": "The fresh Settings composition pairs HookNavigation with one flat, Store-backed control surface and true disabled desktop states.",
+      "html": "<section class='ds-settings'><aside class='ds-settings-nav' aria-label='Settings'><button type='button' aria-current='page'>Playback</button><button type='button'>Appearance</button><button type='button'>Desktop</button></aside><article class='ds-settings-surface'><header class='ds-settings-header'><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M4 6h16M7 12h10M9 18h6' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'/></svg><div><h2>Playback</h2><p>Choose how controls and transitions behave.</p></div></header><div class='ds-settings-row'><span><strong>Magic crossfade</strong><small>Blend the ending of one track into the next.</small></span><button class='ds-settings-switch' type='button' role='switch' aria-checked='true' aria-label='Magic crossfade'><i></i></button></div><div class='ds-settings-row'><span><strong>Desktop only</strong><small>This control becomes active in the installed desktop build.</small></span><button class='ds-settings-disabled' type='button' disabled>Unavailable</button></div></article></section>",
+      "css": ".ds-settings { display:grid;width:min(860px,100%);grid-template-columns:190px minmax(0,1fr);gap:28px;color:#f8f7f3;background:#070707;font-family:'DM Sans',sans-serif; }.ds-settings-nav { display:flex;flex-direction:column; }.ds-settings-nav button { min-height:44px;padding:7px 11px;color:#aba8a2;border:0;border-radius:10px;background:transparent;text-align:left;cursor:pointer; }.ds-settings-nav button:hover,.ds-settings-nav button[aria-current='page'] { color:#f8f7f3;background:#1a1a1d; }.ds-settings-surface { overflow:hidden;border-radius:16px;background:#0d0d0e; }.ds-settings-header { display:flex;align-items:flex-start;gap:15px;padding:23px 24px;border-bottom:1px solid rgba(255,255,255,.1); }.ds-settings-header svg { width:20px;color:#ff5a36; }.ds-settings-header h2 { margin:0;font:700 18px/1.2 Manrope,sans-serif;letter-spacing:-.025em; }.ds-settings-header p { margin:5px 0 0;color:#aba8a2;font-size:11px; }.ds-settings-row { display:flex;min-height:72px;align-items:center;justify-content:space-between;gap:24px;padding:15px 24px;border-bottom:1px solid rgba(255,255,255,.1); }.ds-settings-row>span { display:flex;flex-direction:column; }.ds-settings-row strong { font-size:12px; }.ds-settings-row small { margin-top:4px;color:#aba8a2;font-size:10px; }.ds-settings-switch { position:relative;width:48px;height:44px;border:0;border-radius:999px;background:transparent;cursor:pointer; }.ds-settings-switch::before { content:'';position:absolute;top:11px;left:3px;width:42px;height:22px;border-radius:999px;background:#ff5a36; }.ds-settings-switch i { position:absolute;top:13px;left:25px;width:18px;height:18px;border-radius:999px;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.25); }.ds-settings-disabled { min-height:44px;padding:0 12px;color:#f8f7f3;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:#1a1a1d;opacity:.45;cursor:not-allowed; }.ds-settings button:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }@media(max-width:900px){.ds-settings{grid-template-columns:1fr;}.ds-settings-nav{flex-direction:row;overflow-x:auto;}.ds-settings-nav button{min-width:max-content;}}"
+    },
+    {
+      "name": "Immersive Large Now Playing",
+      "kind": "custom",
+      "refersTo": "immersive-player",
+      "description": "A theme-aware full-viewport overlay with a background Store visualizer, a record that slides alone from behind stationary artwork and pauses its rotation with playback, shared readable metadata and open transport, hold-drag volume, and a wider Queue/Lyrics/Sound workspace.",
+      "html": "<section class='ds-large-player' role='dialog' aria-modal='true' aria-label='Now playing'><header class='ds-large-header'><button type='button'>⌄ Close player</button><span>Playing from <strong>Binary Sunset</strong></span><button type='button' aria-label='Close player'>×</button></header><div class='ds-large-layout'><main class='ds-large-primary'><div class='ds-large-cover' aria-label='Binary Sunset artwork'><span class='ds-large-record' aria-hidden='true'></span></div><div class='ds-large-meta'><div><h1>Sorting Array</h1><p>The Algorithms</p></div><button type='button' aria-label='Like track'>♡</button></div><input class='ds-large-progress' type='range' min='0' max='100' value='38' aria-label='Track position'/><div class='ds-large-transport'><button type='button' aria-label='Previous track'>◀</button><button class='ds-large-play' type='button' aria-label='Pause'>Ⅱ</button><button type='button' aria-label='Next track'>▶</button></div></main><aside class='ds-large-aside'><div class='ds-large-tabs' role='group' aria-label='Now playing information'><button type='button' aria-pressed='true'>Queue</button><button type='button' aria-pressed='false'>Lyrics</button><button type='button' aria-pressed='false'>Sound</button></div><button class='ds-large-queue' type='button' aria-current='true'><span>01</span><i></i><span><strong>Sorting Array</strong><small>The Algorithms</small></span><time>3:24</time></button><button class='ds-large-queue' type='button'><span>02</span><i></i><span><strong>Neon Highway</strong><small>Neon Void</small></span><time>4:05</time></button></aside></div></section>",
+      "css": ".ds-large-player { min-height:650px;overflow:hidden;color:#fff;background:radial-gradient(circle at 28% 42%,rgba(132,30,12,.36),transparent 34%),#070707;font-family:'DM Sans',sans-serif; }.ds-large-header { display:flex;min-height:70px;align-items:center;justify-content:space-between;padding:0 26px;border-bottom:1px solid rgba(255,255,255,.12); }.ds-large-header button { min-height:44px;padding:8px;color:#d1cbc7;border:0;border-radius:11px;background:transparent;cursor:pointer; }.ds-large-header button:last-child { width:44px;background:rgba(255,255,255,.08); }.ds-large-header span { color:#aaa29d;font-size:10px; }.ds-large-header strong { color:#fff; }.ds-large-layout { display:grid;min-height:580px;grid-template-columns:minmax(0,1fr) 350px;align-items:center;gap:58px;padding:38px 54px 54px; }.ds-large-primary { width:100%;max-width:620px;justify-self:center; }.ds-large-cover { position:relative;width:min(42vh,390px);max-width:100%;aspect-ratio:1;margin:0 auto 29px;border-radius:16px;background:linear-gradient(145deg,#ff5a36,#4c1009 48%,#070707);box-shadow:0 30px 70px rgba(0,0,0,.54); }.ds-large-record { position:absolute;z-index:-1;top:4%;left:25%;width:92%;height:92%;border-radius:999px;background:repeating-radial-gradient(circle,#080808 0 3px,#252525 4px 5px,#080808 6px 8px); }.ds-large-meta { display:flex;align-items:center;justify-content:space-between;gap:15px; }.ds-large-meta h1 { margin:0;font:760 clamp(26px,4vw,46px)/.98 Manrope,sans-serif;letter-spacing:-.035em; }.ds-large-meta p { margin:5px 0 0;color:#c5bdb8;font-size:14px; }.ds-large-meta button,.ds-large-transport button { display:grid;width:44px;height:44px;place-items:center;color:#bdb6b1;border:0;border-radius:11px;background:transparent;cursor:pointer; }.ds-large-progress { width:100%;margin-top:19px;accent-color:#ff5a36; }.ds-large-transport { display:flex;align-items:center;justify-content:center;gap:9px;margin-top:13px; }.ds-large-transport .ds-large-play { width:48px;height:48px;color:#200702;border-radius:999px;background:#ff5a36; }.ds-large-aside { display:flex;height:min(72vh,650px);min-height:0;flex-direction:column;padding:18px;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(8,8,9,.6);backdrop-filter:blur(18px); }.ds-large-tabs { display:flex;gap:3px;padding:3px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.06); }.ds-large-tabs button { min-height:44px;flex:1;color:#aaa29d;border:0;border-radius:8px;background:transparent;cursor:pointer; }.ds-large-tabs button[aria-pressed='true'] { color:#fff;background:rgba(255,255,255,.1); }.ds-large-queue { display:grid;width:100%;min-height:57px;grid-template-columns:24px 39px minmax(0,1fr) 34px;align-items:center;gap:9px;padding:8px 6px;color:#a9a19c;border:0;border-bottom:1px solid rgba(255,255,255,.09);background:transparent;text-align:left;cursor:pointer; }.ds-large-queue:hover,.ds-large-queue[aria-current='true'] { background:rgba(255,255,255,.07); }.ds-large-queue i { width:39px;height:39px;border-radius:9px;background:linear-gradient(145deg,#ff5a36,#171719); }.ds-large-queue>span:nth-child(3) { display:flex;flex-direction:column; }.ds-large-queue strong { color:#fff;font-size:10px; }.ds-large-queue small,.ds-large-queue time { color:#968e89;font-size:8px; }.ds-large-player button:focus-visible,.ds-large-player input:focus-visible { outline:2px solid #ff5a36;outline-offset:3px; }@media(max-width:900px){.ds-large-layout{grid-template-columns:1fr;padding:30px 28px;}.ds-large-aside{display:none;}.ds-large-cover{width:min(52vh,460px);}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Precision Rail",
+    "overview": "Nebula is a precision listening console: music carries the emotion while the shell stays compact, exact, and immediately operable. Precision Rail gives that thesis a distinct Studio expression through near-black instrument surfaces, warm white type, one Appearance-selected action color, hairline divisions, restrained corners, and real album artwork. Ember remains the default seed. The story is continuous rather than dashboard-like. A listener scans one large five-track feature, starts a song through the shared playback owner, browses quiet artwork shelves, tunes the device, and controls the shared queue without leaving the music. A RareUI-inspired hooked navigation rail anchors the left edge; Spectrum-inspired command search and explicit state controls keep operation immediate; a Spell-inspired artwork card and fresh Studio player compositions let the music carry the visual weight. This world is source-backed by design-system/studio.html and design-system/studio/**. It consumes Nebula's real StoreProvider, service surface, navigation, settings, queue, audio clock, player state, and desktop bridges. It does not replace the production renderer, production theme, or the architecture described in PRODUCT.md and ADR 0003. Studio uses isolated preview persistence, local artwork, and generated fixture audio while the mounted React session remains the only playback owner.",
+    "keyCharacteristics": [
+      "Full-bleed, square application framing with depth reserved for interior music rooms.",
+      "A precision three-panel desktop console: hooked navigation, music canvas, and shared queue/player.",
+      "One five-track Featured bar with real Store actions, timed progression, and deliberate pause controls.",
+      "DM Sans for interface density and Manrope for display authority.",
+      "Near-black tonal layers derived from the selected dark background, raised-contrast text, hairline divisions, and one scarce Appearance-selected action color.",
+      "Artwork-first shelves and flat ledgers instead of a field of equal cards.",
+      "Source-backed primitives with explicit keyboard, focus, disabled, loading, empty, and active states.",
+      "A sidebar player on wide desktop, a persistent floating dock in compact/mobile modes, and a full-screen player overlay.",
+      "Full Nebula feature behavior inside a deliberately isolated Studio data boundary."
+    ],
+    "rules": [
+      { "name": "The Ember Is Action Rule", "body": "Ember marks current state, playback intent, focus, progress, or an active signal; it never decorates passive panels.", "section": "colors" },
+      { "name": "The Appearance Accent Rule", "body": "The selected primary drives Studio play, progress, focus, switch, and selected states; the selected background seeds the dark neutral stack; the secondary participates only in the immersive visualizer. All remain scoped to .nebula-remix.", "section": "colors" },
+      { "name": "The Warm Black Rule", "body": "Use the neutral-black stack and warm foregrounds; do not substitute cool graphite, blue-black, or an extra accent family.", "section": "colors" },
+      { "name": "The Semantic Theme Rule", "body": "Light mode may invert semantic surfaces to warm paper, but it must preserve the same hierarchy, scarce accent, and hairline discipline.", "section": "colors" },
+      { "name": "The Artwork Speaks First Rule", "body": "Give display scale to the active track, artist, or collection, then step sharply down to metadata; do not seed every panel with another large heading.", "section": "typography" },
+      { "name": "The Family Ownership Rule", "body": "Manrope owns display and titles. DM Sans owns body, labels, inputs, timing, and controls. Do not reintroduce Inter or a decorative display family inside Studio.", "section": "typography" },
+      { "name": "The Tracking Floor Rule", "body": "Tight display tracking stops at the established floor; compression must never damage title legibility.", "section": "typography" },
+      { "name": "The Readability Floor Rule", "body": "Essential Studio copy never renders below 11px; metadata, controls, timing, and help use the shared readable scale.", "section": "typography" },
+      { "name": "The Three-Panel Rule", "body": "On wide screens, navigation, listening canvas, and now-playing remain distinct siblings; do not translate the composition into a generic card dashboard.", "section": "layout" },
+      { "name": "The Breakpoint Ownership Rule", "body": "Player mode changes at the compact-desktop boundary, dialog navigation begins at the mobile boundary, and content simplification happens at the small boundary. Do not invent extra near-duplicate breakpoints.", "section": "layout" },
+      { "name": "The 44px Target Rule", "body": "Interactive targets are at least 44px in either their fixed box or their minimum block size. Small visible icons, rails, dots, and artwork may sit inside that target, but they do not shrink it.", "section": "layout" },
+      { "name": "The Flat Instrument Rule", "body": "Start with adjacent surface tones and hairlines. Add one shadow only when a surface genuinely overlaps another plane.", "section": "elevation" },
+      { "name": "The Music-Derived Atmosphere Rule", "body": "Blur may come from current artwork or a true overlay surface; it is not a generic material for cards, navigation, or settings rows.", "section": "elevation" },
+      { "name": "The Restrained Corner Rule", "body": "Use the smallest radius that communicates the component's role. Do not inflate all panels toward soft-card styling.", "section": "shapes" },
+      { "name": "The Square Ledger Rule", "body": "Track lists are divided rows on the canvas, never a stack of independently rounded cards.", "section": "shapes" },
+      { "name": "The State Must Read Rule", "body": "Every interaction changes at least one of color, border, surface, position, or accessible state while preserving the single-ember hierarchy.", "section": "components" },
+      { "name": "The Single Playback Owner Rule", "body": "Sidebar, floating, radio, and immersive player surfaces issue commands to the shared Store owner; none may create a second audio element or independent queue.", "section": "components" },
+      { "name": "The Real Behavior Rule", "body": "A Studio component is not a static facsimile. Navigation, search, settings, playlist, queue, radio, and playback specimens must exercise the real owner through isolated preview adapters.", "section": "components" }
+    ],
+    "dos": [
+      "Do keep all Precision Rail rendering and overrides under .studio-app, design-system/studio/**, and design-system/studio.html until a separate production migration is explicitly approved.",
+      "Do use DM Sans for interface and Manrope for display/title roles.",
+      "Do use the exact near-black stack, warm foregrounds, ember action, hairlines, restrained corners, and 44px minimum targets defined in frontmatter.",
+      "Do let real artwork and the active music object carry the emotional weight while navigation, metadata, and controls remain compact.",
+      "Do preserve the 1260px, 900px, and 620px responsive responsibilities and the corresponding sidebar, floating, and mobile player behavior.",
+      "Do retain focus containment, background inertness, Escape dismissal, restored accessibility state, and focus restoration for overlays and the mobile drawer.",
+      "Do keep the five-track carousel's timing, interaction pause, reduced-motion stop, and manual selection behavior together.",
+      "Do keep segmented options equal in width and move one shared indicator between them.",
+      "Do keep artwork and metadata stationary while only the immersive record slides from behind the cover, rotates during playback, and pauses in place.",
+      "Do use the shared open transport and full-width thumb-free timeline across sidebar, floating, and immersive players.",
+      "Do route Artists, Albums, Songs, and Playlists from the left navigation without duplicating those destinations in Library content.",
+      "Do keep the immersive overlay, transport, tools, and queue surfaces on the active dark or light semantic theme.",
+      "Do require a held drag for pointer volume changes while retaining Arrow and Home/End keyboard control.",
+      "Do preserve the shared Store/service feature path and isolated Studio persistence, fixtures, and generated audio.",
+      "Do require a confirmation step for destructive playlist deletion and actual disabling for unavailable desktop-only fields."
+    ],
+    "donts": [
+      "Don't treat this Studio world as the production renderer or silently generalize its tokens into the existing production theme.",
+      "Don't introduce a second playback owner, audio pipeline, queue, or player-only state model.",
+      "Don't restore Inter, cool blue-black neutrals, competing accent hues, or low-contrast metadata.",
+      "Don't surround the viewport, shelves, or track rows with generic soft cards, borders, and shadows.",
+      "Don't use pills as the default control shape or shrink interaction targets below the 44px minimum.",
+      "Don't autoplay Featured, rotate the record, show the ambient visualizer, or animate rails, selectors, switches, overlays, artwork, loaders, or radio signals when reduced motion is requested.",
+      "Don't leave browser-only desktop controls visually active or let a destructive icon delete immediately.",
+      "Don't replace real Store-backed navigation, search, playlist, radio, settings, queue, or playback behavior with mock-only controls."
+    ]
+  }
+}

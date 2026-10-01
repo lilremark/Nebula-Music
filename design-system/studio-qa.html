@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nebula Studio QA</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; background: #161616; }
+      body { display: grid; place-items: start center; padding: 8px; overflow: hidden; }
+      .viewport { width: 633.6px; height: 450.56px; overflow: hidden; box-shadow: 0 32px 80px rgb(0 0 0 / 50%); }
+      iframe {
+        width: 1440px;
+        height: 1024px;
+        border: 0;
+        border-radius: 0;
+        background: #050505;
+        transform: scale(.44);
+        transform-origin: top left;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="viewport"><iframe id="studio-frame" src="/studio.html?qaPlayer=1" title="Nebula desktop prototype at 1440 by 1024 pixels"></iframe></div>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get('view');
+      const floating = params.get('floating') === '1' ? '&qaFloating=1' : '';
+      const expanded = params.get('expanded') === '1' ? '&qaExpanded=1' : '';
+      document.querySelector('#studio-frame').src = `/studio.html?qaPlayer=1${view ? `&qaView=${encodeURIComponent(view)}` : ''}${floating}${expanded}`;
+    </script>
+  </body>
+</html>

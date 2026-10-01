@@ -88,8 +88,8 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
 
     const coverArt = service.getCoverArtUrl(currentSong.coverArt || currentSong.id, 200);
     const streamUrl = service.getStreamUrl(currentSong.id, currentSong.suffix);
-    const waveform = useTrackWaveform(currentSong.id, streamUrl);
     const progressMode = settings.progressVisualization;
+    const waveform = useTrackWaveform(currentSong.id, progressMode === 'waveform' ? streamUrl : null);
     const { colors } = useAdaptiveColors(coverArt);
     const progress = duration ? (currentTime / duration) * 100 : 0;
     const displayProgress = visualProgress || progress;
@@ -117,6 +117,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
     return (
         <div
             className="flex flex-col rounded-xl bg-neutral-100 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-300 dark:border-white/10 shadow-2xl animate-scale-in overflow-hidden"
+            data-nebula-player="floating"
             style={{
                 boxShadow: `0 25px 60px -15px rgba(0,0,0,0.6), 0 0 0 1px ${colors.primary}15`,
                 width: '760px',
@@ -146,9 +147,9 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
             </div>
 
             {/* Main content */}
-            <div className="flex items-center gap-3 px-3 pr-5 py-3">
+            <div className="flex items-center gap-3 px-3 pr-5 py-3" data-nebula-floating-content>
                 {/* Album Art */}
-                <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-lg cursor-pointer" onClick={onExpand}>
+                <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-lg cursor-pointer" onClick={onExpand} data-nebula-floating-art>
                     <img
                         src={coverArt}
                         alt={currentSong.title}
@@ -157,7 +158,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 </div>
 
                 {/* Song Info */}
-                <div className="min-w-0 w-32 shrink-0">
+                <div className="min-w-0 w-32 shrink-0" data-nebula-floating-info>
                     <div className="relative overflow-hidden">
                         {currentSong.title.length > 22 ? (
                             <div className="mini-title-marquee font-semibold text-neutral-900 dark:text-white text-sm whitespace-nowrap">
@@ -172,7 +173,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 </div>
 
                 {/* Time display */}
-                <div className="flex items-center justify-center gap-2 text-xs font-mono text-neutral-700 dark:text-white/70 shrink-0 min-w-[86px]">
+                <div className="flex items-center justify-center gap-2 text-xs font-mono text-neutral-700 dark:text-white/70 shrink-0 min-w-[86px]" data-nebula-floating-time>
                     <span className="tabular-nums">{formatTime(currentTime)}</span>
                     <span className="text-neutral-400 dark:text-white/50">/</span>
                     <span className="tabular-nums">{formatTime(duration)}</span>
@@ -181,6 +182,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 {/* Progress style toggle */}
                 <button
                     onClick={toggleProgressMode}
+                    data-nebula-floating-progress-toggle
                     className="p-1.5 text-neutral-600 hover:text-neutral-900 transition-colors active:scale-95 dark:text-white/60 dark:hover:text-white"
                     title={`Progress style: ${progressMode}`}
                     aria-label={`Switch progress style (current: ${progressMode})`}
@@ -193,6 +195,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
 
                 {/* Volume control */}
                 <div
+                    data-nebula-floating-volume
                     className="flex items-center gap-1 shrink-0"
                     onMouseEnter={() => setIsHoverVolume(true)}
                     onMouseLeave={() => setIsHoverVolume(false)}
@@ -214,6 +217,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                             />
                             <input
                                 type="range"
+                                aria-label="Volume"
                                 min="0"
                                 max="1"
                                 step="0.01"
@@ -235,7 +239,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 </button>
 
                 {/* Controls */}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0" data-nebula-floating-transport>
                     <button
                         onClick={prevSong}
                         className="p-2 text-neutral-600 hover:text-neutral-900 transition-colors active:scale-95 dark:text-white/50 dark:hover:text-white"
@@ -268,7 +272,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 <div className="w-px h-8 bg-neutral-200 dark:bg-white/10" />
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0" data-nebula-floating-actions>
                     {/* Restore Sidebar */}
                     <button
                         onClick={onRestoreSidebar}

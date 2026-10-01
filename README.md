@@ -176,7 +176,7 @@ npm run start:electron   # builds the renderer + main process and launches Elect
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20.19+ or 22.12+; Node.js 24 LTS is recommended
+- [Node.js](https://nodejs.org/) 22.22.2+, 24.15.0+, or 26+; use Node.js 24 LTS for development and CI
 - npm
 - A reachable Subsonic-compatible server, unless using demo mode
 
@@ -489,4 +489,9 @@ Security vulnerabilities must not be reported publicly. Email
 
 Distributed under the [MIT License](./LICENSE.txt).
 
+
+
+## Design system
+
+Run `npm run design-system` and open <http://localhost:3100> for the current-design gallery: theme tokens, live shared components, and music-player pattern references. See [the design system guide](docs/design-system.md) for usage, ownership, and the refinement queue. Build the standalone reference with `npm run design-system:build`.
 

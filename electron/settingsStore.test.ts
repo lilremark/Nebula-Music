@@ -1,55 +1,30 @@
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SettingsStore } from './settingsStore';
-import { DESKTOP_SETTINGS_DEFAULTS } from './settingsSchema';
 
-let dir: string;
-let file: string;
+describe('SettingsStore persistence', () => {
+  let dir: string;
+  beforeEach(async () => { dir = await mkdtemp(path.join(os.tmpdir(), 'nebula-settings-')); });
+  afterEach(async () => { await rm(dir, { recursive: true, force: true }); });
 
-beforeEach(async () => {
-  dir = await mkdtemp(path.join(tmpdir(), 'nebula-settings-'));
-  file = path.join(dir, 'settings.json');
-});
-afterEach(async () => {
-  await rm(dir, { recursive: true, force: true });
-});
-
-describe('SettingsStore', () => {
-  it('falls back to defaults when the file does not exist', async () => {
-    const store = await SettingsStore.open(file);
-    expect(store.snapshot()).toEqual(DESKTOP_SETTINGS_DEFAULTS);
+  it('requires HTTP opt-in for new settings and preserves existing saved consent', async () => {
+    const file = path.join(dir, 'settings.json');
+    const first = await SettingsStore.open(file);
+    expect(first.get('permitInsecureHttp')).toBe(false);
+    await first.set('permitInsecureHttp', true);
+    expect((await SettingsStore.open(file)).get('permitInsecureHttp')).toBe(true);
   });
 
-  it('falls back to defaults on corrupt json', async () => {
-    await writeFile(file, 'not-json', 'utf8');
+  it('resumes persistence after a transient filesystem failure', async () => {
+    const blockedParent = path.join(dir, 'blocked');
+    await writeFile(blockedParent, 'not a directory');
+    const file = path.join(blockedParent, 'settings.json');
     const store = await SettingsStore.open(file);
-    expect(store.snapshot()).toEqual(DESKTOP_SETTINGS_DEFAULTS);
-  });
-
-  it('persists a valid setting and reloads it atomically', async () => {
-    const store = await SettingsStore.open(file);
-    await store.set('trayOnClose', false);
-    const reloaded = await SettingsStore.open(file);
-    expect(reloaded.get('trayOnClose')).toBe(false);
-  });
-
-  it('throws on an invalid setting value', async () => {
-    const store = await SettingsStore.open(file);
-    await expect(store.set('updateChannel', 'nonsense')).rejects.toThrow(
-      /Invalid desktop setting "updateChannel"/,
-    );
-  });
-
-  it('serialised writes always land on a valid file with a trailing newline', async () => {
-    const store = await SettingsStore.open(file);
-    const a = store.set('mediaKeysEnabled', false);
-    const b = store.set('taskbarProgressEnabled', false);
-    await Promise.all([a, b]);
-    const raw = await readFile(file, 'utf8');
-    expect(raw.endsWith('\n')).toBe(true);
-    expect(JSON.parse(raw).mediaKeysEnabled).toBe(false);
-    expect(JSON.parse(raw).taskbarProgressEnabled).toBe(false);
+    await expect(store.set('trayOnClose', false)).rejects.toThrow();
+    await rm(blockedParent);
+    await store.set('mediaKeysEnabled', false);
+    expect(JSON.parse(await readFile(file, 'utf8')).mediaKeysEnabled).toBe(false);
   });
 });

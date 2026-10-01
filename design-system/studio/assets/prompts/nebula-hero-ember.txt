@@ -1,0 +1,13 @@
+Use case: photorealistic-natural
+Asset type: production music dashboard hero image, intended for a 1600 x 900 landscape slot
+Primary request: Create a cinematic editorial portrait for Nebula's Ember music experience, inspired by the coral-and-black nightclub mood and right-weighted portrait composition of the two reference images.
+Input images: Image 1 is a product-concept reference for palette, atmosphere, and hero composition only; Image 2 is a visual reference for coral backdrop, dark styling, and right-side subject placement only. Do not reproduce any existing person, UI, typography, album art, or logo from either reference.
+Scene/backdrop: Minimal seamless deep-black-to-saturated-coral red studio backdrop with subtle smoky falloff and barely perceptible film grain; no objects or scenery.
+Subject: One stylish fictional Black male recording artist, early thirties, dark sculptural sunglasses, black turtleneck, tailored red leather jacket with realistic grain and restrained sheen; confident calm expression, head and upper torso visible.
+Style/medium: Premium photorealistic music-editorial photography, contemporary fashion campaign, realistic skin pores, natural hair texture, believable fabric and leather, restrained color grade.
+Composition/framing: True 16:9 wide landscape. Place the artist entirely on the right half, facing slightly toward the open left side. Keep the left 45 percent as clean, low-detail negative space suitable for large white UI copy. Crop around mid-torso without cutting the head or glasses. No hands near the face.
+Lighting/mood: Dramatic low-key nightclub lighting; warm coral-red key light with a crisp rim on the jacket and hair, controlled deep shadows, subtle amber highlights, intimate late-night mood.
+Color palette: Near-black, charcoal, coral red, burnt orange, tiny warm amber highlights.
+Text (verbatim): none
+Constraints: exactly one person; original fictional identity; polished production asset; clean usable negative space; no visual elements behind the copy area.
+Avoid: any text, letters, numerals, logos, watermark, UI, interface chrome, cards, controls, border, frame, album cover, recognizable celebrity likeness, extra people, duplicated face, distorted eyewear, plastic skin, excessive haze, busy background.

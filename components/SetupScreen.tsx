@@ -15,6 +15,8 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { WindowControls } from './window/WindowControls';
+import { InsecureHttpSetting } from './InsecureHttpSetting';
+import { isInsecureHttpUrl, useInsecureHttpSetting } from '../hooks/useInsecureHttpSetting';
 
 const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
   ({ WebkitAppRegion: region }) as CSSProperties;
@@ -26,13 +28,15 @@ export const SetupScreen: React.FC = () => {
   const [pass, setPass] = useState('');
   const [authMode, setAuthMode] = useState<'password' | 'apiKey'>('password');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const httpSetting = useInsecureHttpSetting();
 
   const isInsecure = useMemo(() => {
-    return url && !url.startsWith('https://') && url.length > 7;
+    return isInsecureHttpUrl(url);
   }, [url]);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!httpSetting.canConnect(url)) return;
     setStatus('loading');
     const success = await connectToSubsonic(url, user, pass, authMode);
     if (!success) {
@@ -47,7 +51,7 @@ export const SetupScreen: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#0a0a0a] dark:text-white">
+    <div className="nebula-next-setup fixed inset-0 overflow-hidden bg-neutral-100 text-neutral-900 dark:bg-[#0a0a0a] dark:text-white">
       {/* Drag region so the frameless window can be moved from the sign-in screen */}
       <div className="absolute top-0 inset-x-0 h-10 z-30" style={appRegion('drag')} />
 
@@ -55,18 +59,6 @@ export const SetupScreen: React.FC = () => {
       <div className="absolute top-2 right-4 z-40" style={appRegion('no-drag')}>
         <WindowControls />
       </div>
-
-      <div
-        className="absolute inset-0 pointer-events-none opacity-25"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }}
-      />
-      <div
-        className="absolute top-[-10rem] left-1/2 h-[24rem] w-[24rem] -translate-x-1/2 rounded-full blur-[170px] opacity-[0.10] pointer-events-none"
-        style={{ backgroundColor: 'rgb(var(--color-primary))' }}
-      />
 
       {/* Left: cover flow (hidden below lg) */}
       <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-[55%] lg:block">
@@ -77,10 +69,10 @@ export const SetupScreen: React.FC = () => {
       <div className="absolute inset-y-0 right-0 flex w-full items-center justify-center px-5 py-6 lg:w-[45%]">
         <div className="w-full max-w-sm">
           <Card
-            elevation={4}
+            elevation={1}
             hover={false}
             padding="md"
-            className="border-neutral-200/70 bg-white/90 dark:border-white/10 dark:bg-neutral-950/82"
+            className="nebula-setup-card border-neutral-200/70 bg-white/90 dark:border-white/10 dark:bg-neutral-950/82"
           >
             <div className="mb-3 text-center">
               <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-black shadow-[0_10px_30px_rgba(0,0,0,0.18)] dark:bg-white">
@@ -186,6 +178,7 @@ export const SetupScreen: React.FC = () => {
                   <span>HTTPS is recommended for secure server access.</span>
                 </div>
               )}
+              {isInsecure && <InsecureHttpSetting setting={httpSetting} />}
 
               {status === 'error' && (
                 <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-3 text-sm text-red-700 dark:text-red-400">
@@ -199,6 +192,7 @@ export const SetupScreen: React.FC = () => {
                   type="submit"
                   size="md"
                   loading={status === 'loading'}
+                  disabled={!httpSetting.canConnect(url)}
                   icon={status === 'loading' ? undefined : <ArrowRight className="h-4 w-4" />}
                   className="w-full justify-center rounded-2xl"
                 >

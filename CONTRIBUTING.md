@@ -16,7 +16,7 @@ and code changes.
 
 ### Requirements
 
-- Node.js 20.19+ or 22.12+; Node.js 24 LTS is recommended
+- Node.js 22.22.2+, 24.15.0+, or 26+; use Node.js 24 LTS for development and CI
 - npm
 - A Subsonic/OpenSubsonic server for live integration testing, or demo mode
 - Docker Desktop or Docker Engine when modifying the container setup

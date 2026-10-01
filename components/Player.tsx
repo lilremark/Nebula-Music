@@ -78,8 +78,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 800) : '';
     const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
-    const waveform = useTrackWaveform(currentSong?.id, streamUrl);
     const progressMode = settings.progressVisualization;
+    const waveform = useTrackWaveform(currentSong?.id, progressMode === 'waveform' ? streamUrl : null);
     const { colors } = useAdaptiveColors(coverArt);
     const { image: artistImage } = useArtistImage(currentSong?.artistId, currentSong?.artist);
     const isLightMode = mode === 'light';
@@ -159,18 +159,6 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         setVisualizerMode(VISUALIZER_MODES[nextIndex]);
     }, [visualizerMode, setVisualizerMode]);
 
-    const renderQualityBadge = (suffix?: string, bitrate?: number) => {
-        if (!suffix) return null;
-        const s = suffix.toUpperCase();
-        const isLossless = s === 'FLAC' || s === 'ALAC' || s === 'WAV' || s === 'AIFF' || s === 'AIF';
-        return (
-            <span className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider ${isLossless ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-neutral-200 text-neutral-600 border border-neutral-200 dark:bg-white/10 dark:text-white/60 dark:border-white/10'
-                }`}>
-                {s} {bitrate && `${bitrate}k`}
-            </span>
-        );
-    };
-
     useEffect(() => {
         setShowZenControls(isZenMode);
     }, [isZenMode]);
@@ -229,6 +217,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
     return (
         <div className={`fixed inset-0 z-[60] flex flex-col bg-neutral-200 dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded || isZenMode ? 'translate-y-0' : 'translate-y-full'}`}
+            data-nebula-player="fullscreen"
+            inert={!isExpanded && !isZenMode}
+            aria-hidden={!isExpanded && !isZenMode}
             style={playerBackground}
         >
             {isWindows && (
@@ -249,6 +240,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             {/* Dot pattern background */}
             <div
                 className={`absolute inset-0 pointer-events-none ${isLightMode ? 'opacity-45' : 'opacity-30'}`}
+                data-nebula-player-atmosphere="dots"
                 style={{
                     backgroundImage: `radial-gradient(circle, ${withAlpha(colors.primary, isLightMode ? 0.14 : 0.18)} 1px, transparent 1px)`,
                     backgroundSize: '24px 24px'
@@ -262,10 +254,12 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             {/* Subtle album color orbs */}
             <div
                 className={`absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[180px] pointer-events-none ${isLightMode ? 'opacity-[0.16]' : 'opacity-[0.05]'}`}
+                data-nebula-player-atmosphere="primary"
                 style={{ backgroundColor: colors.primary }}
             />
             <div
                 className={`absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full blur-[160px] pointer-events-none ${isLightMode ? 'opacity-[0.12]' : 'opacity-[0.04]'}`}
+                data-nebula-player-atmosphere="secondary"
                 style={{ backgroundColor: colors.secondary || colors.primary }}
             />
 
@@ -284,7 +278,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             )}
 
             {/* Top Navigation */}
-            <header className={`relative z-20 flex items-center justify-between p-4 md:p-6 transition-opacity duration-500 ${isZenMode ? 'opacity-0 hover:opacity-100' : ''}`}>
+            <header className={`relative z-20 flex items-center justify-between p-4 md:p-6 transition-opacity duration-500 ${isZenMode ? 'opacity-0 hover:opacity-100' : ''}`} data-nebula-fullscreen-header>
                 <button
                     onClick={onClose}
                     className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-white/10 flex items-center justify-center hover:bg-neutral-300 dark:hover:bg-white/20 transition-all active:scale-95"
@@ -298,6 +292,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                 {!isZenMode && (
                     <div
                         className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-neutral-200 dark:bg-white/5 rounded-lg p-1"
+                        data-nebula-fullscreen-tabs
                         style={appRegion('no-drag')}
                     >
                         {(['playing', 'lyrics', 'queue'] as const).map(tab => (
@@ -335,14 +330,14 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             </header>
 
             {/* Main Content Area */}
-            <div className={`relative z-10 flex-1 flex flex-col overflow-hidden ${isZenMode ? 'opacity-0 hover:opacity-100 transition-opacity duration-700' : ''}`}>
+            <div className={`relative z-10 flex-1 flex flex-col overflow-hidden ${isZenMode ? 'opacity-0 hover:opacity-100 transition-opacity duration-700' : ''}`} data-nebula-fullscreen-main>
 
                 {/* Now Playing Tab */}
                 {activeTab === 'playing' && !isZenMode && (
                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                        <div className="flex min-h-full w-full flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 px-6 md:px-12 pb-8">
+                        <div className="flex min-h-full w-full flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 px-6 md:px-12 pb-8" data-nebula-fullscreen-playing>
                         {/* Album Art */}
-                        <div className="relative w-full max-w-[380px] lg:max-w-[480px] shrink-0">
+                        <div className="relative w-full max-w-[380px] lg:max-w-[480px] shrink-0" data-nebula-fullscreen-art>
                             <div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 w-full max-w-[min(55vh,480px)] ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
                                 <img
                                     src={coverArt}
@@ -359,12 +354,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         </div>
 
                         {/* Song Info & Controls */}
-                        <div className="relative flex-1 flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-lg">
-                            {/* Quality Badge */}
-                            <div className="mb-4">
-                                {renderQualityBadge(currentSong.suffix, currentSong.bitRate)}
-                            </div>
-
+                        <div className="relative flex-1 flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-lg" data-nebula-fullscreen-info>
                             {/* Title & Artist */}
                             <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-neutral-900 dark:text-white mb-2 leading-tight">
                                 {currentSong.title}
@@ -380,6 +370,13 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 onClick={() => { setView('ALBUM_DETAIL', currentSong.albumId); onClose(); }}
                             >
                                 {currentSong.album}
+                                {currentSong.suffix && (
+                                    <>
+                                        <span aria-hidden="true"> · </span>
+                                        {currentSong.suffix.toUpperCase()}
+                                        {currentSong.bitRate ? ` · ${currentSong.bitRate} kbps` : ''}
+                                    </>
+                                )}
                             </p>
 
                             {/* Progress Bar */}
@@ -415,7 +412,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             </div>
 
                             {/* Main Controls */}
-                            <div className="flex items-center justify-center gap-6 mb-8 w-full">
+                            <div className="flex items-center justify-center gap-6 mb-8 w-full" data-nebula-fullscreen-transport>
                                 <button
                                     onClick={toggleRepeat}
                                     className={`p-3 rounded-lg transition-all ${repeatMode === 'OFF' ? 'text-neutral-500 dark:text-white/50 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-white/5' : 'text-neutral-900 dark:text-white bg-neutral-200 dark:bg-white/10'}`}
@@ -479,6 +476,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     />
                                     <input
                                         type="range"
+                                        aria-label="Volume"
                                         min="0"
                                         max="1"
                                         step="0.01"
@@ -642,7 +640,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
                 {/* Lyrics Tab */}
                 {activeTab === 'lyrics' && !isZenMode && (
-                    <div className="flex-1 overflow-hidden relative">
+                    <div className="flex-1 overflow-hidden relative" data-nebula-fullscreen-lyrics>
                         <div className="absolute inset-0 overflow-y-auto custom-scrollbar scroll-smooth" ref={lyricsContainerRef}>
                             <div className="min-h-full flex flex-col items-center justify-center py-20 px-6 text-center">
                                 {loadingLyrics ? (
@@ -685,7 +683,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
                 {/* Queue Tab */}
                 {activeTab === 'queue' && !isZenMode && (
-                    <div className="flex-1 overflow-hidden px-4 md:px-8 pb-8">
+                    <div className="flex-1 overflow-hidden px-4 md:px-8 pb-8" data-nebula-fullscreen-queue>
                         <div className="max-w-3xl mx-auto h-full flex flex-col">
                             <div className="flex items-center justify-between py-4">
                                 <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Up Next</h2>
@@ -694,6 +692,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 {queue.map((song, idx) => (
                                     <div
+                                        data-nebula-fullscreen-queue-row
                                         key={`${song.id}-${idx}`}
                                         onClick={() => playSong(song, queue)}
                                         className={`flex items-center p-3 rounded-lg transition-all cursor-pointer hover:bg-neutral-100 dark:hover:bg-white/5 mb-1 ${idx === currentSongIndex ? 'bg-neutral-200 dark:bg-white/10' : ''

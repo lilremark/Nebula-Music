@@ -1,4 +1,5 @@
 import { STREAM_DECK_MAX_ARTWORK_LENGTH } from './streamDeckProtocol';
+import { fetchAndRead, readLimitedBlob } from './httpRequest';
 
 const MAX_ARTWORK_RESPONSE_BYTES = 8 * 1024 * 1024;
 const TARGET_SIZE = 256;
@@ -32,16 +33,14 @@ export const createSanitizedArtwork = async (
   targetSize: number = TARGET_SIZE,
 ): Promise<string | undefined> => {
   try {
-    const response = await fetch(authenticatedUrl, {
-      signal,
-      credentials: 'same-origin',
-      cache: 'force-cache',
-    });
-    if (!response.ok) return undefined;
-
-    const declaredSize = Number(response.headers.get('content-length') || 0);
-    if (declaredSize > MAX_ARTWORK_RESPONSE_BYTES) return undefined;
-    const blob = await response.blob();
+    const blob = await fetchAndRead(authenticatedUrl, async response => {
+      if (!response.ok) {
+        await response.body?.cancel();
+        return null;
+      }
+      return readLimitedBlob(response, MAX_ARTWORK_RESPONSE_BYTES);
+    }, { signal, cache: 'force-cache' });
+    if (!blob) return undefined;
     if (!blob.type.startsWith('image/') || blob.size > MAX_ARTWORK_RESPONSE_BYTES) return undefined;
 
     const sourceDataUrl = await readBlobAsDataUrl(blob);

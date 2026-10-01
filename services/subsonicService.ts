@@ -4,6 +4,7 @@ import { MOCK_ALBUMS, MOCK_ARTISTS, MOCK_SONGS, MOCK_PLAYLISTS } from '../consta
 import { db } from './db';
 import md5 from 'blueimp-md5';
 import { webSubsonicTransport, type SubsonicTransport } from './subsonicTransport';
+import { fetchAndRead } from './httpRequest';
 
 const SUBSONIC_API_VERSION = '1.16.1';
 const SUBSONIC_PROTOCOL_FALLBACKS = [SUBSONIC_API_VERSION, '1.15.0', '1.14.0'] as const;
@@ -52,6 +53,7 @@ export class SubsonicService {
   private protocolVersion = SUBSONIC_API_VERSION;
   private readonly maxUrlCacheEntries = 500;
   private transport: SubsonicTransport;
+  private credentialsGeneration = 0;
 
   constructor(creds: SubsonicCredentials | null) {
     this.creds = creds;
@@ -61,9 +63,12 @@ export class SubsonicService {
 
   public setTransport(transport: SubsonicTransport) {
     this.transport = transport;
+    this.streamUrlCache.clear();
+    this.coverArtUrlCache.clear();
   }
 
   public setCredentials(creds: SubsonicCredentials | null) {
+    this.credentialsGeneration += 1;
     this.creds = creds;
     this.isDemo = !creds;
     this.streamUrlCache.clear();
@@ -91,6 +96,12 @@ export class SubsonicService {
 
     try {
       const url = new URL(serverUrl);
+      if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+        throw new Error('Subsonic server URL must use HTTP or HTTPS without embedded credentials.');
+      }
+      // Server configuration is a base URL, never a source of API/auth parameters.
+      url.search = '';
+      url.hash = '';
       const basePath = url.pathname.replace(/\/$/, '');
       url.pathname = `${basePath}/rest/${method}`;
 
@@ -119,10 +130,12 @@ export class SubsonicService {
   }
 
   private async request(method: string, params: Record<string, string> = {}): Promise<SubsonicResponse> {
+    const generation = this.credentialsGeneration;
     const url = this.buildUrl(method, params);
     if (!url) throw new Error('Subsonic credentials are not configured.');
 
     const res = await this.transport.fetchJson(url);
+    if (generation !== this.credentialsGeneration) throw new Error('The Subsonic account changed during the request.');
     if (!res.ok) {
       throw new Error(`Subsonic request failed (${res.status} ${res.statusText}).`);
     }
@@ -175,12 +188,36 @@ export class SubsonicService {
 
   private stripHtml(html: string): string {
     if (!html) return '';
-    const tmp = document.createElement("DIV");
+    // Template contents stay inert: server-supplied images/iframes must never load.
+    const tmp = document.createElement('template');
     tmp.innerHTML = html;
-    let text = tmp.textContent || tmp.innerText || "";
+    tmp.content.querySelectorAll('script, style').forEach(element => element.remove());
+    let text = tmp.content.textContent || '';
     text = text.replace(/<[^>]*>?/gm, '');
     text = text.replace(/\s*Read more on Last\.fm.*/i, '');
     return text.trim();
+  }
+
+  private scopedCacheKey(key: string): string {
+    const creds = this.creds;
+    // A digest avoids persisting an API key in IndexedDB keys. This is a
+    // namespace identifier, not a password-security or authentication primitive.
+    const account = creds ? [creds.serverUrl, creds.authType || 'token',
+      creds.authType === 'apiKey' ? creds.apiKey : creds.username] : ['demo'];
+    return `subsonic:${md5(JSON.stringify(account))}:${key}`;
+  }
+
+  private async getCachedResponse(key: string, ttlMinutes: number) {
+    const generation = this.credentialsGeneration;
+    const cached = await db.getCachedResponse(key, ttlMinutes);
+    if (generation !== this.credentialsGeneration) throw new Error('The Subsonic account changed during the cache lookup.');
+    return cached;
+  }
+
+  private cacheResponse(key: string, data: unknown): Promise<void> {
+    // Fallback endpoints and third-party lyric requests can outlive a login.
+    if (!key.startsWith(this.scopedCacheKey(''))) return Promise.resolve();
+    return db.cacheResponse(key, data);
   }
 
   private setCachedUrl(cache: Map<string, string>, key: string, value: string) {
@@ -313,14 +350,14 @@ export class SubsonicService {
 
   async getGenres(): Promise<string[]> {
     if (this.isDemo) return ['Electronic', 'Rock', 'Jazz', 'Synthwave', 'Pop', 'Classical'];
-    const cacheKey = 'genres_list';
-    const cached = await db.getCachedResponse(cacheKey, 1440);
+    const cacheKey = this.scopedCacheKey('genres_list');
+    const cached = await this.getCachedResponse(cacheKey, 1440);
     if (cached) return cached;
     try {
       const response = await this.request('getGenres.view');
       const genres = response.genres?.genre || [];
       const genreNames = genres.map((g: any) => g.value || g.name).sort();
-      await db.cacheResponse(cacheKey, genreNames);
+      await this.cacheResponse(cacheKey, genreNames);
       return genreNames;
     } catch (e) { return []; }
   }
@@ -381,17 +418,17 @@ export class SubsonicService {
       if (type === 'alphabeticalByName') sorted.sort((a, b) => a.name.localeCompare(b.name));
       return sorted.slice(offset, offset + size);
     }
-    const paramString = Object.entries(params).map(([k, v]) => `${k}-${v}`).join('_');
-    const cacheKey = `albumList_${type}_${size}_${offset}_${paramString}`;
+    const paramString = JSON.stringify(Object.entries(params).sort(([a], [b]) => a.localeCompare(b)));
+    const cacheKey = this.scopedCacheKey(`albumList_${type}_${size}_${offset}_${paramString}`);
     if (type !== 'random') {
-      const cached = await db.getCachedResponse(cacheKey, 30);
+      const cached = await this.getCachedResponse(cacheKey, 30);
       if (cached) return cached;
     }
     for (const [method, responseKey] of [['getAlbumList2.view', 'albumList2'], ['getAlbumList.view', 'albumList']] as const) {
       try {
         const response = await this.request(method, { type, size: size.toString(), offset: offset.toString(), ...params });
         const result = (response[responseKey]?.album || []).map((album: any) => this.mapAlbum(album));
-        if (type !== 'random' && result.length > 0) { await db.cacheResponse(cacheKey, result); }
+        if (type !== 'random' && result.length > 0) { await this.cacheResponse(cacheKey, result); }
         return result;
       } catch {
         // Fall back for older servers without the ID3 endpoint.
@@ -407,8 +444,8 @@ export class SubsonicService {
       return { ...album, songs, info: { notes: "A journey through digital soundscapes." }, starred: false };
     }
 
-    const cacheKey = `album_detail_${id}`;
-    const cached = await db.getCachedResponse(cacheKey, 60); // Cache for 1 hour
+    const cacheKey = this.scopedCacheKey(`album_detail_${id}`);
+    const cached = await this.getCachedResponse(cacheKey, 60); // Cache for 1 hour
     if (cached) return cached;
 
     try {
@@ -442,24 +479,21 @@ export class SubsonicService {
       }
 
       const result = { ...this.mapAlbum(albumData), songs, info };
-      await db.cacheResponse(cacheKey, result);
+      await this.cacheResponse(cacheKey, result);
       return result;
     } catch (e) { return null; }
   }
 
   async getArtists(): Promise<IArtist[]> {
     if (this.isDemo) return MOCK_ARTISTS;
-    const cacheKey = 'all_artists';
-    const cached = await db.getCachedResponse(cacheKey, 1440);
+    const cacheKey = this.scopedCacheKey('all_artists');
+    const cached = await this.getCachedResponse(cacheKey, 1440);
     if (cached) return cached;
     try {
       const response = await this.request('getArtists.view');
       const index = response.artists?.index || [];
-      let allArtists: IArtist[] = [];
-      index.forEach((idx: any) => {
-        if (idx.artist) allArtists = [...allArtists, ...idx.artist];
-      });
-      if (allArtists.length > 0) { await db.cacheResponse(cacheKey, allArtists); }
+      const allArtists: IArtist[] = index.flatMap((idx: any) => idx.artist || []);
+      if (allArtists.length > 0) { await this.cacheResponse(cacheKey, allArtists); }
       return allArtists;
     } catch (e) { return [] }
   }
@@ -471,8 +505,8 @@ export class SubsonicService {
       return { artist, albums };
     }
 
-    const cacheKey = `artist_detail_${id}`;
-    const cached = await db.getCachedResponse(cacheKey, 60);
+    const cacheKey = this.scopedCacheKey(`artist_detail_${id}`);
+    const cached = await this.getCachedResponse(cacheKey, 60);
     if (cached) return cached;
 
     try {
@@ -489,7 +523,7 @@ export class SubsonicService {
         artist: { id: artistData.id, name: artistData.name, albumCount: artistData.albumCount, coverArt: artistData.coverArt },
         albums
       };
-      await db.cacheResponse(cacheKey, result);
+      await this.cacheResponse(cacheKey, result);
       return result;
     } catch (e) { return { artist: { id, name: 'Unknown' }, albums: [] }; }
   }
@@ -497,8 +531,8 @@ export class SubsonicService {
   async getArtistInfo(id: string, name?: string): Promise<{ bio?: string, image?: string }> {
     if (this.isDemo) return { bio: "A legendary entity formed in the digital void.", image: "https://picsum.photos/1200/600?grayscale" };
 
-    const cacheKey = `artist_info_${id}`;
-    const cached = await db.getCachedResponse(cacheKey, 1440); // 24 hours
+    const cacheKey = this.scopedCacheKey(`artist_info_${id}`);
+    const cached = await this.getCachedResponse(cacheKey, 1440); // 24 hours
     if (cached) return cached;
 
     let bio, image;
@@ -522,22 +556,22 @@ export class SubsonicService {
     }
 
     const result = { bio, image };
-    if (bio || image) await db.cacheResponse(cacheKey, result);
+    if (bio || image) await this.cacheResponse(cacheKey, result);
     return result;
   }
 
   async getTopSongs(artistName: string, count: number = 10): Promise<ISong[]> {
     if (this.isDemo) return MOCK_SONGS.filter(s => s.artist === artistName).slice(0, count);
 
-    const cacheKey = `top_songs_${artistName}_${count}`;
-    const cached = await db.getCachedResponse(cacheKey, 1440);
+    const cacheKey = this.scopedCacheKey(`top_songs_${artistName}_${count}`);
+    const cached = await this.getCachedResponse(cacheKey, 1440);
     if (cached) return cached;
 
     try {
       const response = await this.request('getTopSongs.view', { artist: artistName, count: count.toString() });
       const songs = response.topSongs?.song || [];
       const result = songs.map((s: any) => this.mapSong(s));
-      if (result.length > 0) await db.cacheResponse(cacheKey, result);
+      if (result.length > 0) await this.cacheResponse(cacheKey, result);
       return result;
     } catch (e) { return []; }
   }
@@ -558,14 +592,14 @@ export class SubsonicService {
       }
       return allMockSongs.slice(offset, offset + size);
     }
-    const cacheKey = `searchSongs_${query}_${size}_${offset}`;
-    const cached = await db.getCachedResponse(cacheKey, 60);
+    const cacheKey = this.scopedCacheKey(`searchSongs_${query}_${size}_${offset}`);
+    const cached = await this.getCachedResponse(cacheKey, 60);
     if (cached) return cached;
     try {
       const response = await this.request('search3.view', { query, songCount: size.toString(), songOffset: offset.toString() });
       const songs = response.searchResult3?.song || [];
       const mapped = songs.map((s: any) => this.mapSong(s));
-      await db.cacheResponse(cacheKey, mapped);
+      await this.cacheResponse(cacheKey, mapped);
       return mapped;
     } catch (e) { return []; }
   }
@@ -610,8 +644,8 @@ export class SubsonicService {
 
   async getLyrics(artist: string, title: string, album?: string, duration?: number, id?: string): Promise<string> {
     if (this.isDemo) return `[00:00.50] (Instrumental Intro)\n[00:04.00] Standing on the edge of the neon light\n[00:08.00] Watching code flow through the night\n[00:12.00] Digital dreams in a binary stream\n[00:16.00] Waking up from a silicon dream`;
-    const cacheKey = `lyrics_${id || ''}_${artist}_${title}_${duration || 0}`;
-    const cached = await db.getCachedResponse(cacheKey, 1440);
+    const cacheKey = this.scopedCacheKey(JSON.stringify(['lyrics', id, artist, title, album, duration]));
+    const cached = await this.getCachedResponse(cacheKey, 1440);
     if (cached) return cached;
     let lyrics = '';
     let unsyncedFallback = '';
@@ -647,8 +681,8 @@ export class SubsonicService {
         url.searchParams.append('track_name', title);
         if (album) url.searchParams.append('album_name', album);
         if (duration) url.searchParams.append('duration', duration.toString());
-        const res = await fetch(url.toString());
-        if (res.ok) { const data = await res.json(); lyrics = data.syncedLyrics || data.plainLyrics; }
+        const data = await fetchAndRead(url.toString(), async res => res.ok ? res.json() : null);
+        if (data) lyrics = data.syncedLyrics || data.plainLyrics;
       } catch (e) { }
     }
     if (!lyrics) {
@@ -656,9 +690,8 @@ export class SubsonicService {
         try {
           const url = new URL('https://lrclib.net/api/search');
           url.searchParams.append('q', `${qArtist} ${qTitle}`);
-          const res = await fetch(url.toString());
-          if (res.ok) {
-            const list = await res.json();
+          const list = await fetchAndRead(url.toString(), async res => res.ok ? res.json() : null);
+          if (list) {
             if (Array.isArray(list) && list.length > 0) {
               const validMatches = list.filter((item: { duration: number }) => duration ? Math.abs(item.duration - duration) <= 2 : true);
               validMatches.sort((a: { syncedLyrics: string }, b: { syncedLyrics: string }) => (a.syncedLyrics && !b.syncedLyrics) ? -1 : 1);
@@ -684,7 +717,7 @@ export class SubsonicService {
       } catch (e) { }
     }
     if (!lyrics && unsyncedFallback) lyrics = unsyncedFallback;
-    if (lyrics) { await db.cacheResponse(cacheKey, lyrics); return lyrics; }
+    if (lyrics) { await this.cacheResponse(cacheKey, lyrics); return lyrics; }
     return "";
   }
 

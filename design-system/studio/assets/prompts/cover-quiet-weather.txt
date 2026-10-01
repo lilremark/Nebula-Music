@@ -1,0 +1,12 @@
+Use case: photorealistic-natural
+Asset type: 1024 x 1024 production album cover for the fictional release Quiet Weather by Lo-Fi Dreams
+Primary request: Create an intimate nighttime still life seen through a rain-streaked apartment window, designed to remain striking and legible at small music-library thumbnail scale.
+Scene/backdrop: View from inside a dark apartment through wet window glass onto soft, out-of-focus amber streetlights; distinct rain trails and beads catch the light; the city beyond is abstract, quiet, and atmospheric.
+Subject: The rain-covered glass and amber bokeh are the primary subject. A simple steaming ceramic cup barely enters along the lower edge as a subtle foreground anchor.
+Style/medium: Premium photorealistic editorial album photography with realistic condensation, glass texture, ceramic surface, delicate steam, shallow depth of field, and tactile analog film grain.
+Composition/framing: Exact square composition. Strong central-to-upper field of amber bokeh through rain, with large calm charcoal areas and a clean silhouette. Keep the cup minimal and partially cropped at the bottom edge. Bold tonal separation and simple shapes that read clearly at thumbnail size.
+Lighting/mood: Low-key, reflective, late-night calm; warm amber practical lights diffused through cool charcoal shadows; gentle glow without blown highlights.
+Color palette: Charcoal black, graphite gray, deep umber, warm amber, muted cream.
+Text (verbatim): none
+Constraints: no people; no visible room clutter; no identifiable city landmark; premium production-ready cover; readable at thumbnail scale.
+Avoid: any text, letters, numerals, logos, watermark, border, frame, UI, interface elements, hands, faces, people, duplicated cup, busy detail, neon colors, illustration, surreal objects, excessive blur, plastic-looking materials.

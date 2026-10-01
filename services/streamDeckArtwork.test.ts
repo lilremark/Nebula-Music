@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSanitizedArtwork } from './streamDeckArtwork';
 
-const makeBlob = (type: string, content = 'x') => ({ type, size: content.length }) as Blob;
+const makeResponse = (type: string, length = '10', status = 200) => new Response('x', {
+  status, headers: { 'content-type': type, 'content-length': length },
+});
 
 // Minimal canvas that records drawImage and returns a small data URL.
 beforeEach(() => {
@@ -49,28 +51,28 @@ describe('createSanitizedArtwork', () => {
   const t = () => globalThis.fetch as ReturnType<typeof vi.fn>;
 
   it('sends the authenticated URL with same-origin credentials and force-cache', async () => {
-    t().mockResolvedValue({ ok: true, headers: { get: () => '100' }, blob: async () => makeBlob('image/jpeg') });
+    t().mockResolvedValue(makeResponse('image/jpeg', '100'));
     await createSanitizedArtwork('https://m/art?id=1');
     expect(t()).toHaveBeenCalledWith('https://m/art?id=1', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('returns undefined when the response is not ok', async () => {
-    t().mockResolvedValue({ ok: false, headers: { get: () => '10' }, blob: async () => makeBlob('image/jpeg') });
+    t().mockResolvedValue(makeResponse('image/jpeg', '10', 500));
     expect(await createSanitizedArtwork('https://m/art')).toBeUndefined();
   });
 
   it('returns undefined when the declared content-length exceeds the cap', async () => {
-    t().mockResolvedValue({ ok: true, headers: { get: () => '999999999' }, blob: async () => makeBlob('image/jpeg') });
+    t().mockResolvedValue(makeResponse('image/jpeg', '999999999'));
     expect(await createSanitizedArtwork('https://m/art')).toBeUndefined();
   });
 
   it('returns undefined for a non-image blob', async () => {
-    t().mockResolvedValue({ ok: true, headers: { get: () => '10' }, blob: async () => makeBlob('text/plain') });
+    t().mockResolvedValue(makeResponse('text/plain'));
     expect(await createSanitizedArtwork('https://m/art')).toBeUndefined();
   });
 
   it('returns a jpeg data URL on the happy path', async () => {
-    t().mockResolvedValue({ ok: true, headers: { get: () => '10' }, blob: async () => makeBlob('image/jpeg') });
+    t().mockResolvedValue(makeResponse('image/jpeg'));
     expect(await createSanitizedArtwork('https://m/art')).toMatch(/^data:image\/jpeg/);
   });
 });

@@ -26,7 +26,7 @@ if (typeof FileReader === 'undefined') {
 describe('toDataUrlArtwork', () => {
   it('converts fetchable http URLs to data URLs', async () => {
     const blob = new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' });
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, blob: async () => blob });
+    global.fetch = vi.fn().mockResolvedValue(new Response(blob));
     const result = await toDataUrlArtwork([{ src: 'https://example.com/art.jpg', sizes: '96x96', type: 'image/jpeg' }]);
     expect(result).toHaveLength(1);
     expect(result[0].src.startsWith('data:image/jpeg')).toBe(true);

@@ -12,14 +12,9 @@
  * pool is exhausted, which stalls playback after a handful of tracks.
  */
 
-export type StreamProxyFetch = (
-  url: string,
-  init?: {
-    headers?: Headers;
-    redirect?: 'follow';
-    signal?: AbortSignal;
-  },
-) => Promise<Response>;
+import { fetchWithTrustedRedirects, UntrustedTargetError, type TrustedFetch } from './trustedFetch';
+
+export type StreamProxyFetch = TrustedFetch;
 
 export interface StreamProxyOptions {
   fetchImpl: StreamProxyFetch;
@@ -44,9 +39,8 @@ export const createStreamProxy = ({ fetchImpl, isTrustedTarget }: StreamProxyOpt
     if (range) headers.set('Range', range);
 
     try {
-      const upstream = await fetchImpl(target, {
+      const upstream = await fetchWithTrustedRedirects(fetchImpl, isTrustedTarget, target, {
         headers,
-        redirect: 'follow',
         signal: request.signal,
       });
 
@@ -58,6 +52,9 @@ export const createStreamProxy = ({ fetchImpl, isTrustedTarget }: StreamProxyOpt
       const contentRange = upstream.headers.get('content-range');
       if (contentRange) responseHeaders.set('content-range', contentRange);
       responseHeaders.set('x-content-type-options', 'nosniff');
+      // Never let remote HTML/SVG become an active document on our privileged
+      // app origin, even if it is reached through a link or an iframe.
+      responseHeaders.set('content-security-policy', "default-src 'none'; sandbox; frame-ancestors 'none'");
 
       return new Response(upstream.body, {
         status: upstream.status,
@@ -65,6 +62,7 @@ export const createStreamProxy = ({ fetchImpl, isTrustedTarget }: StreamProxyOpt
         headers: responseHeaders,
       });
     } catch (err) {
+      if (err instanceof UntrustedTargetError) return new Response('Forbidden', { status: 403 });
       if (err instanceof Error && err.name === 'AbortError') {
         // The renderer cancelled the request (e.g. it switched tracks). The
         // caller will ignore this response; returning one keeps the handler

@@ -127,6 +127,7 @@ export interface AutoEqProfileSelection {
   name: string;
   source: string;
   path: string;
+  /** Gain in dB before the EQ filters; applied only while custom EQ is enabled. */
   preamp?: number;
   appliedAt: number;
 }
@@ -165,7 +166,7 @@ export interface AppSettings {
       '16k': number;
     };
   };
-  miniPlayerMode: 'floating' | 'sidebar'; // which mini-player style to show
+  miniPlayerMode: 'floating' | 'sidebar'; // desktop transport layout; sidebar includes the bottom bar and optional panel
   progressVisualization: 'bar' | 'waveform';
   magicCrossfade: boolean;
   streamDeck: {

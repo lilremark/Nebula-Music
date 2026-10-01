@@ -1,4 +1,5 @@
 import type { Platform } from '../platform/types';
+import { fetchAndRead } from './httpRequest';
 
 export interface SubsonicTransport {
   fetchJson(url: string): Promise<{
@@ -11,14 +12,19 @@ export interface SubsonicTransport {
 }
 
 /**
- * Browser transport: global fetch and unchanged URLs. The web build behaves
- * exactly as before.
+ * Browser transport: bounded JSON requests and unchanged media URLs.
  */
 export const webSubsonicTransport: SubsonicTransport = {
   fetchJson: async (url) => {
-    const response = await fetch(url);
-    const body = await response.json().catch(() => null);
-    return { status: response.status, statusText: response.statusText, ok: response.ok, body };
+    // A redirect can forward query-string authentication to another server.
+    // Browsers hide manual redirect destinations, so use the canonical server URL.
+    return fetchAndRead(url, async (response) => {
+      const body = await response.json().catch((error: unknown) => {
+        if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) throw error;
+        return null;
+      });
+      return { status: response.status, statusText: response.statusText, ok: response.ok, body };
+    }, { redirect: 'error' });
   },
   resolveMediaUrl: (url) => url,
 };

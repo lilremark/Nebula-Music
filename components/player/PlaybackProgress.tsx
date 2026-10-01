@@ -138,6 +138,7 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
             {scrubbable && onScrub && (
                 <input
                     type="range"
+                    aria-label="Playback position"
                     min="0"
                     max="100"
                     step="0.1"

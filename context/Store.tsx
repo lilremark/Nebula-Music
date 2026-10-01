@@ -10,6 +10,8 @@ import { computeNextPlaybackIndex, pushNavigationStack, popNavigationStack } fro
 import { db } from '../services/db';
 import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
+import { defaultAccent } from '../design-system/tokens';
+import { applyEqPreamp, getEqPreampGain } from '../services/eqPreamp';
 
 interface StoreContextType extends AppState {
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
@@ -78,11 +80,7 @@ interface StoreContextType extends AppState {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 const DEFAULT_SETTINGS: AppSettings = {
-  theme: {
-    primaryColor: '#06b6d4',
-    secondaryColor: '#8b5cf6',
-    backgroundColor: '#0a0a0a',
-  },
+  theme: { ...defaultAccent },
   sidebar: {
     showHome: true,
     showBrowse: true,
@@ -285,7 +283,11 @@ const loadDesktopCredentials = async (platform: Platform): Promise<SubsonicCrede
   return platform.vault.get(canonicalServerUrl(lastServerUrl));
 };
 
-export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const StoreProvider: React.FC<{
+  children: React.ReactNode;
+  /** Optional, isolated persistence for a fixture-only host such as Studio. */
+  previewPlaylistStorageKey?: string;
+}> = ({ children, previewPlaylistStorageKey }) => {
   const platform = usePlatform();
   const [service] = useState(() => new SubsonicService(null));
   useEffect(() => {
@@ -352,6 +354,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isZenMode, setZenMode] = useState(false);
 
   const [playlists, setPlaylists] = useState<IPlaylist[]>([]);
+  const hasRestoredPreviewPlaylists = useRef(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<ISong | null>(null);
 
@@ -359,6 +362,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isSearching, setIsSearching] = useState(false);
   const [lastSearchQuery, setLastSearchQuery] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const searchRequestRef = useRef(0);
 
   const [playHistory, setPlayHistory] = useState<Record<string, { count: number, song: ISong }>>({});
   const [history, setHistory] = useState<ISong[]>([]);
@@ -385,6 +389,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const dspInputRef = useRef<GainNode | null>(null);
+  const eqPreampRef = useRef<GainNode | null>(null);
   const eqFiltersRef = useRef<Array<{ key: EqBandKey; filter: BiquadFilterNode }>>([]);
   const compressorRef = useRef<DynamicsCompressorNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -679,6 +684,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         service.getPlaylists().then(setPlaylists);
         fetchArtists();
       }
+      if (previewPlaylistStorageKey) {
+        try {
+          const storedPlaylists = localStorage.getItem(previewPlaylistStorageKey);
+          const parsedPlaylists = storedPlaylists ? JSON.parse(storedPlaylists) : null;
+          if (Array.isArray(parsedPlaylists)) {
+            hasRestoredPreviewPlaylists.current = true;
+            setPlaylists(parsedPlaylists);
+          }
+        } catch {
+          // Ignore malformed preview data; Studio falls back to the fixtures.
+        }
+      }
       const savedSettings = await db.get('settings', 'user_settings');
       if (savedSettings) {
         // Migration: Convert old flat EQ to new nested structure
@@ -749,7 +766,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsInitialized(true);
     };
     init();
-  }, [service, platform]);
+  }, [service, platform, previewPlaylistStorageKey]);
 
   useEffect(() => {
     if (isPlaying && currentSongIndex >= 0 && queue[currentSongIndex]) {
@@ -777,12 +794,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const ctx = audioContextRef.current;
     const now = ctx?.currentTime ?? 0;
 
+    if (eqPreampRef.current) applyEqPreamp(eqPreampRef.current, settings.eq, now);
+
     eqFiltersRef.current.forEach(({ key, filter }) => {
       const targetGain = settings.eq.enabled ? settings.eq.bands[key] || 0 : 0;
       filter.gain.cancelScheduledValues(now);
       filter.gain.setTargetAtTime(targetGain, now, 0.015);
     });
-  }, [settings.eq.bands, settings.eq.enabled]);
+  }, [settings.eq.bands, settings.eq.enabled, settings.eq.autoEq, settings.eq.preset]);
 
   const ensureDspGraph = useCallback((ctx: AudioContext) => {
     if (dspInputRef.current && analyserRef.current) {
@@ -794,7 +813,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     input.gain.value = 1;
     dspInputRef.current = input;
 
-    let currentNode: AudioNode = input;
+    const preamp = ctx.createGain();
+    // Start at the saved gain, rather than briefly playing boosted EQ at unity.
+    preamp.gain.value = getEqPreampGain(settings.eq);
+    input.connect(preamp);
+    eqPreampRef.current = preamp;
+
+    let currentNode: AudioNode = preamp;
     eqFiltersRef.current = EQ_BAND_KEYS.map((key, index) => {
       const filter = ctx.createBiquadFilter();
       filter.type = index === 0 ? 'lowshelf' : index === EQ_BAND_KEYS.length - 1 ? 'highshelf' : 'peaking';
@@ -824,7 +849,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     analyserRef.current = ana;
     setAnalyser(ana);
     applyEqToGraph();
-  }, [applyEqToGraph]);
+  }, [applyEqToGraph, settings.eq]);
 
   const ensureRadioPitchNode = useCallback(async (ctx: AudioContext) => {
     if (!('audioWorklet' in ctx)) return null;
@@ -1560,6 +1585,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (isRadioPlaying) {
         initAudioContext('radio');
         audio.play().catch(e => {
+          if (cancelled) return;
           if (e.name !== 'AbortError') console.warn("Radio play failed", e);
           audio.pause();
           audio.load();
@@ -1576,6 +1602,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       cancelled = true;
     };
   }, [currentRadioStation, initAudioContext, isRadioPlaying, volume]);
+
+  useEffect(() => () => {
+    radioHlsRef.current?.destroy();
+    radioHlsRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!currentRadioStation) {
@@ -1679,6 +1710,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (error?.name !== 'AbortError') console.warn('Radio metadata unavailable', error);
       } finally {
         window.clearTimeout(timeoutId);
+        // Even a response without ICY headers can be an endless live stream.
+        // Release its connection as soon as this metadata probe finishes.
+        controller.abort();
         if (!cancelled) setIsRadioMetadataLoading(false);
       }
     };
@@ -1736,36 +1770,43 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    let cancelled = false;
+    let handoffTimer: number | undefined;
+    let metadataListener: (() => void) | undefined;
 
     const song = queue[currentSongIndex];
 
     if (song) {
       const url = service.getStreamUrl(song.id, song.suffix);
 
-      if (audio.src !== url) {
-        const handoff = crossfadeHandoffRef.current?.songId === song.id
-          ? crossfadeHandoffRef.current
-          : null;
-
+      const handoff = crossfadeHandoffRef.current?.songId === song.id
+        ? crossfadeHandoffRef.current
+        : null;
+      const sourceChanged = audio.src !== url;
+      if (sourceChanged) {
         audio.src = url;
         audio.volume = volume;
         audio.load();
 
         applyPlaybackAttributes(audio);
+      }
 
+      if (sourceChanged || handoff) {
         if (isPlaying) {
           const finishCrossfadeHandoff = () => {
+            if (cancelled || crossfadeHandoffRef.current !== handoff) return;
             stopCrossfadeAudio();
             crossfadeHandoffRef.current = null;
             isCrossfadingRef.current = false;
 
             const nextIndex = getNextPlaybackIndex(currentSongIndex, stateRef.current.queue, stateRef.current.repeatMode);
-            if (stateRef.current.isPlaying && nextIndex >= 0) {
+            if (stateRef.current.isPlaying && stateRef.current.magicCrossfade && nextIndex >= 0) {
               prepareCrossfadeTrack(nextIndex);
             }
           };
 
           const startPlayback = () => {
+            if (cancelled) return;
             if (handoff && Number.isFinite(handoff.currentTime)) {
               try {
                 const handoffAudio = crossfadeAudioRef.current;
@@ -1780,20 +1821,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (playPromise !== undefined) {
               playPromise
                 .then(() => {
-                  if (handoff) {
-                    window.setTimeout(finishCrossfadeHandoff, 180);
+                  if (handoff && !cancelled) {
+                    handoffTimer = window.setTimeout(finishCrossfadeHandoff, 180);
                   }
                 })
                 .catch(e => {
                   if (e.name !== 'AbortError') console.warn("Play failed", e);
                 });
             } else if (handoff) {
-              window.setTimeout(finishCrossfadeHandoff, 180);
+              handoffTimer = window.setTimeout(finishCrossfadeHandoff, 180);
             }
             initAudioContext(); // Ensure context is ready
           };
 
           if (handoff && audio.readyState < 1) {
+            metadataListener = startPlayback;
             audio.addEventListener('loadedmetadata', startPlayback, { once: true });
           } else {
             startPlayback();
@@ -1812,6 +1854,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audio.removeAttribute('src');
       audio.load();
     }
+    return () => {
+      cancelled = true;
+      if (handoffTimer !== undefined) window.clearTimeout(handoffTimer);
+      if (metadataListener) audio.removeEventListener('loadedmetadata', metadataListener);
+    };
   }, [applyPlaybackAttributes, cancelCrossfade, currentSongIndex, getNextPlaybackIndex, initAudioContext, isPlaying, pitch, pitchCorrection, playbackRate, prepareCrossfadeTrack, queue, service, stopCrossfadeAudio, volume]);
 
   const playSong = (song: ISong, contextQueue?: ISong[]) => {
@@ -1968,10 +2015,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
   const performSearch = async (query: string) => {
+    const requestId = ++searchRequestRef.current;
     setLastSearchQuery(query); setIsSearching(true);
-    const results = await service.search(query);
-    setSearchResults(results); setIsSearching(false);
     setView('SEARCH');
+    try {
+      const results = await service.search(query);
+      if (requestId === searchRequestRef.current) setSearchResults(results);
+    } catch (error) {
+      if (requestId === searchRequestRef.current) {
+        console.warn('Library search failed', error);
+        setSearchResults({ artists: [], albums: [], songs: [] });
+      }
+    } finally {
+      if (requestId === searchRequestRef.current) setIsSearching(false);
+    }
   };
   const openSearchModal = () => setIsSearchModalOpen(true);
   const closeSearchModal = () => setIsSearchModalOpen(false);
@@ -1986,6 +2043,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updatedEQ = {
           ...prev.eq,
           ...newSettings.eq,
+          autoEq: newSettings.eq.preset && newSettings.eq.preset !== 'custom'
+            ? null
+            : newSettings.eq.autoEq === undefined ? prev.eq.autoEq : newSettings.eq.autoEq,
           bands: {
             ...prev.eq.bands,
             ...(newSettings.eq.bands || {})
@@ -2025,6 +2085,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     service.setCredentials(creds);
     const success = await service.getPing();
     if (success) {
+      searchRequestRef.current += 1;
+      setIsSearching(false);
       setCredentialsState(creds);
       setIsDemoMode(false);
       // Clear any demo mode data to prevent mixing
@@ -2056,6 +2118,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const disconnect = async () => {
+    searchRequestRef.current += 1;
+    setIsSearching(false);
     cancelCrossfade();
     service.setCredentials(null as any); setCredentialsState(null);
     await clearCredentials(); await db.clear('api_cache');
@@ -2070,7 +2134,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMostPlayed([]);
   };
 
-  const enableDemoMode = () => { setIsDemoMode(true); setPlaylists(MOCK_PLAYLISTS); };
+  const enableDemoMode = () => {
+    searchRequestRef.current += 1;
+    setIsSearching(false);
+    setIsDemoMode(true);
+    if (!hasRestoredPreviewPlaylists.current) setPlaylists(MOCK_PLAYLISTS);
+  };
   const openPlaylistModal = (song: ISong) => { setSongToAddToPlaylist(song); setModalOpen(true); };
   const closePlaylistModal = () => { setModalOpen(false); setSongToAddToPlaylist(null); };
 
@@ -2184,6 +2253,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return pl;
     }));
   };
+
+  useEffect(() => {
+    if (!previewPlaylistStorageKey || !isInitialized || !isDemoMode) return;
+    try {
+      localStorage.setItem(previewPlaylistStorageKey, JSON.stringify(playlists));
+    } catch {
+      // Preview persistence is non-essential; playlist editing still works.
+    }
+  }, [isDemoMode, isInitialized, playlists, previewPlaylistStorageKey]);
 
   useEffect(() => {
     if (!isInitialized) return;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface AdaptiveColors {
     primary: string;
@@ -11,11 +11,7 @@ interface AdaptiveColors {
     gradient: string;
 }
 
-interface ColorCache {
-    [url: string]: AdaptiveColors;
-}
-
-const colorCache: ColorCache = {};
+const colorCache = new Map<string, AdaptiveColors>();
 
 // Default monochrome palette when no album art
 const defaultColors: AdaptiveColors = {
@@ -77,75 +73,80 @@ const extractColors = async (imageUrl: string): Promise<AdaptiveColors> => {
         img.crossOrigin = 'anonymous';
 
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                resolve(defaultColors);
-                return;
-            }
-
-            // Sample at lower resolution for performance
-            const size = 50;
-            canvas.width = size;
-            canvas.height = size;
-            ctx.drawImage(img, 0, 0, size, size);
-
-            const imageData = ctx.getImageData(0, 0, size, size).data;
-
-            // Simple color quantization - find most frequent colors
-            const colorBuckets: { [key: string]: { r: number; g: number; b: number; count: number } } = {};
-
-            for (let i = 0; i < imageData.length; i += 4) {
-                const r = Math.floor(imageData[i] / 32) * 32;
-                const g = Math.floor(imageData[i + 1] / 32) * 32;
-                const b = Math.floor(imageData[i + 2] / 32) * 32;
-                const key = `${r},${g},${b}`;
-
-                if (!colorBuckets[key]) {
-                    colorBuckets[key] = { r, g, b, count: 0 };
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    resolve(defaultColors);
+                    return;
                 }
-                colorBuckets[key].count++;
-            }
 
-            // Sort by frequency and get top colors
-            const sortedColors = Object.values(colorBuckets)
-                .filter(c => {
-                    // Filter out very dark and very light colors for better accent
-                    const lum = getLuminance(c.r, c.g, c.b);
-                    return lum > 0.05 && lum < 0.9;
-                })
-                .sort((a, b) => b.count - a.count);
+                // Sample at lower resolution for performance
+                const size = 50;
+                canvas.width = size;
+                canvas.height = size;
+                ctx.drawImage(img, 0, 0, size, size);
 
-            if (sortedColors.length === 0) {
+                const imageData = ctx.getImageData(0, 0, size, size).data;
+
+                // Simple color quantization - find most frequent colors
+                const colorBuckets: { [key: string]: { r: number; g: number; b: number; count: number } } = {};
+
+                for (let i = 0; i < imageData.length; i += 4) {
+                    const r = Math.floor(imageData[i] / 32) * 32;
+                    const g = Math.floor(imageData[i + 1] / 32) * 32;
+                    const b = Math.floor(imageData[i + 2] / 32) * 32;
+                    const key = `${r},${g},${b}`;
+
+                    if (!colorBuckets[key]) {
+                        colorBuckets[key] = { r, g, b, count: 0 };
+                    }
+                    colorBuckets[key].count++;
+                }
+
+                // Sort by frequency and get top colors
+                const sortedColors = Object.values(colorBuckets)
+                    .filter(c => {
+                        // Filter out very dark and very light colors for better accent
+                        const lum = getLuminance(c.r, c.g, c.b);
+                        return lum > 0.05 && lum < 0.9;
+                    })
+                    .sort((a, b) => b.count - a.count);
+
+                if (sortedColors.length === 0) {
+                    resolve(defaultColors);
+                    return;
+                }
+
+                const dominant = sortedColors[0];
+                const secondary = sortedColors[1] || dominant;
+
+                // Boost saturation for more vivid colors
+                const [pr, pg, pb] = adjustSaturation(dominant.r, dominant.g, dominant.b, 1.3);
+                const [sr, sg, sb] = adjustSaturation(secondary.r, secondary.g, secondary.b, 1.2);
+
+                // Create darker surface color
+                const [surfR, surfG, surfB] = adjustBrightness(pr, pg, pb, 0.15);
+                const [surfHR, surfHG, surfHB] = adjustBrightness(pr, pg, pb, 0.25);
+
+                // Determine text color based on primary brightness
+                const textColor = isLightColor(pr, pg, pb) ? '#000000' : '#ffffff';
+                const textMuted = isLightColor(pr, pg, pb) ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)';
+
+                resolve({
+                    primary: rgbToHex(pr, pg, pb),
+                    primaryMuted: `rgba(${pr}, ${pg}, ${pb}, 0.7)`,
+                    secondary: rgbToHex(sr, sg, sb),
+                    surface: `rgba(${surfR}, ${surfG}, ${surfB}, 0.3)`,
+                    surfaceHover: `rgba(${surfHR}, ${surfHG}, ${surfHB}, 0.4)`,
+                    text: textColor,
+                    textMuted: textMuted,
+                    gradient: `linear-gradient(135deg, rgb(${surfR}, ${surfG}, ${surfB}) 0%, rgb(10, 10, 10) 100%)`,
+                });
+            } catch {
+                // Cross-origin artwork can taint the canvas even after it loads.
                 resolve(defaultColors);
-                return;
             }
-
-            const dominant = sortedColors[0];
-            const secondary = sortedColors[1] || dominant;
-
-            // Boost saturation for more vivid colors
-            const [pr, pg, pb] = adjustSaturation(dominant.r, dominant.g, dominant.b, 1.3);
-            const [sr, sg, sb] = adjustSaturation(secondary.r, secondary.g, secondary.b, 1.2);
-
-            // Create darker surface color
-            const [surfR, surfG, surfB] = adjustBrightness(pr, pg, pb, 0.15);
-            const [surfHR, surfHG, surfHB] = adjustBrightness(pr, pg, pb, 0.25);
-
-            // Determine text color based on primary brightness
-            const textColor = isLightColor(pr, pg, pb) ? '#000000' : '#ffffff';
-            const textMuted = isLightColor(pr, pg, pb) ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.6)';
-
-            resolve({
-                primary: rgbToHex(pr, pg, pb),
-                primaryMuted: `rgba(${pr}, ${pg}, ${pb}, 0.7)`,
-                secondary: rgbToHex(sr, sg, sb),
-                surface: `rgba(${surfR}, ${surfG}, ${surfB}, 0.3)`,
-                surfaceHover: `rgba(${surfHR}, ${surfHG}, ${surfHB}, 0.4)`,
-                text: textColor,
-                textMuted: textMuted,
-                gradient: `linear-gradient(135deg, rgb(${surfR}, ${surfG}, ${surfB}) 0%, rgb(10, 10, 10) 100%)`,
-            });
         };
 
         img.onerror = () => {
@@ -159,34 +160,31 @@ const extractColors = async (imageUrl: string): Promise<AdaptiveColors> => {
 export const useAdaptiveColors = (imageUrl: string | undefined) => {
     const [colors, setColors] = useState<AdaptiveColors>(defaultColors);
     const [isLoading, setIsLoading] = useState(false);
-    const prevUrlRef = useRef<string | undefined>(undefined);
-
-    const updateColors = useCallback(async (url: string) => {
-        // Check cache first
-        if (colorCache[url]) {
-            setColors(colorCache[url]);
-            return;
-        }
-
-        setIsLoading(true);
-        const extractedColors = await extractColors(url);
-        colorCache[url] = extractedColors;
-        setColors(extractedColors);
-        setIsLoading(false);
-    }, []);
-
     useEffect(() => {
+        let cancelled = false;
         if (!imageUrl) {
             setColors(defaultColors);
+            setIsLoading(false);
             return;
         }
 
-        // Don't re-extract if URL hasn't changed
-        if (prevUrlRef.current === imageUrl) return;
-        prevUrlRef.current = imageUrl;
-
-        updateColors(imageUrl);
-    }, [imageUrl, updateColors]);
+        const cached = colorCache.get(imageUrl);
+        if (cached) {
+            setColors(cached);
+            setIsLoading(false);
+            return;
+        }
+        setIsLoading(true);
+        extractColors(imageUrl).then(extracted => {
+            colorCache.set(imageUrl, extracted);
+            if (colorCache.size > 128) colorCache.delete(colorCache.keys().next().value!);
+            if (!cancelled) {
+                setColors(extracted);
+                setIsLoading(false);
+            }
+        });
+        return () => { cancelled = true; };
+    }, [imageUrl]);
 
     // Apply colors to CSS custom properties
     useEffect(() => {
