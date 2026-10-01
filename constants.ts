@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.6';
+export const APP_VERSION = '2.5.0-beta.7';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,23 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.7',
+    date: '2026-09-30',
+    title: 'Security, Playback and AutoEQ',
+    changes: [
+      'Refreshed the desktop and web interface while retaining library, playlist, radio, and playback controls.',
+      'Updated dependencies and improved desktop security and isolation between music servers and accounts.',
+      'Improved queue and crossfade recovery, radio cleanup, artwork loading, and settings persistence.',
+      'Applied AutoEQ preamp to music, crossfades, and radio with saved-profile restore, EQ bypass, and smooth live changes.',
+      'Reduced the initial web bundle by loading views on demand while keeping playback active.',
+      'AI DJ settings remain temporarily hidden.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.7'
+    }
+  },
   {
     version: '2.5.0-beta.6',
     date: '2026-09-20',
