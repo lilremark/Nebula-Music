@@ -1,29 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type ThemeMode = 'light' | 'dark';
-
-interface ThemeColors {
-    // Backgrounds
-    bg: string;
-    bgSecondary: string;
-    bgTertiary: string;
-
-    // Text colors
-    text: string;
-    textSecondary: string;
-    textTertiary: string;
-
-    // Borders
-    border: string;
-    borderHover: string;
-
-    // Interactive elements
-    hover: string;
-    active: string;
-
-    // States
-    muted: string;
-}
+import { lightColors, darkColors, type ThemeColors, type ThemeMode } from '../design-system/tokens';
+export type { ThemeMode } from '../design-system/tokens';
 
 interface ThemeContextType {
     mode: ThemeMode;
@@ -31,34 +9,6 @@ interface ThemeContextType {
     setTheme: (mode: ThemeMode) => void;
     colors: ThemeColors;
 }
-
-const lightColors: ThemeColors = {
-    bg: '#e8e8e8',
-    bgSecondary: '#d4d4d4',
-    bgTertiary: '#c0c0c0',
-    text: '#0a0a0a',
-    textSecondary: '#404040',
-    textTertiary: '#737373',
-    border: '#b0b0b0',
-    borderHover: '#909090',
-    hover: '#d0d0d0',
-    active: '#b8b8b8',
-    muted: '#888888'
-};
-
-const darkColors: ThemeColors = {
-    bg: '#0a0a0a',
-    bgSecondary: '#171717',
-    bgTertiary: '#262626',
-    text: '#fafafa',
-    textSecondary: '#a3a3a3',
-    textTertiary: '#525252',
-    border: '#404040',
-    borderHover: '#525252',
-    hover: '#262626',
-    active: '#404040',
-    muted: '#525252'
-};
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 

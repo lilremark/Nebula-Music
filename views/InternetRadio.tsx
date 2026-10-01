@@ -74,8 +74,8 @@ export const InternetRadioView: React.FC = () => {
     };
 
     return (
-        <div className="p-6 md:p-8 pb-32 max-w-[1500px] mx-auto">
-            <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div data-nebula-view="radio" className="p-6 md:p-8 pb-32 max-w-[1500px] mx-auto">
+            <div data-nebula-view-header className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
                     <div className="mb-2 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
                         <Radio className="h-4 w-4" />
@@ -96,7 +96,7 @@ export const InternetRadioView: React.FC = () => {
             </div>
 
             {radioStations.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-neutral-300 p-12 text-center dark:border-white/15">
+                <div data-nebula-empty-state className="rounded-lg border border-dashed border-neutral-300 p-12 text-center dark:border-white/15">
                     <Radio className="mx-auto mb-4 h-12 w-12 text-neutral-400 dark:text-white/30" />
                     <h2 className="text-lg font-bold text-neutral-900 dark:text-white">No stations yet</h2>
                     <p className="mt-2 text-sm text-neutral-600 dark:text-white/60">Add a station stream URL to start listening.</p>
@@ -115,6 +115,7 @@ export const InternetRadioView: React.FC = () => {
                         return (
                             <div
                                 key={station.id}
+                                data-nebula-radio-card
                                 className={`rounded-lg border bg-neutral-100 p-4 transition dark:bg-neutral-900/70 ${isCurrent
                                     ? 'border-primary/60 shadow-[0_0_24px_rgba(var(--primary-rgb),0.18)]'
                                     : 'border-neutral-200 hover:border-neutral-300 dark:border-white/10 dark:hover:border-white/20'
@@ -179,7 +180,7 @@ export const InternetRadioView: React.FC = () => {
             )}
 
             {isStationModalOpen && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                <div data-nebula-radio-modal className="fixed inset-0 z-[120] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-xs dark:bg-neutral-950/80" onClick={resetForm} />
                     <form
                         onSubmit={submitStation}

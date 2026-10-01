@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
+import { SettingPanel, ToggleRow } from '../components/ui';
 import { usePlatform } from '../platform/PlatformContext';
 import type { UpdaterState } from '../electron/updater';
 import { VISUALIZER_MODES } from '../types';
@@ -29,52 +30,13 @@ import { STREAM_DECK_DEFAULT_PORT } from '../services/streamDeckProtocol';
 
 const rowClass = 'flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-neutral-100 dark:hover:bg-white/5';
 const inputClass = 'w-full rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900 placeholder-neutral-500 transition-all hover:bg-neutral-50 focus:border-primary/60 focus:outline-hidden focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-neutral-950/70 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-900';
-
-const SettingPanel = ({
-    icon: Icon,
-    title,
-    description,
-    children,
-    className = '',
-}: {
-    icon: React.ElementType;
-    title: string;
-    description?: string;
-    children: React.ReactNode;
-    className?: string;
-}) => (
-    <section className={`grid overflow-hidden rounded-lg border border-neutral-200 bg-white/70 shadow-xs dark:border-white/10 dark:bg-neutral-900/50 lg:grid-cols-[260px_minmax(0,1fr)] ${className}`}>
-        <div className="flex items-start gap-3 border-b border-neutral-200 bg-neutral-100/70 px-5 py-4 dark:border-white/10 dark:bg-white/[0.03] lg:border-b-0 lg:border-r">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
-                <Icon className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-900 dark:text-white">{title}</h2>
-                {description && <p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</p>}
-            </div>
-        </div>
-        <div className="min-w-0 divide-y divide-neutral-200 dark:divide-white/10">
-            {children}
-        </div>
-    </section>
-);
-
-const ToggleRow = ({ label, description, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (v: boolean) => void }) => (
-    <button
-        type="button"
-        className={`${rowClass} w-full text-left`}
-        onClick={() => onChange(!checked)}
-        aria-pressed={checked}
-    >
-        <span className="min-w-0">
-            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
-            {description && <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</span>}
-        </span>
-        <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-neutral-300 dark:bg-white/20'}`}>
-            <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
-        </span>
-    </button>
-);
+const SETTINGS_JUMPS = [
+    ['settings-server-connection', 'Connection'],
+    ['settings-equalizer', 'Sound'],
+    ['settings-appearance', 'Interface'],
+    ['settings-stream-deck', 'Integrations'],
+    ['settings-desktop-integration', 'Desktop'],
+] as const;
 
 const StaticRow = ({ label, description }: { label: string; description?: string }) => (
     <div className={`${rowClass}`}>
@@ -650,6 +612,7 @@ export const SettingsView: React.FC = () => {
     const [autoEqLastFetchedAt, setAutoEqLastFetchedAt] = useState<number | null>(() => settings.eq.autoEqIndexFetchedAt || getCachedAutoEqIndexInfo()?.fetchedAt || null);
     const [pairingCode, setPairingCode] = useState('');
     const [pairingError, setPairingError] = useState('');
+    const [activeSettingsJump, setActiveSettingsJump] = useState<string>(SETTINGS_JUMPS[0][0]);
 
     useEffect(() => {
         setIsInsecure(Boolean(url && !url.startsWith('https://') && url.length > 7));
@@ -786,23 +749,38 @@ export const SettingsView: React.FC = () => {
         ? new Date(autoEqLastFetchedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
         : 'Not cached';
 
+    const jumpToSetting = (panelId: string) => {
+        setActiveSettingsJump(panelId);
+        document.getElementById(panelId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
     return (
-        <div className="h-full overflow-y-auto bg-neutral-50 text-neutral-900 custom-scrollbar dark:bg-neutral-950 dark:text-white">
-            <div className="w-full px-6 py-8 pb-32 lg:px-10">
-                <header className="mb-8">
-                    <div>
-                        <div className="mb-3 inline-flex items-center gap-2 rounded bg-primary/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-primary ring-1 ring-primary/20">
-                            <Monitor className="h-3.5 w-3.5" />
-                            Nebula Controls
-                        </div>
+        <div data-nebula-view="settings" className="h-full overflow-y-auto bg-neutral-50 text-neutral-900 custom-scrollbar dark:bg-neutral-950 dark:text-white">
+            <div data-nebula-settings-canvas className="w-full px-6 py-8 pb-32 lg:px-10">
+                <header data-nebula-settings-header className="mb-8">
+                    <div data-nebula-settings-intro>
                         <h1 className="text-3xl font-black tracking-tight text-neutral-950 dark:text-white">Settings</h1>
                         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-600 dark:text-white/55">
                             Tune the connection, playback, appearance, navigation, and keyboard controls for this device.
                         </p>
+                        <p data-nebula-settings-scope>Changes are saved to this device.</p>
                     </div>
                 </header>
 
-                <div className="space-y-5">
+                <nav data-nebula-settings-jumps aria-label="Settings sections">
+                    {SETTINGS_JUMPS.map(([panelId, label]) => (
+                        <button
+                            key={panelId}
+                            type="button"
+                            aria-current={activeSettingsJump === panelId ? 'true' : undefined}
+                            onClick={() => jumpToSetting(panelId)}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </nav>
+
+                <div data-nebula-settings-stack className="space-y-5">
                         <SettingPanel icon={Server} title="Server Connection" description="Subsonic-compatible server credentials are stored locally.">
                             <form onSubmit={handleConnect} className="divide-y divide-neutral-200 dark:divide-white/10">
                                 <div className="grid grid-cols-2 gap-1 px-5 py-4">
@@ -1104,6 +1082,7 @@ export const SettingsView: React.FC = () => {
                                                             <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
                                                                 <input
                                                                     type="range"
+                                                                    aria-label={`${label} equalizer gain`}
                                                                     min="-12"
                                                                     max="12"
                                                                     step="1"
@@ -1265,9 +1244,9 @@ export const SettingsView: React.FC = () => {
 
                         <SettingPanel icon={Monitor} title="Player Display">
                             <OptionRow
-                                label="Mini Player Style"
+                                label="Desktop Playback Layout"
                                 options={[
-                                    { value: 'sidebar', label: 'Sidebar Panel' },
+                                    { value: 'sidebar', label: 'Bottom Bar' },
                                     { value: 'floating', label: 'Floating Bar' },
                                 ]}
                                 value={settings.miniPlayerMode}

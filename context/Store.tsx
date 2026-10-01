@@ -9,6 +9,7 @@ import { MOCK_PLAYLISTS } from '../constants';
 import { db } from '../services/db';
 import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
+import { defaultAccent } from '../design-system/tokens';
 
 interface StoreContextType extends AppState {
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
@@ -77,11 +78,7 @@ interface StoreContextType extends AppState {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 const DEFAULT_SETTINGS: AppSettings = {
-  theme: {
-    primaryColor: '#06b6d4',
-    secondaryColor: '#8b5cf6',
-    backgroundColor: '#0a0a0a',
-  },
+  theme: { ...defaultAccent },
   sidebar: {
     showHome: true,
     showBrowse: true,
@@ -284,7 +281,11 @@ const loadDesktopCredentials = async (platform: Platform): Promise<SubsonicCrede
   return platform.vault.get(canonicalServerUrl(lastServerUrl));
 };
 
-export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const StoreProvider: React.FC<{
+  children: React.ReactNode;
+  /** Optional, isolated persistence for a fixture-only host such as Studio. */
+  previewPlaylistStorageKey?: string;
+}> = ({ children, previewPlaylistStorageKey }) => {
   const platform = usePlatform();
   const [service] = useState(() => new SubsonicService(null));
   useEffect(() => {
@@ -351,6 +352,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isZenMode, setZenMode] = useState(false);
 
   const [playlists, setPlaylists] = useState<IPlaylist[]>([]);
+  const hasRestoredPreviewPlaylists = useRef(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<ISong | null>(null);
 
@@ -678,6 +680,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         service.getPlaylists().then(setPlaylists);
         fetchArtists();
       }
+      if (previewPlaylistStorageKey) {
+        try {
+          const storedPlaylists = localStorage.getItem(previewPlaylistStorageKey);
+          const parsedPlaylists = storedPlaylists ? JSON.parse(storedPlaylists) : null;
+          if (Array.isArray(parsedPlaylists)) {
+            hasRestoredPreviewPlaylists.current = true;
+            setPlaylists(parsedPlaylists);
+          }
+        } catch {
+          // Ignore malformed preview data; Studio falls back to the fixtures.
+        }
+      }
       const savedSettings = await db.get('settings', 'user_settings');
       if (savedSettings) {
         // Migration: Convert old flat EQ to new nested structure
@@ -748,7 +762,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsInitialized(true);
     };
     init();
-  }, [service, platform]);
+  }, [service, platform, previewPlaylistStorageKey]);
 
   useEffect(() => {
     if (isPlaying && currentSongIndex >= 0 && queue[currentSongIndex]) {
@@ -2057,7 +2071,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMostPlayed([]);
   };
 
-  const enableDemoMode = () => { setIsDemoMode(true); setPlaylists(MOCK_PLAYLISTS); };
+  const enableDemoMode = () => {
+    setIsDemoMode(true);
+    if (!hasRestoredPreviewPlaylists.current) setPlaylists(MOCK_PLAYLISTS);
+  };
   const openPlaylistModal = (song: ISong) => { setSongToAddToPlaylist(song); setModalOpen(true); };
   const closePlaylistModal = () => { setModalOpen(false); setSongToAddToPlaylist(null); };
 
@@ -2171,6 +2188,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return pl;
     }));
   };
+
+  useEffect(() => {
+    if (!previewPlaylistStorageKey || !isInitialized || !isDemoMode) return;
+    try {
+      localStorage.setItem(previewPlaylistStorageKey, JSON.stringify(playlists));
+    } catch {
+      // Preview persistence is non-essential; playlist editing still works.
+    }
+  }, [isDemoMode, isInitialized, playlists, previewPlaylistStorageKey]);
 
   useEffect(() => {
     if (!isInitialized) return;

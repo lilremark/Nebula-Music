@@ -1,0 +1,13 @@
+Use case: photorealistic-natural
+Asset type: 1024 x 1024 square album artwork for the isolated Nebula Studio music-player prototype
+Primary request: Create original cover art for the fictional album Midnight City by Neon Void: a high alpine lake reflecting a dramatic storm-clearing sunset over rugged mountains.
+Scene/backdrop: remote treeless alpine basin after a storm, mirror-dark lake, jagged stone ridgelines, broken cloud layers opening near the horizon.
+Subject: powerful mountain silhouettes and their reflection, with warm ember light burning softly through retreating clouds; no people, buildings, vehicles, boats, or animals.
+Style/medium: premium editorial landscape photography, cinematic film grain, realistic natural atmosphere, subtle analog softness, tactile and sophisticated.
+Composition/framing: perfectly square edge-to-edge cover crop; low lakeshore viewpoint; one dominant angular mountain mass balanced by its reflection; strong dark-to-light value structure that remains immediately readable at small album-thumbnail size; no border or frame.
+Lighting/mood: storm-clearing dusk, restrained and dramatic, cool shadowed terrain with warm ember light concentrated in the clouds and reflected water.
+Color palette: desaturated slate blue, charcoal, weathered stone gray, muted warm amber and ember highlights; avoid bright or synthetic colors.
+Materials/textures: wind-smoothed dark water, rugged mineral rock, layered mist and cloud, fine photographic grain.
+Text: none.
+Constraints: original photographic artwork; exact square composition suitable for 1024 x 1024 output; no people; no text; no letters; no numbers; no logo; no watermark; no UI; no frame; no album mockup; no rounded-corner mask.
+Avoid: neon city imagery, skylines, cyberpunk clichés, fluorescent glow, fantasy landscape, oversaturation, glossy 3D rendering, collage, interface elements.

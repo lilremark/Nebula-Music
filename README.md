@@ -490,3 +490,8 @@ Security vulnerabilities must not be reported publicly. Email
 Distributed under the [MIT License](./LICENSE.txt).
 
 
+
+## Design system
+
+Run `npm run design-system` and open <http://localhost:3100> for the current-design gallery: theme tokens, live shared components, and music-player pattern references. See [the design system guide](docs/design-system.md) for usage, ownership, and the refinement queue. Build the standalone reference with `npm run design-system:build`.
+

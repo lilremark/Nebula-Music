@@ -165,7 +165,7 @@ export interface AppSettings {
       '16k': number;
     };
   };
-  miniPlayerMode: 'floating' | 'sidebar'; // which mini-player style to show
+  miniPlayerMode: 'floating' | 'sidebar'; // desktop transport layout; sidebar includes the bottom bar and optional panel
   progressVisualization: 'bar' | 'waveform';
   magicCrossfade: boolean;
   streamDeck: {

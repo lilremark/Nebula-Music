@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import type { CSSProperties } from 'react';
-import { Home, Compass, Mic2, Disc, Music, ListMusic, Heart, Star, Settings, X, Radio } from 'lucide-react';
+import { Home, Compass, Mic2, Disc, Music, ListMusic, Heart, Star, Settings, X, Radio, Search } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { usePlatform } from '../../platform/PlatformContext';
 import { View } from '../../types';
@@ -15,7 +15,7 @@ interface NavDrawerProps {
 }
 
 export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
-    const { currentView, setView, isDemoMode, settings } = useStore();
+    const { currentView, setView, openSearchModal, isDemoMode, settings, playlists, service } = useStore();
     const platform = usePlatform();
     const drawerTopClass = getNavDrawerTopClass(platform?.info.os);
     const s = settings.sidebar;
@@ -45,6 +45,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
         return (
             <button
                 onClick={() => handleNavigate(view)}
+                aria-current={isActive ? 'page' : undefined}
                 className={`
                     w-full flex items-center gap-4 px-4 py-3 rounded-lg
                     transition-all duration-200
@@ -86,6 +87,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
 
             {/* Drawer */}
             <nav
+                id="app-navigation"
                 className={`
                     fixed ${drawerTopClass} left-0 bottom-0 z-50
                     w-72 max-w-[85vw]
@@ -110,8 +112,8 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                             </svg>
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">NEBULA</h2>
-                            <p className="text-[10px] text-neutral-600 dark:text-white/60 uppercase tracking-widest font-mono">Music</p>
+                            <h2 className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">Nebula</h2>
+                            <p className="text-[10px] text-neutral-600 dark:text-white/60">Your music, your server</p>
                         </div>
                     </div>
 
@@ -129,25 +131,30 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                 <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
                     <SectionLabel>Discover</SectionLabel>
                     <div className="space-y-1">
-                        {s.showHome && <NavItem icon={Home} label="Home" view="HOME" />}
+                        {s.showHome && <NavItem icon={Home} label="Listen Now" view="HOME" />}
                         {s.showBrowse && <NavItem icon={Compass} label="Browse" view="BROWSE" />}
                         {s.showRadio && <NavItem icon={Radio} label="Internet Radio" view="RADIO" />}
+                        <button type="button" onClick={() => { onClose(); openSearchModal(); }} className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-neutral-700 dark:text-white/70 hover:bg-neutral-100 dark:hover:bg-white/10 text-left"><Search size={20} aria-hidden="true" /><span className="text-sm">Search</span></button>
                     </div>
 
-                    <SectionLabel>Library</SectionLabel>
+                    <SectionLabel>Your Library</SectionLabel>
                     <div className="space-y-1">
-                        {s.showSongs && <NavItem icon={Heart} label="Liked Songs" view="LIKED_SONGS" />}
-                        {s.showAlbums && <NavItem icon={Star} label="Liked Albums" view="LIKED_ALBUMS" />}
                         {s.showArtists && <NavItem icon={Mic2} label="Artists" view="ARTISTS" />}
                         {s.showAlbums && <NavItem icon={Disc} label="Albums" view="ALBUMS" />}
                         {s.showSongs && <NavItem icon={Music} label="Songs" view="SONGS" />}
+                        {s.showPlaylists && <NavItem icon={ListMusic} label="Playlists" view="PLAYLISTS" />}
+                        <NavItem icon={Heart} label="Liked Songs" view="LIKED_SONGS" />
+                        <NavItem icon={Star} label="Liked Albums" view="LIKED_ALBUMS" />
                     </div>
 
-                    {s.showPlaylists && (
+                    {s.showPlaylists && playlists.length > 0 && (
                         <>
                             <SectionLabel>Playlists</SectionLabel>
                             <div className="space-y-1">
-                                <NavItem icon={ListMusic} label="My Playlists" view="PLAYLISTS" />
+                                {playlists.slice(0, 8).map(playlist => <button key={playlist.id} type="button" className="nebula-drawer-playlist" onClick={() => handleNavigate('PLAYLIST_DETAIL', playlist.id)}>
+                                    {playlist.coverArt ? <img src={service.getCoverArtUrl(playlist.coverArt, 48)} alt="" /> : <span><ListMusic size={16} aria-hidden="true" /></span>}
+                                    <span>{playlist.name}</span>
+                                </button>)}
                             </div>
                         </>
                     )}

@@ -104,8 +104,8 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
 };
 
 const ViewHeader = ({ currentView, children }: { currentView: View, children?: React.ReactNode }) => (
-    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-6 animate-fade-in">
-        <h2 className="text-4xl md:text-5xl font-black capitalize flex items-center tracking-tight text-neutral-900 dark:text-white hidden md:flex">
+    <div data-nebula-view-header className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-6 animate-fade-in">
+        <h1 className="text-4xl md:text-5xl font-black capitalize flex items-center tracking-tight text-neutral-900 dark:text-white hidden md:flex">
             {currentView === 'ARTISTS' && <div className="p-2 bg-purple-500/20 rounded-xl mr-4 border border-purple-500/30"><Mic2 className="w-8 h-8 text-purple-400" /></div>}
             {currentView === 'ALBUMS' && <div className="p-2 bg-blue-500/20 rounded-xl mr-4 border border-blue-500/30"><Disc className="w-8 h-8 text-blue-400" /></div>}
             {currentView === 'SONGS' && <div className="p-2 bg-green-500/20 rounded-xl mr-4 border border-green-500/30"><Music className="w-8 h-8 text-green-400" /></div>}
@@ -113,7 +113,7 @@ const ViewHeader = ({ currentView, children }: { currentView: View, children?: R
             {currentView === 'LIKED_SONGS' && <div className="p-2 bg-red-500/20 rounded-xl mr-4 border border-red-500/30"><Heart className="w-8 h-8 text-red-500 fill-current" /></div>}
             {currentView === 'LIKED_ALBUMS' && <div className="p-2 bg-yellow-500/20 rounded-xl mr-4 border border-yellow-500/30"><Star className="w-8 h-8 text-yellow-500 fill-current" /></div>}
             {currentView === 'LIKED_SONGS' ? 'Liked Songs' : currentView === 'LIKED_ALBUMS' ? 'Liked Albums' : currentView.toLowerCase()}
-        </h2>
+        </h1>
 
         <div className="flex flex-wrap items-center w-full lg:w-auto gap-3">
             {children}
@@ -132,7 +132,7 @@ const MobileLibraryTabs = () => {
     ];
 
     return (
-        <div className="md:hidden w-full overflow-x-auto pb-6 -mx-6 px-6 scrollbar-hide">
+        <div data-nebula-library-tabs className="md:hidden w-full overflow-x-auto pb-6 -mx-6 px-6 scrollbar-hide">
             <div className="flex items-center gap-2">
                 {tabs.map(tab => (
                     <button
@@ -166,7 +166,7 @@ const FilterBar: React.FC<{
     genres: string[];
     resetFilters: () => void;
 }> = ({ currentView, filter, setFilter, setPage, sortType, setSortType, selectedGenre, setSelectedGenre, selectedYear, setSelectedYear, genres, resetFilters }) => (
-    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto p-1">
+    <div data-nebula-library-filters className="flex flex-wrap items-center gap-3 w-full md:w-auto p-1">
         {/* Text Search */}
         <div className="relative flex-1 min-w-[200px] group">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-neutral-900 transition-colors dark:group-focus-within:text-white" />
@@ -352,7 +352,7 @@ export const LibraryView: React.FC = () => {
     const isSongView = currentView === 'SONGS' || currentView === 'LIKED_SONGS';
 
     return (
-        <div className="p-6 md:p-12 min-h-full flex flex-col max-w-[1800px] mx-auto animate-fade-in">
+        <div data-nebula-view="library" data-nebula-library={currentView.toLowerCase()} className="p-6 md:p-12 min-h-full flex flex-col max-w-[1800px] mx-auto animate-fade-in">
             <MobileLibraryTabs />
 
             <ViewHeader currentView={currentView}>
@@ -373,7 +373,7 @@ export const LibraryView: React.FC = () => {
                 )}
             </ViewHeader>
 
-            {shouldShowPagination && <PaginationControls />}
+            {shouldShowPagination && page > 0 && <PaginationControls />}
 
             {isLoading && !displayItems.length ? (
                 <div className="flex flex-col items-center justify-center h-64 text-neutral-500">
@@ -383,7 +383,7 @@ export const LibraryView: React.FC = () => {
             ) : (
                 <>
                     {isSongView ? (
-                        <div className="rounded-lg overflow-hidden flex-1 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-white/5">
+                        <div data-nebula-track-ledger className="rounded-lg overflow-hidden flex-1 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-white/5">
                             <div className="overflow-x-auto custom-scrollbar">
                                 <table className="w-full text-left text-sm text-neutral-700 dark:text-neutral-400">
                                     <thead className="bg-neutral-200 text-neutral-700 dark:bg-white/5 dark:text-neutral-300 uppercase tracking-widest text-[10px] font-bold">
@@ -431,10 +431,11 @@ export const LibraryView: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 content-start">
+                        <div data-nebula-collection-grid className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 content-start">
                             {displayItems.map((item: any, i) => (
                                 <div
                                     key={item.id}
+                                    data-nebula-collection-card
                                     className={`group cursor-pointer bg-transparent`}
                                     onClick={() => {
                                         if (currentView === 'ARTISTS') setView('ARTIST_DETAIL', item.id);

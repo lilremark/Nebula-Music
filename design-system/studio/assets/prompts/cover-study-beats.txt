@@ -1,0 +1,14 @@
+Use case: photorealistic-natural
+Asset type: 1024 x 1024 square album artwork for the isolated Nebula Studio music-player prototype
+Primary request: Create original cover art for the fictional album Study Beats by Lo-Fi Dreams: Icelandic geothermal steam rolling low across charcoal-black volcanic rock.
+Input image: reference image for the Nebula concept's restrained, premium, warm editorial mood and tactile photographic treatment only; do not reproduce its interface, layout, people, typography, or existing cover art.
+Scene/backdrop: barren Icelandic geothermal field with layered mineral-stained charcoal lava, pale steam drifting across the ground, and only a minimal distant horizon.
+Subject: sculptural volcanic rock and dense geothermal vapor; no people, buildings, vehicles, or animals.
+Style/medium: grainy editorial album photography, cinematic but natural, tactile film grain, subtle analog softness, realistic geology and atmospheric depth.
+Composition/framing: perfectly square edge-to-edge cover crop; low viewpoint; bold dark foreground rock mass with steam forming an organic diagonal through the frame; balanced and readable at small album-thumbnail size; no border or frame.
+Lighting/mood: overcast northern light with a restrained amber glow filtering through some steam; contemplative, focused, nocturnal-adjacent, premium.
+Color palette: charcoal black, soot gray, muted warm stone, subdued amber highlights; avoid bright colors.
+Materials/textures: porous basalt, mineral dust, moisture, translucent steam, fine photographic grain.
+Text: none.
+Constraints: original photographic artwork; exact square composition suitable for 1024 x 1024 output; no people; no text; no letters; no numbers; no logo; no watermark; no UI; no frame; no album mockup; no rounded-corner mask.
+Avoid: recognizable brands, typography, neon, oversaturation, fantasy landscape, glossy 3D rendering, collage, interface elements.

@@ -1,0 +1,11 @@
+Use case: photorealistic-natural
+Asset type: production square album artwork for the fictional album Digital Rain by Cyber Punkers
+Primary request: Create a 1024 × 1024 square album-cover photograph of alpine cable cars suspended over misty blue-gray mountains at teal-cyan dawn.
+Scene/backdrop: layered alpine ridgelines receding into soft atmospheric mist beneath an early-morning teal-cyan sky; restrained dawn haze and cool natural depth.
+Subject: a small group of cable-car gondolas traveling along clean diagonal cables high above the mountain valley; no visible occupants.
+Style/medium: premium editorial landscape photography with cinematic film grain, realistic optics, subtle analog texture, and refined music-art direction.
+Composition/framing: exact square composition; bold, simple diagonal cable line; gondolas clearly legible at thumbnail scale; generous negative space; striking silhouette and depth without visual clutter.
+Lighting/mood: cool dawn light, quiet suspended atmosphere, cinematic and contemplative.
+Color palette: muted teal, cyan, slate blue, blue-gray, charcoal, and restrained pale dawn highlights.
+Constraints: no people, buildings, roads, vehicles other than the cable-car gondolas, birds, or foreground props.
+Avoid: all text, lettering, numbers, logos, signatures, watermarks, frames, borders, UI, mockup presentation, neon cyberpunk clichés, magenta lighting, holograms, circuitry, sci-fi cityscapes, fantasy elements, oversaturation, and glossy 3D rendering.

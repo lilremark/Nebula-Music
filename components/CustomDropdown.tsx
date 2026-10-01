@@ -67,7 +67,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     const displayText = selectedOption ? selectedOption.label : placeholder;
 
     return (
-        <div className={`relative ${className}`} ref={dropdownRef}>
+        <div data-nebula-dropdown className={`relative ${className}`} ref={dropdownRef}>
             {/* Trigger button */}
             <button
                 type="button"
@@ -93,6 +93,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
             {/* Dropdown menu */}
             {isOpen && (
                 <div
+                    data-nebula-dropdown-menu
                     className="absolute w-full min-w-[200px] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-white/10 rounded-2xl shadow-float-3 z-50 overflow-hidden animate-scale-in"
                     style={dropdownStyle}
                 >

@@ -16,17 +16,17 @@
   --mono-950: #0a0a0a;
 
   /* Theme variables (set by ThemeContext) */
-  --theme-bg: #e8e8e8;
-  --theme-bgSecondary: #d4d4d4;
-  --theme-bgTertiary: #c0c0c0;
-  --theme-text: #0a0a0a;
-  --theme-textSecondary: #404040;
-  --theme-textTertiary: #737373;
-  --theme-border: #b0b0b0;
-  --theme-borderHover: #909090;
-  --theme-hover: #d0d0d0;
-  --theme-active: #b8b8b8;
-  --theme-muted: #888888;
+  --theme-bg: #f3f4f8;
+  --theme-bgSecondary: #e8eaf1;
+  --theme-bgTertiary: #d9dce7;
+  --theme-text: #191b27;
+  --theme-textSecondary: #515667;
+  --theme-textTertiary: #626778;
+  --theme-border: #d8dbe5;
+  --theme-borderHover: #b8bdca;
+  --theme-hover: #e8eaf1;
+  --theme-active: #d9dce7;
+  --theme-muted: #626778;
 
   /* Adaptive colors (set by useAdaptiveColors hook) */
   --adaptive-primary: #ffffff;
@@ -48,17 +48,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --theme-bg: #0a0a0a;
-    --theme-bgSecondary: #171717;
-    --theme-bgTertiary: #262626;
-    --theme-text: #fafafa;
-    --theme-textSecondary: #a3a3a3;
-    --theme-textTertiary: #525252;
-    --theme-border: #404040;
-    --theme-borderHover: #525252;
-    --theme-hover: #262626;
-    --theme-active: #404040;
-    --theme-muted: #525252;
+    --theme-bg: #11131c;
+    --theme-bgSecondary: #181a25;
+    --theme-bgTertiary: #242735;
+    --theme-text: #f5f5fa;
+    --theme-textSecondary: #bcc0ce;
+    --theme-textTertiary: #abb0c0;
+    --theme-border: #333746;
+    --theme-borderHover: #4b5163;
+    --theme-hover: #242735;
+    --theme-active: #303446;
+    --theme-muted: #abb0c0;
   }
 }
 

@@ -134,7 +134,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
     if (!currentSong) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center" data-nebula-player="sidebar">
                 <div className="w-32 h-32 rounded-2xl bg-neutral-300 dark:bg-white/5 flex items-center justify-center mb-6">
                     <ListMusic className="w-12 h-12 text-neutral-500 dark:text-white/50" />
                 </div>
@@ -147,12 +147,13 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     return (
         <div
             className="flex-1 flex flex-col h-full overflow-hidden relative justify-center"
+            data-nebula-player="sidebar"
             style={{ background: `linear-gradient(180deg, ${colors.primary}15 0%, transparent 50%)` }}
         >
             {/* Top Section: Media Controls (Scrollable if needed on small screens, but usually fixed) */}
-            <div className="flex-none flex flex-col items-center w-full pb-4 pt-4">
+            <div className="flex-none flex flex-col items-center w-full pb-4 pt-4" data-nebula-sidebar-player-main>
                 {/* Header with collapse button */}
-                <div className="w-full relative z-10 flex items-center justify-between px-4 mb-2">
+                <div className="w-full relative z-10 flex items-center justify-between px-4 mb-2" data-nebula-sidebar-player-header>
                     <span className="text-xs font-bold text-neutral-600 dark:text-white/50 uppercase tracking-wider">Now Playing</span>
                     <button
                         onClick={onCollapse}
@@ -165,7 +166,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Album Art - Compact */}
-                <div className="relative w-full px-6 mb-6">
+                <div className="relative w-full px-6 mb-6" data-nebula-sidebar-player-art>
                     <div
                         className="relative w-full aspect-square max-w-[240px] mx-auto group cursor-pointer rounded-xl shadow-2xl overflow-hidden"
                         onClick={onExpand}
@@ -186,7 +187,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Song Info */}
-                <div className="px-6 text-center w-full mb-2">
+                <div className="px-6 text-center w-full mb-2" data-nebula-sidebar-player-info>
                     <h2 className="text-lg font-bold text-neutral-900 dark:text-white truncate" title={currentSong.title}>
                         {currentSong.title}
                     </h2>
@@ -207,7 +208,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full px-6 mb-2">
+                <div className="w-full px-6 mb-2" data-nebula-sidebar-player-progress>
                     <div className="flex justify-end mb-1.5">
                         <button
                             onClick={toggleProgressMode}
@@ -244,7 +245,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Main Controls */}
-                <div className="flex items-center justify-center gap-4 mb-2">
+                <div className="flex items-center justify-center gap-4 mb-2" data-nebula-sidebar-player-transport>
                     <button
                         onClick={prevSong}
                         className="p-2.5 text-neutral-700 dark:text-white/70 hover:text-neutral-900 dark:hover:text-white transition-all hover:scale-110 active:scale-95"
@@ -276,7 +277,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Secondary Controls */}
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center justify-center gap-3" data-nebula-sidebar-player-tools>
                     <button
                         onClick={() => toggleLike(currentSong)}
                         className={`p-2 transition-all active:scale-95 ${currentSong.starred ? 'text-red-500' : 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white'}`}
@@ -438,6 +439,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
                 {/* Volume */}
                 <div
+                    data-nebula-sidebar-player-volume
                     className="flex items-center justify-center gap-1 shrink-0 mt-3"
                     onMouseEnter={() => setIsHoveringVolume(true)}
                     onMouseLeave={() => setIsHoveringVolume(false)}
@@ -459,6 +461,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                             />
                             <input
                                 type="range"
+                                aria-label="Volume"
                                 min="0"
                                 max="1"
                                 step="0.01"
@@ -472,8 +475,8 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
             </div>
 
             {/* Bottom Section: Queue Card */}
-            <div className={`flex flex-col px-4 pb-4 transition-all duration-300 ${isQueueCollapsed ? 'flex-none' : 'flex-1 min-h-0'}`}>
-                <div className="flex-1 bg-neutral-100 dark:bg-white/5 rounded-xl border border-neutral-200 dark:border-white/5 overflow-hidden flex flex-col shadow-inner">
+            <div className={`flex flex-col px-4 pb-4 transition-all duration-300 ${isQueueCollapsed ? 'flex-none' : 'flex-1 min-h-0'}`} data-nebula-sidebar-player-queue>
+                <div className="flex-1 bg-neutral-100 dark:bg-white/5 rounded-xl border border-neutral-200 dark:border-white/5 overflow-hidden flex flex-col shadow-inner" data-nebula-sidebar-player-queue-card>
                     <div
                         className="px-4 py-3 border-b border-neutral-200 dark:border-white/5 flex items-center justify-between bg-neutral-200/50 dark:bg-white/5 cursor-pointer hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors"
                         onClick={() => setIsQueueCollapsed(!isQueueCollapsed)}

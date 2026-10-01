@@ -2,8 +2,11 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { StoreProvider, useStore } from './context/Store';
 import { SplitLayout, TopBar, MacTitleBar, WindowsTitleBar } from './components/layout';
 import { NavDrawer } from './components/navigation';
+import { DesktopRail } from './components/navigation/DesktopRail';
+import { BlurFade } from './components/vendor/magic-blur-fade';
 import { NowPlayingPanel } from './components/player/NowPlayingPanel';
 import { FloatingMiniPlayer } from './components/player/FloatingMiniPlayer';
+import { DesktopPlaybackBar } from './components/player/DesktopPlaybackBar';
 import { RadioFloatingMiniPlayer, RadioFullPlayer, RadioMobileBar, RadioSidebarPanel } from './components/radio/RadioPlayers';
 import { Player } from './components/Player';
 import { HomeView } from './views/Home';
@@ -26,23 +29,52 @@ import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
 import { usePlatform } from './platform/PlatformContext';
+import { NebulaDesignPrototype } from './components/design-prototype/NebulaDesignPrototype';
 
-const AppContent: React.FC = () => {
+/**
+ * The production shell is also composed by the isolated Studio preview.  The
+ * default drawer preserves the desktop application's behaviour; Studio opts
+ * into its accessible preview drawer without forking any view or player code.
+ */
+export const AppContent: React.FC<{
+  navDrawer?: React.ComponentType<{ isOpen: boolean; onClose: () => void }>;
+  initialSidebarCollapsed?: boolean;
+  initialPlayerExpanded?: boolean;
+}> = ({ navDrawer: Drawer = NavDrawer, initialSidebarCollapsed = true, initialPlayerExpanded = false }) => {
   const {
     currentView, setView, viewData, credentials, isDemoMode, queue, currentSongIndex,
     currentRadioStation,
     togglePlay, nextSong, prevSong, toggleRepeat, isPlaying,
     visualizerMode, setVisualizerMode, isZenMode, setZenMode,
-    settings, volume, setVolume, getMostPlayedSongs, refreshMostPlayed
+    settings, updateSettings, volume, setVolume, getMostPlayedSongs, refreshMostPlayed
   } = useStore();
 
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(initialPlayerExpanded);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(initialSidebarCollapsed);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const mainRef = useRef<HTMLElement>(null);
 
+  useEffect(() => {
+    const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', updateViewportWidth);
+    return () => window.removeEventListener('resize', updateViewportWidth);
+  }, []);
+
+  // Development-only concept lab. It is intentionally isolated from the
+  // production app so visual exploration cannot alter playback behavior.
+  const showDesignPrototype = import.meta.env.DEV
+    && new URLSearchParams(window.location.search).get('designPrototype') === '1';
+
+  if (showDesignPrototype) {
+    return <NebulaDesignPrototype />;
+  }
+
   const handleGlobalShortcuts = useCallback((e: KeyboardEvent) => {
-    if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+    const target = e.target as HTMLElement;
+    // Range inputs own their arrow keys. Handling them here as volume
+    // shortcuts makes keyboard slider adjustment apply twice.
+    if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
 
     const { shortcuts } = settings;
@@ -134,19 +166,17 @@ const AppContent: React.FC = () => {
   // Determine player display mode based on settings
   const useSidebarPlayer = settings.miniPlayerMode === 'sidebar';
   const useFloatingPlayer = settings.miniPlayerMode === 'floating';
-
-  // Dynamic background style based on settings
-  const bgStyle = {
-    backgroundColor: settings.theme.backgroundColor || '#000000',
-  };
+  const showSidebarPlayer = viewportWidth >= 1320 && useSidebarPlayer && !isSidebarCollapsed;
+  const showFloatingPlayer = viewportWidth >= 1024 && useFloatingPlayer;
+  const showDesktopPlaybackBar = viewportWidth >= 1024 && useSidebarPlayer && isPlayerVisible;
 
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
+    <div className="nebula-next relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
       <WindowsTitleBar />
       <MacTitleBar />
 
       {/* Navigation Drawer */}
-      <NavDrawer isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
+      {isNavOpen && <Drawer isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />}
 
       {/* Top-level update banner (desktop only) */}
       <UpdateBanner />
@@ -154,10 +184,11 @@ const AppContent: React.FC = () => {
       {/* Split Screen Layout */}
       <div className="flex-1 min-h-0">
         <SplitLayout
+        leftPanel={<DesktopRail />}
         isPlayerVisible={isPlayerVisible}
         isCollapsed={isSidebarCollapsed || useFloatingPlayer}
         rightPanel={
-          useSidebarPlayer ? (
+          showSidebarPlayer ? (
             isRadioPlayerVisible ? (
               <RadioSidebarPanel
                 onExpand={() => setIsExpanded(true)}
@@ -172,19 +203,21 @@ const AppContent: React.FC = () => {
           ) : null
         }
         floatingPlayer={
-          (useFloatingPlayer || isSidebarCollapsed) ? (
+          showFloatingPlayer ? (
             isRadioPlayerVisible ? (
               <RadioFloatingMiniPlayer
                 onExpand={() => setIsExpanded(true)}
                 onRestoreSidebar={() => {
-                  if (useSidebarPlayer) setIsSidebarCollapsed(false);
+                  updateSettings({ miniPlayerMode: 'sidebar' });
+                  setIsSidebarCollapsed(false);
                 }}
               />
             ) : (
               <FloatingMiniPlayer
                 onExpand={() => setIsExpanded(true)}
                 onRestoreSidebar={() => {
-                  if (useSidebarPlayer) setIsSidebarCollapsed(false);
+                  updateSettings({ miniPlayerMode: 'sidebar' });
+                  setIsSidebarCollapsed(false);
                 }}
               />
             )
@@ -202,27 +235,31 @@ const AppContent: React.FC = () => {
           className="flex-1 overflow-y-auto custom-scrollbar"
         >
           <div className={`min-h-full ${isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
-            <ViewComponent />
+            <BlurFade key={`${currentView}-${String(viewData ?? '')}`} duration={0.3} blur="4px" offset={10}>
+              <ViewComponent />
+            </BlurFade>
           </div>
         </main>
 
-        {/* Mobile Player Bar (shows on mobile when something is playing) */}
-        {isRadioPlayerVisible ? (
-          <RadioMobileBar onExpand={() => setIsExpanded(true)} />
-        ) : (
-          <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
-        )}
       </SplitLayout>
       </div>
 
+      {showDesktopPlaybackBar && <DesktopPlaybackBar
+        onExpand={() => setIsExpanded(true)}
+        panelOpen={showSidebarPlayer}
+        onTogglePanel={() => viewportWidth < 1320 ? setIsExpanded(true) : setIsSidebarCollapsed(value => !value)}
+      />}
+
       {/* Mini Player */}
-      <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${isNavOpen ? 'translate-y-full' : 'translate-y-0'} md:hidden`}>
-        {isRadioPlayerVisible ? (
-          <RadioMobileBar onExpand={() => setIsExpanded(true)} />
-        ) : (
-          <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
-        )}
-      </div>
+      {!isNavOpen && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
+          {isRadioPlayerVisible ? (
+            <RadioMobileBar onExpand={() => setIsExpanded(true)} />
+          ) : (
+            <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
+          )}
+        </div>
+      )}
 
 
 

@@ -64,6 +64,7 @@ const VolumeSlider: React.FC<{ className?: string; compact?: boolean }> = ({ cla
                 />
                 <input
                     type="range"
+                    aria-label="Volume"
                     min="0"
                     max="1"
                     step="0.01"
@@ -249,6 +250,8 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
     return (
         <div
             className={`fixed inset-0 z-[60] flex flex-col bg-neutral-950 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded ? 'translate-y-0' : 'translate-y-full'}`}
+            inert={!isExpanded}
+            aria-hidden={!isExpanded}
             style={{
                 backgroundColor: '#0a0a0a',
                 backgroundImage: colors.gradient,

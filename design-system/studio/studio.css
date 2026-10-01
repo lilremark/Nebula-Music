@@ -1,0 +1,2463 @@
+/*
+ * Ember Listening Room
+ * Studio-only styling: every selector is scoped below .studio-app so the
+ * production shell, playback owner, and persisted application remain intact.
+ */
+
+body.studio-preview {
+  margin: 0;
+  overflow: hidden;
+  background: #080808;
+}
+
+.studio-app {
+  --studio-bg: #050505;
+  --studio-panel: #0c0c0d;
+  --studio-panel-raised: #121214;
+  --studio-control: #19191c;
+  --studio-hover: #222225;
+  --studio-line: rgb(255 255 255 / 10%);
+  --studio-line-strong: rgb(255 255 255 / 16%);
+  --studio-text: #f8f7f4;
+  --studio-muted: #a7a5a1;
+  --studio-faint: #918d86;
+  --studio-accent: #ff5938;
+  --studio-accent-strong: #ff3f1f;
+  --studio-accent-ink: #1a0703;
+  --color-primary: 255 89 56;
+  --color-secondary: 246 132 86;
+  --primary-rgb: 255, 89, 56;
+  height: 100dvh;
+  min-height: 0;
+  padding: 14px;
+  overflow: hidden;
+  color: var(--studio-text);
+  background: #080808;
+  font-family: 'Inter', sans-serif;
+  isolation: isolate;
+}
+
+html:not(.dark) .studio-app {
+  --studio-bg: #eceae6;
+  --studio-panel: #f7f5f1;
+  --studio-panel-raised: #ffffff;
+  --studio-control: #e5e1dc;
+  --studio-hover: #dcd7d0;
+  --studio-line: rgb(23 19 16 / 11%);
+  --studio-line-strong: rgb(23 19 16 / 18%);
+  --studio-text: #151311;
+  --studio-muted: #625d57;
+  --studio-faint: #6f6860;
+  --studio-accent-ink: #1a0703;
+  background: #dad7d2;
+}
+
+.studio-app *,
+.studio-app *::before,
+.studio-app *::after { box-sizing: border-box; }
+
+.studio-app button { cursor: pointer; }
+.studio-app :focus-visible { outline: 2px solid var(--studio-accent); outline-offset: 3px; }
+.studio-app ::selection { color: var(--studio-accent-ink); background: var(--studio-accent); }
+.studio-app .custom-scrollbar { scrollbar-color: var(--studio-hover) transparent; scrollbar-width: thin; }
+
+.studio-app .studio-stage {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--studio-line);
+  border-radius: 26px;
+  background: var(--studio-bg);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 45%);
+}
+
+.studio-app .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden {
+  height: 100% !important;
+  min-height: 0;
+  padding-left: 72px;
+  overflow: hidden;
+  color: var(--studio-text) !important;
+  background: var(--studio-bg) !important;
+}
+
+.studio-app:has(.studio-nav-drawer[data-open="true"]) .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden {
+  padding-left: 246px;
+}
+
+.studio-app .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden > .flex-1.min-h-0 {
+  padding: 12px 12px 12px 0;
+  overflow: hidden;
+  background: var(--studio-bg);
+}
+
+.studio-app .studio-stage .flex.h-full.w-full {
+  gap: 12px;
+  background: var(--studio-bg) !important;
+}
+
+.studio-app .studio-stage .flex.h-full.w-full > main {
+  overflow: hidden;
+  border: 1px solid var(--studio-line);
+  border-radius: 22px;
+  background: var(--studio-bg);
+}
+
+/* Production top bar, reduced to navigation, the monochrome mark, and search. */
+.studio-app .studio-stage header.relative.h-16 {
+  height: 72px;
+  padding-inline: 22px;
+  border-color: var(--studio-line) !important;
+  background: var(--studio-bg);
+}
+
+.studio-app .studio-stage header.relative.h-16 > .absolute.inset-0 {
+  background: var(--studio-bg) !important;
+  backdrop-filter: none;
+}
+
+.studio-app .studio-stage header.relative.h-16 > div:first-of-type { gap: 10px; }
+
+.studio-app .studio-stage header.relative.h-16 button[aria-label="Open navigation"] {
+  color: var(--studio-muted) !important;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.studio-app .studio-stage header.relative.h-16 button[aria-label="Open navigation"]:hover {
+  color: var(--studio-text) !important;
+  border-color: var(--studio-line);
+  background: var(--studio-control) !important;
+}
+
+.studio-app .studio-stage header.relative.h-16 button[title="Go to Home"] {
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border: 1px solid var(--studio-line-strong);
+  border-radius: 10px;
+  background: #050505 url('./assets/nebula-monochrome.svg') center / 100% no-repeat !important;
+}
+
+.studio-app .studio-stage header.relative.h-16 button[title="Go to Home"] svg { opacity: 0; }
+
+.studio-app .studio-stage header.relative.h-16 h1 {
+  color: var(--studio-text) !important;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+
+.studio-app .studio-stage header.relative.h-16 > div:last-child { gap: 8px; }
+
+.studio-app .studio-stage header.relative.h-16 button[aria-label="Search"] {
+  display: flex;
+  width: min(310px, 32vw);
+  height: 42px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 0 14px;
+  color: var(--studio-muted) !important;
+  border: 1px solid var(--studio-line);
+  border-radius: 13px;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app .studio-stage header.relative.h-16 button[aria-label="Search"]::after {
+  content: 'Search your music';
+  font-size: 13px;
+  font-weight: 450;
+}
+
+.studio-app .studio-stage header.relative.h-16 button[aria-label="Settings"] {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  color: var(--studio-muted) !important;
+  border: 1px solid var(--studio-line);
+  border-radius: 13px;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app .studio-stage header.relative.h-16 button:is([aria-label="Search"], [aria-label="Settings"]):hover {
+  color: var(--studio-text) !important;
+  border-color: var(--studio-line-strong);
+  background: var(--studio-control) !important;
+}
+
+/* Collapsible library drawer. */
+.studio-app .studio-nav-backdrop {
+  position: fixed;
+  z-index: 44;
+  inset: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: rgb(0 0 0 / 70%);
+  transition: opacity 220ms ease;
+}
+
+.studio-app .studio-nav-drawer {
+  position: fixed;
+  z-index: 50;
+  top: 26px;
+  bottom: 26px;
+  left: 26px;
+  display: flex;
+  width: 226px;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--studio-text);
+  border: 1px solid var(--studio-line);
+  border-radius: 18px;
+  background: var(--studio-panel);
+  box-shadow: 0 18px 52px rgb(0 0 0 / 30%);
+  clip-path: inset(0 174px 0 0 round 18px);
+  transition: clip-path 300ms cubic-bezier(.16, 1, .3, 1), box-shadow 220ms ease;
+}
+
+.studio-app .studio-nav-drawer[data-open="true"] { width: 226px; clip-path: inset(0 round 18px); }
+
+.studio-app .studio-nav-header {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.studio-app .studio-nav-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  color: var(--studio-text);
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.studio-app .studio-nav-brand img {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+}
+
+.studio-app .studio-nav-brand-copy,
+.studio-app .studio-nav-status > span {
+  display: none;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.studio-app .studio-nav-drawer[data-open="true"] .studio-nav-brand-copy,
+.studio-app .studio-nav-drawer[data-open="true"] .studio-nav-status > span { display: grid; }
+
+.studio-app .studio-nav-brand-copy strong { font-size: 14px; letter-spacing: -.02em; }
+.studio-app .studio-nav-brand-copy small { margin-top: 2px; color: var(--studio-faint); font-size: 10px; font-weight: 500; }
+
+.studio-app .studio-nav-close {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  padding: 0;
+  color: var(--studio-muted);
+  border: 1px solid var(--studio-line);
+  border-radius: 10px;
+  background: var(--studio-control);
+}
+
+.studio-app .studio-nav-drawer:not([data-open="true"]) .studio-nav-brand { display: none; }
+
+.studio-app .studio-nav-content {
+  flex: 1;
+  padding: 10px 7px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.studio-app .studio-nav-content::-webkit-scrollbar { display: none; }
+
+.studio-app .studio-nav-section { margin-bottom: 14px; }
+.studio-app .studio-nav-section > p {
+  display: none;
+  margin: 0 10px 7px;
+  color: var(--studio-faint);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.studio-app .studio-nav-drawer[data-open="true"] .studio-nav-section > p { display: block; }
+
+.studio-app .studio-nav-item {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 3px;
+  padding: 8px 10px;
+  color: var(--studio-muted);
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  text-align: left;
+  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
+}
+
+.studio-app .studio-nav-item svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.studio-app .studio-nav-item > span { display: none; overflow: hidden; font-size: 12px; font-weight: 550; white-space: nowrap; text-overflow: ellipsis; }
+.studio-app .studio-nav-drawer[data-open="true"] .studio-nav-item > span { display: block; }
+
+.studio-app .studio-nav-item:hover {
+  color: var(--studio-text);
+  border-color: var(--studio-line);
+  background: var(--studio-control);
+}
+
+.studio-app .studio-nav-item[aria-current="page"] {
+  color: var(--studio-accent-ink);
+  background: var(--studio-accent);
+}
+
+.studio-app .studio-nav-item[aria-current="page"] svg { stroke-width: 2.4; }
+.studio-app .studio-nav-item:active { transform: scale(.97); }
+
+.studio-app .studio-playlist-shortcuts { padding-top: 12px; border-top: 1px solid var(--studio-line); }
+.studio-app .studio-create-playlist { color: var(--studio-text); }
+
+.studio-app .studio-nav-footer { padding: 8px 7px; border-top: 1px solid var(--studio-line); }
+
+.studio-app .studio-nav-status {
+  position: relative;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  color: var(--studio-muted);
+  border-radius: 11px;
+  background: var(--studio-bg);
+}
+
+.studio-app .studio-nav-status > svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.studio-app .studio-nav-status strong { overflow: hidden; color: var(--studio-text); font-size: 11px; text-overflow: ellipsis; }
+.studio-app .studio-nav-status small { margin-top: 2px; color: #55cf80; font-size: 9px; }
+.studio-app .studio-nav-status i { position: absolute; right: 8px; width: 6px; height: 6px; border-radius: 999px; background: #55cf80; }
+.studio-app .studio-nav-drawer:not([data-open="true"]) .studio-nav-status i { top: 8px; right: 7px; }
+
+/* The selected hero: editorial image, decisive type, no profile chrome. */
+.studio-app .studio-stage main > div[class*="max-w-"] { max-width: 1680px !important; }
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 {
+  min-height: 390px;
+  margin-bottom: 34px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 22px;
+  background: #b92e18 !important;
+  box-shadow: 0 22px 48px rgb(0 0 0 / 28%);
+}
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 > .absolute.inset-0 {
+  background: #a92514 url('./assets/nebula-hero-ember.png') center / cover no-repeat;
+}
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 > .absolute.inset-0 > img { display: none; }
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 > .absolute.inset-0 > .absolute.inset-0 {
+  background: linear-gradient(90deg, rgb(92 14 4 / 92%) 0%, rgb(139 28 10 / 66%) 41%, rgb(31 5 2 / 10%) 72%, rgb(10 4 3 / 28%) 100%) !important;
+}
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 > .relative.flex {
+  min-height: 390px;
+  align-items: flex-end;
+  padding: 46px 48px;
+}
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 .shrink-0.w-48.h-48 { display: none; }
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 .flex-1.text-center {
+  max-width: 54%;
+  text-align: left;
+}
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 .inline-flex.items-center { display: none; }
+
+.studio-app .studio-stage .text-3xl.md\:text-5xl.font-black {
+  max-width: 9ch;
+  margin-bottom: 12px !important;
+  color: #fff !important;
+  font-size: clamp(44px, 4.7vw, 68px) !important;
+  font-weight: 700 !important;
+  line-height: .94;
+  letter-spacing: -.04em;
+  text-wrap: balance;
+}
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 p { color: rgb(255 255 255 / 78%) !important; }
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 button {
+  border-radius: 12px !important;
+}
+
+.studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 button:first-child {
+  color: #111 !important;
+  background: #fff !important;
+  box-shadow: 0 10px 26px rgb(34 5 0 / 30%);
+}
+
+/* Album shelves and app content. */
+.studio-app .studio-stage main { background: var(--studio-bg); }
+.studio-app .studio-stage main h2,
+.studio-app .studio-stage main h3,
+.studio-app .studio-stage main h4 { color: var(--studio-text) !important; }
+
+.studio-app .studio-stage main p,
+.studio-app .studio-stage main span,
+.studio-app .studio-stage main time { border-color: var(--studio-line); }
+
+.studio-app .studio-stage main [class*="grid-cols"] { column-gap: 16px; }
+
+.studio-app .studio-stage main img { border-radius: 14px; }
+
+.studio-app .studio-stage main .group.cursor-pointer .relative.aspect-square,
+.studio-app .studio-stage main .group.cursor-pointer.relative.aspect-square {
+  border-radius: 16px;
+  background: var(--studio-panel);
+  box-shadow: 0 14px 28px rgb(0 0 0 / 24%);
+}
+
+.studio-app .studio-stage main .bg-neutral-100,
+.studio-app .studio-stage main .dark\:bg-neutral-900\/50,
+.studio-app .studio-stage main .dark\:bg-white\/5 {
+  border-color: var(--studio-line) !important;
+  background-color: var(--studio-panel) !important;
+}
+
+.studio-app .studio-stage button:not([class*="rounded-full"]) { border-radius: 11px; }
+.studio-app .studio-stage button:not(:disabled) { transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, transform 120ms ease; }
+.studio-app .studio-stage button:not(:disabled):active { transform: scale(.97); }
+
+/* Full sidebar music player: an inset listening module with a real queue. */
+.studio-app .studio-stage [data-nebula-panel="now-playing"] {
+  width: 354px !important;
+  min-width: 354px !important;
+  max-width: 354px !important;
+  margin: 0;
+  overflow: hidden;
+  color: var(--studio-text);
+  border: 1px solid var(--studio-line) !important;
+  border-radius: 22px;
+  background: var(--studio-panel) !important;
+  box-shadow: 0 22px 48px rgb(0 0 0 / 28%);
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] > div {
+  justify-content: flex-start;
+  background: radial-gradient(circle at 50% 3%, rgb(255 89 56 / 15%), transparent 33%) !important;
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] > div > div:first-child { padding-top: 18px; }
+.studio-app .studio-stage [data-nebula-panel="now-playing"] > div > div:first-child > div:first-child { margin-bottom: 12px; padding-inline: 20px; }
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] img {
+  border-radius: 16px;
+  box-shadow: 0 18px 34px rgb(0 0 0 / 34%);
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] .max-w-\[240px\] { max-width: 210px; }
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] h2 {
+  color: var(--studio-text) !important;
+  font-size: 17px;
+  letter-spacing: -.02em;
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] button[aria-label="Play"],
+.studio-app .studio-stage [data-nebula-panel="now-playing"] button[aria-label="Pause"] {
+  color: #fff !important;
+  background: var(--studio-accent) !important;
+  box-shadow: 0 12px 24px rgb(255 63 31 / 26%);
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] button[aria-label="Play"] svg,
+.studio-app .studio-stage [data-nebula-panel="now-playing"] button[aria-label="Pause"] svg {
+  color: #fff !important;
+  fill: #fff !important;
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] > div > div:last-child {
+  padding: 6px 14px 14px;
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] > div > div:last-child > div {
+  border-color: var(--studio-line) !important;
+  border-radius: 16px;
+  background: var(--studio-bg) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] > div > div:last-child > div > button {
+  border-color: var(--studio-line) !important;
+  background: var(--studio-control) !important;
+}
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] input[type="range"] { accent-color: var(--studio-accent); }
+
+.studio-app .studio-stage [data-nebula-panel="now-playing"] .overflow-hidden.transition-all.duration-200:has(input[aria-label="Volume"]) {
+  width: 104px !important;
+}
+
+/* Shared focus, menu, form, and settings surfaces inherit the new material. */
+.studio-app .studio-stage .floating-card-1,
+.studio-app .studio-stage .floating-card-2,
+.studio-app .studio-stage .floating-card-3,
+.studio-app .studio-stage .glass-subtle {
+  border-color: var(--studio-line) !important;
+  border-radius: 16px !important;
+  background: var(--studio-panel-raised) !important;
+  box-shadow: 0 14px 32px rgb(0 0 0 / 20%);
+  backdrop-filter: none;
+}
+
+.studio-app .studio-stage input:not([type="range"]),
+.studio-app .studio-stage textarea,
+.studio-app .studio-stage select {
+  color: var(--studio-text);
+  border-color: var(--studio-line) !important;
+  border-radius: 11px !important;
+  background: var(--studio-panel) !important;
+  caret-color: var(--studio-accent);
+}
+
+.studio-app .studio-stage input[type="range"] { accent-color: var(--studio-accent); }
+
+@media (max-width: 1280px) and (min-width: 901px) {
+  .studio-app:has(.studio-nav-drawer[data-open="true"]) .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden { padding-left: 214px; }
+  .studio-app .studio-nav-drawer { width: 194px; clip-path: inset(0 142px 0 0 round 18px); }
+  .studio-app .studio-nav-drawer[data-open="true"] { width: 194px; clip-path: inset(0 round 18px); }
+  .studio-app .studio-stage [data-nebula-panel="now-playing"] { width: 320px !important; min-width: 320px !important; max-width: 320px !important; }
+  .studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 > .relative.flex { min-height: 350px; padding: 36px; }
+}
+
+@media (min-width: 901px) {
+  .studio-app .studio-stage header.relative.h-16 button[aria-controls="app-navigation"] { display: none; }
+}
+
+@media (max-height: 800px) and (min-width: 901px) {
+  .studio-app .studio-stage [data-nebula-panel="now-playing"] .max-w-\[240px\] { max-width: 164px; }
+  .studio-app .studio-stage [data-nebula-panel="now-playing"] > div > div:first-child { padding-top: 12px; padding-bottom: 6px; }
+  .studio-app .studio-stage [data-nebula-panel="now-playing"] > div > div:first-child > div:nth-child(2) { margin-bottom: 10px; }
+  .studio-app .studio-stage [data-nebula-panel="now-playing"] > div > div:last-child { min-height: 126px; }
+  .studio-app .studio-stage [data-nebula-panel="now-playing"] .h-16 { height: 34px; }
+}
+
+@media (max-width: 900px) {
+  .studio-app { padding: 8px; }
+  .studio-app .studio-stage { border-radius: 0; }
+  .studio-app .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden,
+  .studio-app:has(.studio-nav-drawer[data-open="true"]) .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden { padding-left: 0; }
+  .studio-app .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden > .flex-1.min-h-0 { padding: 8px; }
+  .studio-app .studio-stage .flex.h-full.w-full > main { border-radius: 16px; }
+
+  .studio-app .studio-nav-drawer,
+  .studio-app .studio-nav-drawer[data-open="true"] {
+    top: 16px;
+    bottom: 16px;
+    left: 16px;
+    width: min(244px, calc(100vw - 32px));
+    clip-path: none;
+    transform: translateX(calc(-100% - 24px));
+    transition: transform 280ms cubic-bezier(.16, 1, .3, 1);
+  }
+
+  .studio-app .studio-nav-drawer[data-open="true"] { transform: translateX(0); }
+  .studio-app .studio-nav-drawer:not([data-open="true"]) .studio-nav-brand { display: flex; }
+  .studio-app .studio-nav-drawer .studio-nav-brand-copy,
+  .studio-app .studio-nav-drawer .studio-nav-status > span,
+  .studio-app .studio-nav-drawer .studio-nav-section > p,
+  .studio-app .studio-nav-drawer .studio-nav-item > span { display: grid; }
+  .studio-app .studio-nav-backdrop[data-open="true"] { opacity: 1; pointer-events: auto; }
+
+  .studio-app .studio-stage header.relative.h-16 { height: 64px; padding-inline: 12px; }
+  .studio-app .studio-stage header.relative.h-16 button[aria-label="Search"] { width: 42px; justify-content: center; padding: 0; }
+  .studio-app .studio-stage header.relative.h-16 button[aria-label="Search"]::after { display: none; }
+  .studio-app .studio-stage header.relative.h-16 button[title="Go to Home"] { display: none; }
+
+  .studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 { min-height: 430px; border-radius: 18px; }
+  .studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 > .absolute.inset-0 { background-position: 68% center; }
+  .studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 > .absolute.inset-0 > .absolute.inset-0 {
+    background: linear-gradient(0deg, rgb(54 7 2 / 96%) 0%, rgb(104 14 4 / 58%) 48%, rgb(15 3 2 / 10%) 78%) !important;
+  }
+  .studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 > .relative.flex { min-height: 430px; align-items: flex-start !important; justify-content: flex-end; padding: 28px 24px; }
+  .studio-app .studio-stage main .relative.rounded-lg.overflow-hidden.bg-neutral-100 .flex-1.text-center { max-width: 52%; text-align: left !important; }
+  .studio-app .studio-stage .text-3xl.md\:text-5xl.font-black { font-size: clamp(36px, 10vw, 44px) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-app *,
+  .studio-app *::before,
+  .studio-app *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/*
+ * Full-bleed Studio expansion
+ * The browser viewport is now the frame. Interior rooms keep their soft
+ * corners, while the obsolete outer presentation mat is removed.
+ */
+.studio-app {
+  padding: 0;
+  background: var(--studio-bg);
+}
+
+.studio-app .studio-stage {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.studio-app .studio-nav-drawer {
+  top: 12px;
+  bottom: 12px;
+  left: 12px;
+}
+
+/* Album and playlist detail: one editorial sleeve above a quiet track ledger. */
+.studio-app :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"]) {
+  min-height: 100%;
+  padding-bottom: 48px !important;
+  background: var(--studio-bg);
+}
+
+.studio-app [data-nebula-detail-hero] {
+  min-height: 374px;
+  margin: 0 12px;
+  padding-top: 0 !important;
+  overflow: hidden;
+  color: #fff;
+  border: 1px solid var(--studio-line);
+  border-radius: 22px;
+  background: #140b09;
+  box-shadow: 0 22px 48px rgb(0 0 0 / 26%);
+}
+
+.studio-app [data-nebula-detail-backdrop] {
+  height: 100% !important;
+  overflow: hidden;
+}
+
+.studio-app [data-nebula-detail-backdrop] > img {
+  opacity: .34 !important;
+  filter: blur(14px) saturate(.82) contrast(1.05) !important;
+  transform: scale(1.08) !important;
+}
+
+.studio-app [data-nebula-detail-backdrop] > div:first-child:not(.absolute.inset-0) {
+  background: #421009 !important;
+  filter: none !important;
+}
+
+.studio-app [data-nebula-detail-backdrop] > .absolute.inset-0 {
+  background: linear-gradient(90deg, rgb(7 5 4 / 96%) 0%, rgb(18 7 5 / 84%) 48%, rgb(45 10 5 / 54%) 100%) !important;
+}
+
+.studio-app [data-nebula-detail-hero-inner] {
+  display: flex;
+  min-height: 374px;
+  flex-direction: column;
+  padding: 26px 34px 32px !important;
+}
+
+.studio-app [data-nebula-detail-hero-inner] > button {
+  align-self: flex-start;
+  margin-bottom: auto !important;
+  padding: 8px 10px;
+  color: rgb(255 255 255 / 66%) !important;
+  border: 1px solid transparent;
+  border-radius: 10px;
+}
+
+.studio-app [data-nebula-detail-hero-inner] > button:hover {
+  color: #fff !important;
+  border-color: rgb(255 255 255 / 14%);
+  background: rgb(255 255 255 / 8%);
+}
+
+.studio-app [data-nebula-detail-layout] {
+  width: 100%;
+  align-items: flex-end;
+  gap: 32px !important;
+}
+
+.studio-app [data-nebula-detail-cover] {
+  width: clamp(226px, 23vw, 286px) !important;
+  height: auto !important;
+  aspect-ratio: 1;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 18px !important;
+  background: var(--studio-control) !important;
+  box-shadow: 0 24px 48px rgb(0 0 0 / 44%) !important;
+}
+
+.studio-app [data-nebula-detail-cover] img { border-radius: 0 !important; }
+
+.studio-app [data-nebula-detail-info] { min-width: 0; padding-bottom: 4px; }
+
+.studio-app [data-nebula-detail-info] h1 {
+  max-width: 12ch;
+  margin-bottom: 13px !important;
+  color: #fff !important;
+  font-size: clamp(40px, 4.3vw, 64px) !important;
+  font-weight: 720 !important;
+  line-height: .96 !important;
+  letter-spacing: -.04em;
+  text-wrap: balance;
+}
+
+.studio-app [data-nebula-detail-info] > div:nth-of-type(1) {
+  margin-bottom: 20px !important;
+  color: rgb(255 255 255 / 64%) !important;
+}
+
+.studio-app [data-nebula-detail-info] > div:nth-of-type(1) :is(button, span) {
+  color: inherit !important;
+}
+
+.studio-app [data-nebula-detail-info] > div:last-child { gap: 8px !important; }
+
+.studio-app [data-nebula-detail-info] > div:last-child > button {
+  min-height: 40px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 11px !important;
+  background: rgb(255 255 255 / 9%) !important;
+  box-shadow: none !important;
+}
+
+.studio-app [data-nebula-detail-info] > div:last-child > button:first-child {
+  padding-inline: 22px;
+  color: #1a0703 !important;
+  border-color: transparent;
+  background: #fff !important;
+}
+
+.studio-app [data-nebula-detail-info] > div:last-child > button:first-child:hover {
+  color: #fff !important;
+  background: var(--studio-accent) !important;
+}
+
+.studio-app [data-nebula-detail-separator] { display: none; }
+
+.studio-app [data-nebula-detail-content] {
+  padding: 18px 30px 52px !important;
+}
+
+.studio-app [data-nebula-about] {
+  max-width: 860px;
+  padding: 18px 20px !important;
+  color: var(--studio-muted);
+  border-color: var(--studio-line) !important;
+  border-radius: 16px !important;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app [data-nebula-about] > svg { color: var(--studio-faint) !important; }
+.studio-app [data-nebula-about] h3 { color: var(--studio-faint) !important; font-size: 9px; letter-spacing: .12em; }
+.studio-app [data-nebula-about] p { color: var(--studio-muted) !important; }
+
+.studio-app [data-nebula-track-section] {
+  margin-block: 26px 34px !important;
+  overflow: visible !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.studio-app [data-nebula-track-section-inner] { padding: 0 !important; }
+
+.studio-app [data-nebula-track-section-inner] > h2 {
+  margin: 0 0 11px !important;
+  color: var(--studio-faint) !important;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .13em;
+}
+
+.studio-app [data-nebula-track-list] {
+  overflow: visible !important;
+  border: 0 !important;
+  border-top: 1px solid var(--studio-line) !important;
+  border-radius: 0 !important;
+  background: transparent;
+}
+
+.studio-app [data-nebula-track-row] {
+  min-height: 62px;
+  padding: 10px 13px !important;
+  border-color: var(--studio-line) !important;
+  border-radius: 0;
+  background: transparent !important;
+}
+
+.studio-app [data-nebula-track-row]:hover {
+  background: var(--studio-control) !important;
+}
+
+.studio-app [data-nebula-track-row]:is(.bg-neutral-100, .bg-neutral-200) {
+  background: rgb(255 89 56 / 8%) !important;
+  box-shadow: inset 2px 0 0 var(--studio-accent);
+}
+
+.studio-app [data-nebula-track-row] p { color: var(--studio-text) !important; }
+.studio-app [data-nebula-track-row] p + p { color: var(--studio-muted) !important; }
+.studio-app [data-nebula-track-row] > span { color: var(--studio-faint) !important; }
+
+.studio-app [data-nebula-track-actions] button {
+  border-radius: 10px !important;
+}
+
+.studio-app [data-nebula-track-actions] button:hover { background: var(--studio-hover) !important; }
+
+.studio-app [data-nebula-related] {
+  padding-top: 4px;
+  border-top: 1px solid var(--studio-line);
+}
+
+.studio-app [data-nebula-related] > div:first-child { display: none; }
+.studio-app [data-nebula-related] > h2 { margin-top: 22px; color: var(--studio-faint) !important; font-size: 9px; letter-spacing: .13em; }
+.studio-app [data-nebula-related] .relative.aspect-square { border-radius: 16px !important; box-shadow: 0 14px 28px rgb(0 0 0 / 24%); }
+
+/* Sidebar player: a compact listening desk with a proper lower queue room. */
+.studio-app .studio-stage [data-nebula-panel="now-playing"] > [data-nebula-player="sidebar"] {
+  justify-content: flex-start;
+  background: radial-gradient(circle at 50% 0%, rgb(255 89 56 / 13%), transparent 31%) !important;
+}
+
+.studio-app [data-nebula-sidebar-player-main] {
+  padding: 18px 0 12px !important;
+}
+
+.studio-app [data-nebula-sidebar-player-header] {
+  margin-bottom: 14px !important;
+  padding-inline: 18px !important;
+}
+
+.studio-app [data-nebula-sidebar-player-header] > span {
+  color: var(--studio-faint) !important;
+  font-size: 9px;
+  letter-spacing: .13em;
+}
+
+.studio-app [data-nebula-sidebar-player-header] > button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--studio-muted) !important;
+  border: 1px solid var(--studio-line);
+  background: var(--studio-control);
+}
+
+.studio-app [data-nebula-sidebar-player-art] { margin-bottom: 17px !important; padding-inline: 22px !important; }
+.studio-app [data-nebula-sidebar-player-art] > div { max-width: 218px !important; border-radius: 16px !important; }
+
+.studio-app [data-nebula-sidebar-player-info] {
+  margin-bottom: 8px !important;
+  padding-inline: 24px !important;
+}
+
+.studio-app [data-nebula-sidebar-player-info] h2 { margin-bottom: 3px; font-size: 18px !important; }
+.studio-app [data-nebula-sidebar-player-info] p { color: var(--studio-muted) !important; }
+.studio-app [data-nebula-sidebar-player-info] p:last-child { color: var(--studio-faint) !important; }
+
+.studio-app [data-nebula-sidebar-player-progress] { margin-bottom: 6px !important; padding-inline: 24px !important; }
+.studio-app [data-nebula-sidebar-player-progress] > div:first-child { margin-bottom: 4px !important; }
+.studio-app [data-nebula-sidebar-player-progress] button { color: var(--studio-muted) !important; background: var(--studio-control) !important; }
+
+.studio-app [data-nebula-sidebar-player-transport] { gap: 12px !important; margin-bottom: 5px !important; }
+.studio-app [data-nebula-sidebar-player-transport] > button:not([aria-label="Play"]):not([aria-label="Pause"]) {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--studio-muted) !important;
+}
+
+.studio-app [data-nebula-sidebar-player-tools] {
+  gap: 1px !important;
+  padding: 3px;
+  border: 1px solid var(--studio-line);
+  border-radius: 12px;
+  background: var(--studio-bg);
+}
+
+.studio-app [data-nebula-sidebar-player-tools] > button,
+.studio-app [data-nebula-sidebar-player-tools] > div > button {
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px !important;
+}
+
+.studio-app [data-nebula-sidebar-player-volume] { margin-top: 6px !important; }
+.studio-app [data-nebula-sidebar-player-volume] > button { color: var(--studio-muted) !important; }
+
+.studio-app [data-nebula-sidebar-player-queue] { padding: 2px 14px 14px !important; }
+.studio-app [data-nebula-sidebar-player-queue-card] {
+  border-color: var(--studio-line) !important;
+  border-radius: 16px !important;
+  background: var(--studio-bg) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%) !important;
+}
+
+.studio-app [data-nebula-sidebar-player-queue-card] > div:first-child {
+  padding: 12px 13px !important;
+  border-color: var(--studio-line) !important;
+  background: var(--studio-control) !important;
+}
+
+.studio-app [data-nebula-sidebar-player-queue-card] > div:last-child { padding: 6px !important; }
+.studio-app [data-nebula-sidebar-player-queue-card] > div:last-child > div { border-radius: 10px !important; }
+.studio-app [data-nebula-sidebar-player-queue-card] > div:last-child > div:hover { background: var(--studio-control) !important; }
+
+/* Large now-playing view: immersive, editorial, and consistent with the room. */
+.studio-app [data-nebula-player="fullscreen"] {
+  color: var(--studio-text) !important;
+  background: radial-gradient(circle at 78% 20%, rgb(91 21 9 / 42%), transparent 34%), #050505 !important;
+}
+
+.studio-app [data-nebula-player-atmosphere="dots"] { opacity: .11 !important; background-size: 30px 30px !important; }
+.studio-app [data-nebula-player-atmosphere="primary"] { opacity: .08 !important; }
+.studio-app [data-nebula-player-atmosphere="secondary"] { opacity: .05 !important; }
+
+.studio-app [data-nebula-fullscreen-header] {
+  min-height: 82px;
+  padding: 20px 28px !important;
+  border-bottom: 1px solid var(--studio-line);
+}
+
+.studio-app [data-nebula-fullscreen-header] > button,
+.studio-app [data-nebula-fullscreen-header] > div:last-child > button {
+  color: var(--studio-muted) !important;
+  border: 1px solid var(--studio-line);
+  border-radius: 11px !important;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app [data-nebula-fullscreen-header] > button:hover,
+.studio-app [data-nebula-fullscreen-header] > div:last-child > button:hover {
+  color: var(--studio-text) !important;
+  border-color: var(--studio-line-strong);
+  background: var(--studio-control) !important;
+}
+
+.studio-app [data-nebula-fullscreen-tabs] {
+  gap: 2px !important;
+  padding: 4px !important;
+  border: 1px solid var(--studio-line);
+  border-radius: 13px !important;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app [data-nebula-fullscreen-tabs] > button {
+  min-width: 92px;
+  color: var(--studio-muted) !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+}
+
+.studio-app [data-nebula-fullscreen-tabs] > button.bg-white {
+  color: var(--studio-accent-ink) !important;
+  background: var(--studio-accent) !important;
+}
+
+.studio-app [data-nebula-fullscreen-playing] {
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: 24px clamp(34px, 5vw, 76px) 46px !important;
+  gap: clamp(42px, 7vw, 100px) !important;
+}
+
+.studio-app [data-nebula-fullscreen-art] { max-width: min(42vw, 500px) !important; }
+.studio-app [data-nebula-fullscreen-art] > div {
+  max-width: min(60vh, 500px) !important;
+  border: 1px solid var(--studio-line-strong);
+  border-radius: 26px !important;
+  box-shadow: 0 34px 80px rgb(0 0 0 / 48%) !important;
+}
+.studio-app [data-nebula-fullscreen-art] img { border-radius: 0 !important; }
+
+.studio-app [data-nebula-fullscreen-info] { max-width: 590px !important; align-items: flex-start !important; text-align: left !important; }
+.studio-app [data-nebula-fullscreen-info] > div:first-child { margin-bottom: 16px !important; }
+.studio-app [data-nebula-fullscreen-info] h1 {
+  max-width: 11ch;
+  margin-bottom: 11px !important;
+  color: #fff !important;
+  font-size: clamp(46px, 5.6vw, 78px) !important;
+  font-weight: 720 !important;
+  line-height: .94 !important;
+  letter-spacing: -.04em;
+  text-wrap: balance;
+}
+.studio-app [data-nebula-fullscreen-info] > p { color: var(--studio-muted) !important; }
+.studio-app [data-nebula-fullscreen-info] > p:nth-of-type(1) { font-size: 20px !important; }
+.studio-app [data-nebula-fullscreen-info] > p:nth-of-type(2) { margin-bottom: 30px !important; color: var(--studio-faint) !important; }
+
+.studio-app [data-nebula-fullscreen-info] button { border-radius: 11px !important; }
+.studio-app [data-nebula-fullscreen-info] input[type="range"] { accent-color: var(--studio-accent); }
+
+.studio-app [data-nebula-fullscreen-transport] {
+  justify-content: flex-start !important;
+  gap: 14px !important;
+  margin-bottom: 28px !important;
+}
+
+.studio-app [data-nebula-fullscreen-transport] > button {
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  color: var(--studio-muted) !important;
+  border: 1px solid transparent;
+}
+
+.studio-app [data-nebula-fullscreen-transport] > button:hover {
+  color: var(--studio-text) !important;
+  border-color: var(--studio-line);
+  background: var(--studio-control) !important;
+}
+
+.studio-app [data-nebula-fullscreen-transport] > button[aria-label="Play"],
+.studio-app [data-nebula-fullscreen-transport] > button[aria-label="Pause"] {
+  width: 72px;
+  height: 72px;
+  color: #fff !important;
+  border-color: transparent;
+  border-radius: 999px !important;
+  background: var(--studio-accent) !important;
+  box-shadow: 0 16px 34px rgb(255 63 31 / 25%) !important;
+}
+
+.studio-app [data-nebula-fullscreen-transport] > button[aria-label="Play"] svg,
+.studio-app [data-nebula-fullscreen-transport] > button[aria-label="Pause"] svg { color: #fff !important; fill: #fff !important; }
+
+.studio-app [data-nebula-fullscreen-lyrics] { background: linear-gradient(180deg, transparent, rgb(0 0 0 / 20%)); }
+.studio-app [data-nebula-fullscreen-lyrics] p { letter-spacing: -.025em; }
+
+.studio-app [data-nebula-fullscreen-queue] { padding: 14px 28px 32px !important; }
+.studio-app [data-nebula-fullscreen-queue] > div { max-width: 900px !important; }
+.studio-app [data-nebula-fullscreen-queue] h2 { font-size: 30px !important; letter-spacing: -.035em; }
+.studio-app [data-nebula-fullscreen-queue-row] {
+  min-height: 68px;
+  margin-bottom: 2px !important;
+  padding: 9px 12px !important;
+  border: 1px solid transparent;
+  border-radius: 13px !important;
+  background: transparent !important;
+}
+.studio-app [data-nebula-fullscreen-queue-row]:hover { border-color: var(--studio-line); background: var(--studio-control) !important; }
+.studio-app [data-nebula-fullscreen-queue-row].bg-neutral-200 {
+  border-color: rgb(255 89 56 / 22%);
+  background: rgb(255 89 56 / 9%) !important;
+}
+
+/* Centered mini-player: a restrained transport dock, not a glass pill. */
+.studio-app [data-nebula-floating-dock] { bottom: 18px !important; }
+.studio-app [data-nebula-player="floating"] {
+  width: min(760px, calc(100vw - 24px)) !important;
+  overflow: hidden;
+  color: var(--studio-text);
+  border: 1px solid var(--studio-line-strong) !important;
+  border-radius: 22px !important;
+  background: var(--studio-panel) !important;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 54%) !important;
+  backdrop-filter: none !important;
+}
+
+.studio-app [data-nebula-player="floating"] > div:first-child [class~="h-16"] { height: 26px !important; }
+
+.studio-app [data-nebula-floating-content] {
+  min-height: 74px;
+  gap: 12px !important;
+  padding: 10px 12px !important;
+}
+
+.studio-app [data-nebula-floating-art] {
+  width: 54px !important;
+  height: 54px !important;
+  border: 1px solid var(--studio-line);
+  border-radius: 12px !important;
+  box-shadow: 0 10px 22px rgb(0 0 0 / 32%) !important;
+}
+
+.studio-app [data-nebula-floating-info] { width: 144px !important; }
+.studio-app [data-nebula-floating-info] p,
+.studio-app [data-nebula-floating-info] div { color: var(--studio-text) !important; }
+.studio-app [data-nebula-floating-info] p:last-child { margin-top: 2px; color: var(--studio-muted) !important; }
+.studio-app [data-nebula-floating-time] { color: var(--studio-faint) !important; }
+
+.studio-app [data-nebula-floating-content] > button,
+.studio-app [data-nebula-floating-volume] button,
+.studio-app [data-nebula-floating-actions] button,
+.studio-app [data-nebula-floating-transport] > button:not([aria-label="Play"]):not([aria-label="Pause"]) {
+  color: var(--studio-muted) !important;
+  border-radius: 10px !important;
+}
+
+.studio-app [data-nebula-floating-content] > button:hover,
+.studio-app [data-nebula-floating-volume] button:hover,
+.studio-app [data-nebula-floating-actions] button:hover,
+.studio-app [data-nebula-floating-transport] > button:hover {
+  color: var(--studio-text) !important;
+  background: var(--studio-control) !important;
+}
+
+.studio-app [data-nebula-floating-transport] { gap: 2px !important; }
+.studio-app [data-nebula-floating-transport] > button[aria-label="Play"],
+.studio-app [data-nebula-floating-transport] > button[aria-label="Pause"] {
+  width: 44px;
+  height: 44px;
+  color: #fff !important;
+  border-radius: 999px !important;
+  background: var(--studio-accent) !important;
+  box-shadow: 0 10px 22px rgb(255 63 31 / 24%);
+}
+.studio-app [data-nebula-floating-transport] > button[aria-label="Play"] svg,
+.studio-app [data-nebula-floating-transport] > button[aria-label="Pause"] svg { color: #fff !important; fill: #fff !important; }
+.studio-app [data-nebula-floating-content] > .w-px { background: var(--studio-line) !important; }
+
+@media (max-width: 1280px) and (min-width: 901px) {
+  .studio-app [data-nebula-detail-hero] { min-height: 342px; }
+  .studio-app [data-nebula-detail-hero-inner] { min-height: 342px; padding: 22px 28px 28px !important; }
+  .studio-app [data-nebula-detail-cover] { width: clamp(210px, 20vw, 248px) !important; }
+  .studio-app [data-nebula-detail-info] h1 { font-size: clamp(38px, 4vw, 54px) !important; }
+  .studio-app [data-nebula-sidebar-player-art] > div { max-width: 190px !important; }
+  .studio-app [data-nebula-floating-time],
+  .studio-app [data-nebula-floating-progress-toggle] { display: none; }
+  .studio-app [data-nebula-player="floating"] { width: min(620px, calc(100vw - 24px)) !important; }
+}
+
+@media (max-height: 800px) and (min-width: 901px) {
+  .studio-app [data-nebula-sidebar-player-main] { padding-top: 12px !important; padding-bottom: 6px !important; }
+  .studio-app [data-nebula-sidebar-player-header] { margin-bottom: 6px !important; }
+  .studio-app [data-nebula-sidebar-player-art] { margin-bottom: 9px !important; }
+  .studio-app [data-nebula-sidebar-player-art] > div { max-width: 158px !important; }
+  .studio-app [data-nebula-sidebar-player-info] { margin-bottom: 2px !important; }
+  .studio-app [data-nebula-sidebar-player-info] h2 { font-size: 15px !important; }
+  .studio-app [data-nebula-sidebar-player-progress] { margin-bottom: 1px !important; }
+  .studio-app [data-nebula-sidebar-player-progress] [class~="h-16"] { height: 32px !important; }
+  .studio-app [data-nebula-sidebar-player-tools] > button,
+  .studio-app [data-nebula-sidebar-player-tools] > div > button { height: 30px; }
+  .studio-app [data-nebula-sidebar-player-volume] { display: none; }
+}
+
+@media (max-width: 900px) {
+  .studio-app { padding: 0; }
+  .studio-app .studio-stage { border-radius: 0; }
+  .studio-app .studio-nav-drawer,
+  .studio-app .studio-nav-drawer[data-open="true"] {
+    top: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: min(244px, calc(100vw - 16px));
+  }
+
+  .studio-app [data-nebula-detail-hero] {
+    min-height: auto;
+    margin-inline: 8px;
+    border-radius: 18px;
+  }
+
+  .studio-app [data-nebula-detail-backdrop] > .absolute.inset-0 {
+    background: linear-gradient(0deg, rgb(7 5 4 / 98%) 0%, rgb(18 7 5 / 86%) 56%, rgb(55 12 6 / 42%) 100%) !important;
+  }
+
+  .studio-app [data-nebula-detail-hero-inner] {
+    min-height: 0;
+    padding: 18px 20px 25px !important;
+  }
+
+  .studio-app [data-nebula-detail-hero-inner] > button { margin-bottom: 20px !important; }
+  .studio-app [data-nebula-detail-layout] { align-items: flex-start; gap: 22px !important; }
+  .studio-app [data-nebula-detail-cover] { width: min(188px, 52vw) !important; }
+  .studio-app [data-nebula-detail-info] h1 { max-width: 10ch; font-size: clamp(36px, 10vw, 48px) !important; }
+  .studio-app [data-nebula-detail-content] { padding: 12px 18px 42px !important; }
+  .studio-app [data-nebula-about] { margin-block: 12px 22px !important; }
+
+  .studio-app [data-nebula-fullscreen-header] {
+    min-height: 106px;
+    align-items: flex-start;
+    padding: 12px !important;
+  }
+  .studio-app [data-nebula-fullscreen-header] > div:last-child > button:first-child { display: none; }
+  .studio-app [data-nebula-fullscreen-tabs] {
+    right: 12px;
+    bottom: 10px;
+    left: 12px !important;
+    translate: 0 !important;
+    transform: none !important;
+  }
+  .studio-app [data-nebula-fullscreen-tabs] > button { width: auto !important; min-width: 0; flex: 1; }
+  .studio-app [data-nebula-fullscreen-playing] {
+    padding: 18px 22px 38px !important;
+    gap: 28px !important;
+  }
+  .studio-app [data-nebula-fullscreen-art] { max-width: min(300px, 76vw) !important; }
+  .studio-app [data-nebula-fullscreen-art] > div { border-radius: 22px !important; }
+  .studio-app [data-nebula-fullscreen-info] { align-items: center !important; text-align: center !important; }
+  .studio-app [data-nebula-fullscreen-info] h1 { max-width: 13ch; font-size: clamp(34px, 10vw, 48px) !important; }
+  .studio-app [data-nebula-fullscreen-transport] { justify-content: center !important; }
+}
+
+@media (max-width: 620px) {
+  .studio-app [data-nebula-track-row] { gap: 9px !important; padding-inline: 6px !important; }
+  .studio-app [data-nebula-track-actions] { gap: 2px !important; }
+  .studio-app [data-nebula-track-actions] > div:first-child { display: none; }
+  .studio-app [data-nebula-track-row] > span { width: 34px !important; }
+}
+
+/*
+ * Precision Rail
+ * The selected component system combines Spell's compact music controls,
+ * Spectrum's explicit command/state patterns, and RareUI's hooked navigation.
+ * This layer intentionally lives last and remains scoped to the Studio shell.
+ */
+.studio-app {
+  --studio-bg: #060606;
+  --studio-panel: #0a0a0a;
+  --studio-panel-raised: #101010;
+  --studio-control: #151515;
+  --studio-hover: #1b1b1b;
+  --studio-line: rgb(255 255 255 / 8%);
+  --studio-line-strong: rgb(255 255 255 / 15%);
+  --studio-text: #f4f2ee;
+  --studio-muted: #a6a29c;
+  --studio-faint: #74716c;
+  --studio-accent: #ff5b36;
+  --studio-accent-strong: #ff6b48;
+  padding: 0;
+  background: var(--studio-bg);
+}
+
+.studio-app .studio-stage {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.studio-app .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden {
+  padding-left: 64px;
+}
+
+.studio-app:has(.studio-nav-drawer[data-open="true"]) .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden {
+  padding-left: 222px;
+}
+
+.studio-app .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden > .flex-1.min-h-0 {
+  padding: 0;
+}
+
+.studio-app .studio-stage .flex.h-full.w-full {
+  gap: 0;
+}
+
+.studio-app .studio-stage .flex.h-full.w-full > main {
+  border: 0;
+  border-right: 1px solid var(--studio-line);
+  border-radius: 0;
+}
+
+/* Command header — compact, searchable, and free of profile chrome. */
+.studio-app [data-nebula-topbar] {
+  height: 62px !important;
+  min-height: 62px;
+  padding: 0 18px;
+  border-color: var(--studio-line) !important;
+  background: #080808 !important;
+}
+
+.studio-app [data-nebula-topbar] > .absolute.inset-0 {
+  background: #080808 !important;
+  backdrop-filter: none !important;
+}
+
+.studio-app [data-nebula-topbar-leading] { min-width: 180px; gap: 8px !important; }
+.studio-app [data-nebula-topbar-leading] > div { gap: 0 !important; }
+.studio-app [data-nebula-topbar-mark] { display: none !important; }
+.studio-app [data-nebula-topbar-title] {
+  font-size: 13px !important;
+  font-weight: 620 !important;
+  letter-spacing: .01em !important;
+}
+
+.studio-app [data-nebula-topbar-actions] {
+  width: min(520px, 52vw);
+  gap: 8px !important;
+}
+
+.studio-app [data-nebula-command-search] {
+  display: flex !important;
+  width: 100% !important;
+  height: 38px !important;
+  align-items: center !important;
+  gap: 9px !important;
+  padding: 0 9px 0 12px !important;
+  border: 1px solid var(--studio-line-strong) !important;
+  border-radius: 10px !important;
+  background: #0e0e0e !important;
+}
+
+.studio-app [data-nebula-command-search]::after { content: none !important; }
+.studio-app [data-nebula-command-search-label] {
+  display: block !important;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: var(--studio-faint);
+  font-size: 12px;
+  font-weight: 450;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.studio-app [data-nebula-command-search-key] {
+  display: inline-flex !important;
+  min-width: max-content;
+  height: 23px;
+  align-items: center;
+  padding: 0 7px;
+  color: var(--studio-faint);
+  border: 1px solid var(--studio-line);
+  border-radius: 6px;
+  background: #151515;
+  font: 600 9px/1 'Inter', sans-serif;
+  letter-spacing: .03em;
+}
+.studio-app [data-nebula-topbar-settings] {
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 38px;
+  border-radius: 10px !important;
+  background: transparent !important;
+}
+
+/* RareUI-inspired navigation hook: a hairline active marker, never a fill. */
+.studio-app .studio-nav-drawer {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 222px;
+  border: 0;
+  border-right: 1px solid var(--studio-line);
+  border-radius: 0;
+  background: #080808;
+  box-shadow: none;
+  clip-path: inset(0 158px 0 0);
+}
+
+.studio-app .studio-nav-drawer[data-open="true"] {
+  width: 222px;
+  clip-path: inset(0);
+}
+
+.studio-app .studio-nav-header {
+  min-height: 62px;
+  padding: 10px 11px;
+  border-color: var(--studio-line);
+}
+.studio-app .studio-nav-brand { gap: 9px; }
+.studio-app .studio-nav-brand img {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+  border-radius: 8px;
+}
+.studio-app .studio-nav-brand-copy strong { font-size: 13px; font-weight: 650; }
+.studio-app .studio-nav-brand-copy small { color: var(--studio-faint); font-size: 9px; }
+.studio-app .studio-nav-close {
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+}
+.studio-app .studio-nav-close:hover { border-color: var(--studio-line); background: var(--studio-control); }
+.studio-app .studio-nav-content { padding: 12px 9px; }
+.studio-app .studio-nav-section { margin-bottom: 18px; }
+.studio-app .studio-nav-section > p {
+  margin: 0 11px 7px;
+  color: #66635f;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+.studio-app .studio-nav-item {
+  position: relative;
+  min-height: 36px;
+  gap: 10px;
+  margin: 0 0 2px;
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 8px;
+  color: #8f8b85;
+}
+.studio-app .studio-nav-item > span { font-size: 11px; font-weight: 550; }
+.studio-app .studio-nav-item:hover { color: var(--studio-text); background: #111 !important; }
+.studio-app .studio-nav-item[aria-current="page"] {
+  color: #fff;
+  background: #141414;
+  box-shadow: inset 2px 0 0 var(--studio-accent);
+}
+.studio-app .studio-nav-item[aria-current="page"]::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: -9px;
+  width: 5px;
+  border-top: 1px solid var(--studio-accent);
+  border-bottom: 1px solid var(--studio-accent);
+  border-left: 1px solid var(--studio-accent);
+  border-radius: 5px 0 0 5px;
+}
+.studio-app .studio-nav-footer { padding: 9px; }
+.studio-app .studio-nav-status { min-height: 38px; padding: 7px 10px; border-radius: 8px; background: #0c0c0c; }
+.studio-app .studio-nav-status strong { font-size: 10px; }
+.studio-app .studio-nav-status small { font-size: 8px; }
+
+/* Shared route grammar: compact hierarchy, low radius, hairline divisions. */
+.studio-app [data-nebula-view] { background: var(--studio-bg) !important; }
+.studio-app :is([data-nebula-view="home"], [data-nebula-view="browse"], [data-nebula-view="library"], [data-nebula-view="search"], [data-nebula-view="radio"]) {
+  max-width: none !important;
+  padding: 24px 28px 104px !important;
+}
+.studio-app [data-nebula-view-header] {
+  min-height: 38px !important;
+  margin-bottom: 18px !important;
+  padding-bottom: 0 !important;
+  border-bottom: 0 !important;
+}
+.studio-app [data-nebula-view-header] :is(h1, h2) {
+  font-size: clamp(24px, 2.3vw, 32px) !important;
+  font-weight: 640 !important;
+  line-height: 1 !important;
+  letter-spacing: -.035em !important;
+}
+.studio-app [data-nebula-view-header] button,
+.studio-app [data-nebula-instant-mix-trigger] {
+  min-height: 34px;
+  padding: 0 12px !important;
+  color: var(--studio-muted) !important;
+  border: 1px solid var(--studio-line) !important;
+  border-radius: 8px !important;
+  background: #0c0c0c !important;
+  font-size: 11px !important;
+}
+.studio-app [data-nebula-instant-mix-trigger] { display: inline-flex !important; }
+.studio-app [data-nebula-instant-mix-trigger]:hover,
+.studio-app [data-nebula-view-header] button:hover { color: #fff !important; border-color: var(--studio-line-strong) !important; }
+
+/* The user's selected large bar: five real tracks, automatic rotation. */
+.studio-app [data-nebula-featured-heading] { display: block; margin: 0 0 10px; }
+.studio-app [data-nebula-featured-heading] > div { margin: 0 !important; }
+.studio-app [data-nebula-featured-heading] svg { color: var(--studio-accent) !important; }
+.studio-app [data-nebula-featured-heading] h2 {
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase;
+}
+.studio-app [data-nebula-generated-heading],
+.studio-app [data-nebula-browse-intro],
+.studio-app [data-nebula-mix-grid] { display: none !important; }
+
+.studio-app [data-nebula-featured-carousel] {
+  position: relative;
+  display: block !important;
+  width: 100%;
+  height: clamp(250px, 34vh, 338px);
+  margin: 0 0 30px;
+  overflow: hidden;
+  border: 1px solid var(--studio-line-strong);
+  border-radius: 14px;
+  background: #111;
+  isolation: isolate;
+}
+.studio-app [data-nebula-featured-art] {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0 !important;
+  object-fit: cover;
+  animation: studio-featured-reveal 520ms cubic-bezier(.2, .75, .25, 1) both;
+}
+.studio-app [data-nebula-featured-shade] {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: rgb(0 0 0 / 58%);
+}
+.studio-app [data-nebula-featured-copy] {
+  position: absolute;
+  top: 50%;
+  left: clamp(34px, 5vw, 72px);
+  width: min(520px, 58%);
+  translate: 0 -50%;
+}
+.studio-app [data-nebula-featured-context] {
+  margin: 0 0 13px;
+  color: rgb(255 255 255 / 72%) !important;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.studio-app [data-nebula-featured-copy] h2 {
+  max-width: 12ch;
+  margin: 0 0 7px;
+  color: #fff !important;
+  font-size: clamp(38px, 5vw, 68px) !important;
+  font-weight: 690 !important;
+  line-height: .94 !important;
+  letter-spacing: -.055em !important;
+  text-wrap: balance;
+}
+.studio-app [data-nebula-featured-artist] {
+  margin: 0 0 8px;
+  color: #fff !important;
+  font-size: 14px;
+  font-weight: 570;
+}
+.studio-app [data-nebula-featured-description] {
+  max-width: 44ch;
+  margin: 0 0 18px;
+  color: rgb(255 255 255 / 64%) !important;
+  font-size: 11px;
+}
+.studio-app [data-nebula-featured-play] {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  color: #170501;
+  border: 0;
+  border-radius: 8px !important;
+  background: var(--studio-accent);
+  font-size: 11px;
+  font-weight: 720;
+}
+.studio-app :is([data-nebula-featured-previous], [data-nebula-featured-next], [data-nebula-featured-rotation]) {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 9px !important;
+  background: rgb(8 8 8 / 72%);
+}
+.studio-app [data-nebula-featured-previous] { top: 50%; left: 12px; translate: 0 -50%; }
+.studio-app [data-nebula-featured-next] { top: 50%; right: 12px; translate: 0 -50%; }
+.studio-app [data-nebula-featured-rotation] { right: 14px; bottom: 12px; width: 30px; height: 30px; }
+.studio-app [data-nebula-featured-pagination] {
+  position: absolute;
+  z-index: 2;
+  bottom: 21px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  translate: -50% 0;
+}
+.studio-app [data-nebula-featured-pagination] button {
+  width: 18px;
+  height: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px !important;
+  background: rgb(255 255 255 / 32%);
+}
+.studio-app [data-nebula-featured-pagination] button[aria-current="true"] { width: 30px; background: var(--studio-accent); }
+
+@keyframes studio-featured-reveal {
+  from { opacity: .35; transform: scale(1.025); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Collection shelves: artwork carries hierarchy; copy sits directly below. */
+.studio-app [data-nebula-collection-grid] { gap: 24px 14px !important; }
+.studio-app [data-nebula-collection-card] { padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
+.studio-app [data-nebula-collection-card] > div:first-child {
+  margin-bottom: 9px !important;
+  overflow: hidden;
+  border: 1px solid var(--studio-line);
+  border-radius: 11px !important;
+  box-shadow: none !important;
+}
+.studio-app [data-nebula-collection-card] img { border-radius: 0 !important; transform: none !important; }
+.studio-app [data-nebula-collection-card] h3 { margin-bottom: 2px !important; font-size: 12px !important; font-weight: 610 !important; }
+.studio-app [data-nebula-collection-card] p { color: var(--studio-faint) !important; font-size: 10px !important; }
+.studio-app [data-nebula-collection-card]:hover h3 { color: var(--studio-accent) !important; }
+
+/* Album, playlist, artist and track ledgers share one precise surface. */
+.studio-app [data-nebula-detail-hero] {
+  min-height: 330px !important;
+  margin: 16px;
+  padding-top: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--studio-line);
+  border-radius: 14px;
+  background: var(--studio-panel);
+}
+.studio-app [data-nebula-detail-backdrop] { height: 100% !important; opacity: .64; }
+.studio-app [data-nebula-detail-backdrop] img { filter: blur(36px) saturate(.75) !important; }
+.studio-app [data-nebula-detail-backdrop] > .absolute.inset-0 { background: rgb(6 6 6 / 68%) !important; }
+.studio-app [data-nebula-detail-hero-inner] { min-height: 330px !important; padding: 18px 26px 26px !important; }
+.studio-app [data-nebula-detail-layout] { align-items: flex-end; gap: 26px !important; }
+.studio-app [data-nebula-detail-cover] { width: 218px !important; height: auto !important; aspect-ratio: 1; border-radius: 11px !important; box-shadow: 0 14px 36px rgb(0 0 0 / 28%) !important; }
+.studio-app [data-nebula-detail-info] h1 { font-size: clamp(34px, 4vw, 54px) !important; font-weight: 680 !important; letter-spacing: -.05em !important; }
+.studio-app [data-nebula-detail-content] { padding: 0 16px 76px !important; }
+.studio-app [data-nebula-track-section],
+.studio-app [data-nebula-track-section-inner],
+.studio-app [data-nebula-track-list],
+.studio-app [data-nebula-track-ledger] { border-color: var(--studio-line) !important; border-radius: 10px !important; background: #090909 !important; box-shadow: none !important; }
+.studio-app [data-nebula-track-row] { min-height: 48px; border-color: var(--studio-line) !important; border-radius: 0 !important; }
+.studio-app [data-nebula-track-row]:hover { background: #101010 !important; }
+
+/* Spectrum-like settings: explicit navigation, bounded groups, quiet states. */
+.studio-app [data-nebula-settings-canvas] { max-width: none !important; padding: 26px 28px 100px !important; }
+.studio-app [data-nebula-settings-header] { margin-bottom: 16px !important; padding-bottom: 15px; border-bottom: 1px solid var(--studio-line); }
+.studio-app [data-nebula-settings-header] h1 { font-size: clamp(28px, 3vw, 38px) !important; font-weight: 650 !important; letter-spacing: -.04em !important; }
+.studio-app [data-nebula-settings-scope] { color: var(--studio-faint) !important; font-size: 10px !important; }
+.studio-app [data-nebula-settings-jumps] { gap: 4px !important; margin-bottom: 14px !important; padding: 4px !important; border: 1px solid var(--studio-line); border-radius: 9px !important; background: #090909 !important; }
+.studio-app [data-nebula-settings-jumps] a { min-height: 30px; padding: 0 10px !important; border-radius: 6px !important; color: var(--studio-muted) !important; font-size: 10px !important; }
+.studio-app [data-nebula-settings-jumps] a:hover { color: #fff !important; background: var(--studio-control) !important; }
+.studio-app [data-nebula-settings-stack] { gap: 10px !important; }
+.studio-app [data-nebula-settings-panel] { overflow: hidden; border: 1px solid var(--studio-line) !important; border-radius: 10px !important; background: #090909 !important; box-shadow: none !important; }
+.studio-app [data-nebula-settings-panel-heading] { min-height: 100%; padding: 18px !important; border-color: var(--studio-line) !important; background: #0c0c0c !important; }
+.studio-app [data-nebula-settings-panel-heading] > div:first-child { color: var(--studio-accent) !important; }
+.studio-app [data-nebula-settings-panel-heading] h2 { font-size: 13px !important; }
+.studio-app [data-nebula-settings-panel-heading] p { color: var(--studio-faint) !important; font-size: 10px !important; }
+.studio-app [data-nebula-settings-panel-body] { border-color: var(--studio-line) !important; }
+.studio-app [data-nebula-settings-panel] input:not([type="range"]),
+.studio-app [data-nebula-settings-panel] select,
+.studio-app [data-nebula-settings-panel] textarea { min-height: 36px; border-radius: 7px !important; background: #111 !important; }
+
+/* Spell-inspired persistent instrument panel and compact floating transport. */
+.studio-app .studio-stage [data-nebula-panel="now-playing"] {
+  width: 338px !important;
+  min-width: 338px !important;
+  max-width: 338px !important;
+  border: 0 !important;
+  border-left: 1px solid var(--studio-line) !important;
+  border-radius: 0 !important;
+  background: #080808 !important;
+  box-shadow: none !important;
+}
+.studio-app [data-nebula-sidebar-player-main] { padding: 16px 0 8px !important; }
+.studio-app [data-nebula-sidebar-player-header] { margin-bottom: 12px !important; padding: 0 16px !important; }
+.studio-app [data-nebula-sidebar-player-header] span { color: var(--studio-faint) !important; font-size: 9px !important; letter-spacing: .12em; }
+.studio-app [data-nebula-sidebar-player-art] { margin-bottom: 14px !important; padding: 0 28px !important; }
+.studio-app [data-nebula-sidebar-player-art] > div { max-width: 212px !important; border-radius: 11px !important; box-shadow: 0 18px 42px rgb(0 0 0 / 34%) !important; }
+.studio-app [data-nebula-sidebar-player-art] img { border-radius: 0 !important; }
+.studio-app [data-nebula-sidebar-player-info] { margin-bottom: 4px !important; padding: 0 22px !important; }
+.studio-app [data-nebula-sidebar-player-info] h2 { font-size: 17px !important; font-weight: 650 !important; letter-spacing: -.025em; }
+.studio-app [data-nebula-sidebar-player-info] p { color: var(--studio-faint) !important; font-size: 11px !important; }
+.studio-app [data-nebula-sidebar-player-progress] { padding: 0 22px !important; }
+.studio-app [data-nebula-sidebar-player-transport] { gap: 10px !important; }
+.studio-app [data-nebula-sidebar-player-transport] > button[aria-label="Play"],
+.studio-app [data-nebula-sidebar-player-transport] > button[aria-label="Pause"] { width: 46px !important; height: 46px !important; border-radius: 12px !important; background: var(--studio-accent) !important; }
+.studio-app [data-nebula-sidebar-player-tools] { gap: 2px !important; }
+.studio-app [data-nebula-sidebar-player-tools] button { border-radius: 8px !important; }
+.studio-app [data-nebula-sidebar-player-volume] { margin-top: 5px !important; }
+.studio-app [data-nebula-sidebar-player-queue] { padding: 7px 12px 12px !important; }
+.studio-app [data-nebula-sidebar-player-queue-card] { border-color: var(--studio-line) !important; border-radius: 10px !important; background: #0b0b0b !important; box-shadow: none !important; }
+.studio-app [data-nebula-sidebar-player-queue-card] > div:first-child { border-color: var(--studio-line) !important; background: #0e0e0e !important; }
+.studio-app [data-nebula-sidebar-player-queue-card] .group { border-radius: 7px !important; }
+.studio-app [data-nebula-sidebar-player-queue-card] .group:hover { background: #151515 !important; }
+
+.studio-app [data-nebula-player="floating"] {
+  width: min(660px, calc(100vw - 28px)) !important;
+  border: 1px solid var(--studio-line-strong) !important;
+  border-radius: 12px !important;
+  background: #0b0b0b !important;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 42%) !important;
+}
+.studio-app [data-nebula-floating-art] { border-radius: 8px !important; }
+.studio-app [data-nebula-floating-transport] > button[aria-label="Play"],
+.studio-app [data-nebula-floating-transport] > button[aria-label="Pause"] { border-radius: 10px !important; box-shadow: none !important; }
+
+@media (max-width: 1180px) and (min-width: 901px) {
+  .studio-app .studio-stage [data-nebula-panel="now-playing"] { width: 306px !important; min-width: 306px !important; max-width: 306px !important; }
+  .studio-app [data-nebula-command-search] { width: 100% !important; }
+  .studio-app [data-nebula-command-search-key] { display: none !important; }
+  .studio-app [data-nebula-featured-copy] h2 { font-size: clamp(36px, 4.5vw, 52px) !important; }
+}
+
+@media (max-width: 900px) {
+  .studio-app .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden,
+  .studio-app:has(.studio-nav-drawer[data-open="true"]) .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden { padding-left: 0; }
+  .studio-app .studio-nav-drawer,
+  .studio-app .studio-nav-drawer[data-open="true"] { top: 8px; bottom: 8px; left: 8px; width: min(248px, calc(100vw - 16px)); border: 1px solid var(--studio-line-strong); border-radius: 12px; }
+  .studio-app [data-nebula-topbar] { padding: 0 10px; }
+  .studio-app [data-nebula-topbar-leading] { min-width: 0; }
+  .studio-app [data-nebula-topbar-title] { display: none; }
+  .studio-app [data-nebula-topbar-actions] { width: min(420px, calc(100vw - 62px)); }
+  .studio-app [data-nebula-command-search-key] { display: none !important; }
+  .studio-app :is([data-nebula-view="home"], [data-nebula-view="browse"], [data-nebula-view="library"], [data-nebula-view="search"], [data-nebula-view="radio"]) { padding: 20px 16px 104px !important; }
+  .studio-app [data-nebula-featured-carousel] { height: 352px; }
+  .studio-app [data-nebula-featured-copy] { top: auto; right: 54px; bottom: 50px; left: 24px; width: auto; translate: none; }
+  .studio-app [data-nebula-featured-copy] h2 { font-size: clamp(38px, 10vw, 52px) !important; }
+  .studio-app [data-nebula-featured-description] { display: none; }
+  .studio-app [data-nebula-featured-pagination] { bottom: 17px; }
+  .studio-app [data-nebula-detail-hero] { margin: 8px; }
+  .studio-app [data-nebula-detail-layout] { align-items: flex-start; }
+  .studio-app [data-nebula-settings-canvas] { padding: 22px 14px 100px !important; }
+}
+
+@media (max-width: 620px) {
+  .studio-app [data-nebula-command-search-label] { font-size: 10px; }
+  .studio-app [data-nebula-topbar-settings] { display: none !important; }
+  .studio-app [data-nebula-view-header] { align-items: flex-start !important; gap: 12px !important; }
+  .studio-app [data-nebula-featured-carousel] { height: 330px; border-radius: 12px; }
+  .studio-app [data-nebula-featured-previous],
+  .studio-app [data-nebula-featured-next] { top: 16px; translate: none; }
+  .studio-app [data-nebula-featured-copy] { right: 22px; bottom: 52px; left: 22px; }
+  .studio-app [data-nebula-featured-copy] h2 { font-size: 38px !important; }
+  .studio-app [data-nebula-featured-artist] { font-size: 12px; }
+  .studio-app [data-nebula-detail-cover] { width: min(180px, 52vw) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-app [data-nebula-featured-art] { animation: none; }
+  .studio-app .studio-nav-drawer,
+  .studio-app .studio-stage > .relative.flex.h-screen.flex-col.overflow-hidden { transition: none !important; }
+}
+
+@media (max-width: 900px) and (max-height: 760px) {
+  .studio-app [data-nebula-fullscreen-header] { min-height: 96px; }
+  .studio-app [data-nebula-fullscreen-tabs] { bottom: 8px; }
+  .studio-app [data-nebula-fullscreen-playing] {
+    padding: 10px 18px 22px !important;
+    gap: 14px !important;
+  }
+  .studio-app [data-nebula-fullscreen-art] { max-width: min(212px, 48vw) !important; }
+  .studio-app [data-nebula-fullscreen-info] h1 {
+    margin-bottom: 5px !important;
+    font-size: clamp(32px, 8vw, 40px) !important;
+  }
+  .studio-app [data-nebula-fullscreen-info] > p:nth-of-type(1) {
+    margin-bottom: 2px !important;
+    font-size: 17px !important;
+  }
+  .studio-app [data-nebula-fullscreen-info] > p:nth-of-type(2) { margin-bottom: 12px !important; }
+  .studio-app [data-nebula-fullscreen-info] > div:first-of-type { margin-bottom: 12px !important; }
+  .studio-app [data-nebula-fullscreen-info] > div:first-of-type > div:first-child { display: none; }
+  .studio-app [data-nebula-fullscreen-info] > div:first-of-type [class~="h-28"] { height: 42px !important; }
+  .studio-app [data-nebula-fullscreen-transport] { margin-bottom: 14px !important; }
+  .studio-app [data-nebula-fullscreen-transport] > button { width: 44px; height: 44px; }
+  .studio-app [data-nebula-fullscreen-transport] > button[aria-label="Play"],
+  .studio-app [data-nebula-fullscreen-transport] > button[aria-label="Pause"] { width: 58px; height: 58px; }
+}
+
+/*
+ * Route system expansion
+ * Settings and the remaining product views now speak the same editorial,
+ * art-first language as the selected listening-room direction.
+ */
+.studio-app [data-nebula-view] {
+  color: var(--studio-text) !important;
+  background: var(--studio-bg) !important;
+}
+
+.studio-app :is([data-nebula-view="home"], [data-nebula-view="browse"], [data-nebula-view="library"], [data-nebula-view="search"], [data-nebula-view="radio"]) {
+  width: 100%;
+  max-width: 1680px !important;
+  margin-inline: auto;
+  padding: 30px 34px 126px !important;
+}
+
+.studio-app [data-nebula-view-header] {
+  min-height: 74px;
+  align-items: flex-end !important;
+  margin-bottom: 28px !important;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--studio-line) !important;
+}
+
+.studio-app [data-nebula-view-header] :is(h1, h2) {
+  color: var(--studio-text) !important;
+  font-size: clamp(36px, 4vw, 50px) !important;
+  font-weight: 700 !important;
+  line-height: .96;
+  letter-spacing: -.04em !important;
+}
+
+.studio-app [data-nebula-view-header] > div > div:first-child:not([data-nebula-settings-intro]) {
+  color: var(--studio-faint) !important;
+}
+
+.studio-app [data-nebula-view-header] > button,
+.studio-app [data-nebula-view-header] > div:last-child button {
+  min-height: 42px;
+  color: var(--studio-muted) !important;
+  border: 1px solid var(--studio-line) !important;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app [data-nebula-view-header] > button:hover,
+.studio-app [data-nebula-view-header] > div:last-child button:hover {
+  color: var(--studio-text) !important;
+  border-color: var(--studio-line-strong) !important;
+  background: var(--studio-control) !important;
+}
+
+/* Home stays the cinematic opening, with quieter utility shelves beneath it. */
+.studio-app [data-nebula-view="home"] { padding-top: 24px !important; }
+.studio-app [data-nebula-home-hero] { margin-bottom: 34px !important; }
+.studio-app [data-nebula-home-picks] { margin-bottom: 18px !important; }
+
+.studio-app [data-nebula-view="home"] > div > div.flex.items-center.justify-between,
+.studio-app [data-nebula-view="home"] > .flex.items-center.justify-between {
+  margin-top: 42px !important;
+  margin-bottom: 17px !important;
+}
+
+.studio-app [data-nebula-view="home"] h2 {
+  font-size: 18px !important;
+  font-weight: 650 !important;
+  letter-spacing: -.02em;
+}
+
+.studio-app [data-nebula-view="home"] h2 + p,
+.studio-app [data-nebula-view="home"] .group.cursor-pointer > p { color: var(--studio-muted) !important; }
+
+/* Browse turns discovery into one authored mix shelf followed by album rails. */
+.studio-app [data-nebula-view="browse"] > [data-nebula-view-header] { margin-bottom: 22px !important; }
+
+.studio-app [data-nebula-browse-intro] {
+  margin-bottom: 18px !important;
+  padding: 18px 20px !important;
+  color: var(--studio-text);
+  border-color: var(--studio-line) !important;
+  border-radius: 16px !important;
+  background: #140b09 !important;
+}
+
+.studio-app [data-nebula-browse-intro] p { color: var(--studio-muted) !important; }
+.studio-app [data-nebula-browse-intro] button {
+  min-height: 42px;
+  color: var(--studio-accent-ink) !important;
+  background: var(--studio-accent) !important;
+}
+
+.studio-app [data-nebula-mix-grid] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px !important;
+  margin-bottom: 48px !important;
+}
+
+.studio-app [data-nebula-mix-card] {
+  overflow: hidden;
+  color: var(--studio-text);
+  border: 1px solid var(--studio-line);
+  border-radius: 18px !important;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app [data-nebula-mix-card]:hover { border-color: var(--studio-line-strong); background: var(--studio-panel-raised) !important; }
+.studio-app [data-nebula-mix-card] > .aspect-square { border-radius: 0 !important; box-shadow: none !important; }
+.studio-app [data-nebula-mix-card] .bg-gradient-to-br { color: #fff !important; background: var(--studio-accent) !important; }
+.studio-app [data-nebula-mix-card] > div:last-child { min-height: 78px; padding: 15px 16px 16px !important; }
+.studio-app [data-nebula-mix-card] p { color: var(--studio-muted) !important; }
+
+.studio-app [data-nebula-view="browse"] > .flex.items-center.gap-3 {
+  margin-top: 46px !important;
+  margin-bottom: 17px !important;
+}
+
+.studio-app [data-nebula-view="browse"] > .flex.items-center.gap-3 h2 {
+  font-size: 18px !important;
+  font-weight: 650 !important;
+  letter-spacing: -.02em;
+}
+
+.studio-app [data-nebula-view="browse"] > .flex.items-center.gap-3 svg { color: var(--studio-accent) !important; }
+
+/* Collection cards are art first. Text and metadata sit on the canvas. */
+.studio-app [data-nebula-collection-card] {
+  color: var(--studio-text) !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.studio-app [data-nebula-collection-card] > .relative.aspect-square {
+  overflow: hidden;
+  border: 1px solid var(--studio-line);
+  border-radius: 15px !important;
+  background: var(--studio-panel) !important;
+  box-shadow: 0 14px 28px rgb(0 0 0 / 24%);
+}
+
+.studio-app [data-nebula-collection-card] h3,
+.studio-app [data-nebula-collection-card] h4 { color: var(--studio-text) !important; }
+.studio-app [data-nebula-collection-card] p,
+.studio-app [data-nebula-collection-card] > div:last-child > div { color: var(--studio-muted) !important; }
+
+/* Library: editorial title, disciplined filter rail, flat track ledger. */
+.studio-app [data-nebula-view="library"] [data-nebula-view-header] h2 > div {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0 !important;
+  color: var(--studio-accent) !important;
+  border: 1px solid var(--studio-line) !important;
+  border-radius: 12px !important;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app [data-nebula-view="library"] [data-nebula-view-header] h2 > div svg {
+  width: 20px !important;
+  height: 20px !important;
+  color: currentColor !important;
+}
+
+.studio-app [data-nebula-library-filters] {
+  gap: 8px !important;
+  padding: 0 !important;
+}
+
+.studio-app [data-nebula-library-tabs] button {
+  color: var(--studio-muted) !important;
+  border-color: var(--studio-line) !important;
+  background: var(--studio-control) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.studio-app [data-nebula-library-tabs] button.bg-white {
+  color: var(--studio-accent-ink) !important;
+  border-color: transparent !important;
+  background: var(--studio-accent) !important;
+}
+
+.studio-app [data-nebula-library-filters] input,
+.studio-app [data-nebula-library-filters] [data-nebula-dropdown] > button {
+  min-height: 42px;
+  border-color: var(--studio-line) !important;
+  border-radius: 11px !important;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app [data-nebula-dropdown-menu] {
+  color: var(--studio-text) !important;
+  border-color: var(--studio-line) !important;
+  border-radius: 14px !important;
+  background: var(--studio-panel-raised) !important;
+  box-shadow: 0 20px 46px rgb(0 0 0 / 42%) !important;
+}
+
+.studio-app [data-nebula-dropdown-menu] button:hover { background: var(--studio-control) !important; }
+
+.studio-app [data-nebula-collection-grid] {
+  gap: 24px 18px !important;
+}
+
+.studio-app [data-nebula-collection-grid] [data-nebula-collection-card] > div:last-child h3 {
+  margin-bottom: 3px !important;
+  font-size: 14px !important;
+  font-weight: 650 !important;
+}
+
+.studio-app [data-nebula-track-ledger] {
+  overflow: visible !important;
+  border: 0 !important;
+  border-top: 1px solid var(--studio-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.studio-app [data-nebula-track-ledger] table { color: var(--studio-muted) !important; }
+.studio-app [data-nebula-track-ledger] thead {
+  color: var(--studio-faint) !important;
+  border-color: var(--studio-line) !important;
+  background: transparent !important;
+}
+.studio-app [data-nebula-track-ledger] tbody { border-color: var(--studio-line) !important; }
+.studio-app [data-nebula-track-ledger] tbody tr { border-color: var(--studio-line) !important; }
+.studio-app [data-nebula-track-ledger] tbody tr:hover { background: var(--studio-control) !important; }
+.studio-app [data-nebula-track-ledger] th { padding-block: 13px !important; }
+.studio-app [data-nebula-track-ledger] td { padding-block: 11px !important; }
+
+.studio-app [data-nebula-view="library"] > .flex.justify-center.items-center button,
+.studio-app [data-nebula-view="library"] > .flex.justify-center.items-center > div {
+  min-height: 40px;
+  color: var(--studio-muted) !important;
+  border-color: var(--studio-line) !important;
+  border-radius: 11px !important;
+  background: var(--studio-panel) !important;
+}
+
+/* Search uses the same art rails and ledger, without the previous floating cards. */
+.studio-app [data-nebula-search-state]:not([data-nebula-search-state="results"]) {
+  min-height: min(610px, 72vh);
+  margin: 22px 28px;
+  border: 1px solid var(--studio-line);
+  border-radius: 22px;
+  background: var(--studio-panel) !important;
+}
+
+.studio-app [data-nebula-search-state]:not([data-nebula-search-state="results"]) > div:first-child {
+  border-color: var(--studio-line) !important;
+  border-radius: 16px !important;
+  background: var(--studio-control) !important;
+}
+
+.studio-app [data-nebula-search-state] h2 {
+  font-size: clamp(30px, 4vw, 46px) !important;
+  font-weight: 700 !important;
+  line-height: .98;
+  letter-spacing: -.04em;
+}
+
+.studio-app [data-nebula-view="search"] [data-nebula-view-header] > span {
+  padding: 0 !important;
+  color: var(--studio-faint) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.studio-app [data-nebula-view="search"] section { margin-bottom: 54px !important; }
+.studio-app [data-nebula-view="search"] section > h3 {
+  margin-bottom: 18px !important;
+  color: var(--studio-text) !important;
+  font-size: 18px !important;
+  font-weight: 650 !important;
+  letter-spacing: -.02em;
+}
+.studio-app [data-nebula-view="search"] section > h3 svg { width: 18px; height: 18px; color: var(--studio-accent) !important; }
+
+.studio-app [data-nebula-artist-card] {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.studio-app [data-nebula-artist-card]:hover { transform: none !important; }
+.studio-app [data-nebula-artist-card] > .aspect-square {
+  border: 1px solid var(--studio-line);
+  box-shadow: 0 14px 28px rgb(0 0 0 / 24%);
+}
+.studio-app [data-nebula-artist-card] > p {
+  padding: 0 !important;
+  color: var(--studio-faint) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+/* Artist detail becomes the same editorial sleeve and ledger as album detail. */
+.studio-app [data-nebula-view="artist-detail"] { background: var(--studio-bg) !important; }
+.studio-app [data-nebula-artist-hero] {
+  min-height: 352px;
+  margin: 12px 18px 0;
+  padding-top: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--studio-line);
+  border-radius: 22px;
+  background: #140b09;
+  box-shadow: 0 22px 48px rgb(0 0 0 / 26%);
+}
+.studio-app [data-nebula-artist-hero] > .absolute { height: 100% !important; }
+.studio-app [data-nebula-artist-hero] > .absolute > img { opacity: .28 !important; }
+.studio-app [data-nebula-artist-hero] > .absolute > .absolute {
+  background: linear-gradient(90deg, rgb(12 4 3 / 92%) 0%, rgb(43 9 5 / 78%) 48%, rgb(5 5 5 / 42%) 100%) !important;
+}
+.studio-app [data-nebula-artist-hero] > .relative {
+  min-height: 352px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 22px 34px 34px !important;
+}
+.studio-app [data-nebula-artist-hero] > .relative > button {
+  position: absolute;
+  top: 22px;
+  left: 28px;
+  min-height: 38px;
+  padding: 0 12px;
+  color: var(--studio-muted) !important;
+  border: 1px solid var(--studio-line);
+  background: rgb(5 5 5 / 58%);
+}
+.studio-app [data-nebula-artist-hero-layout] { gap: 28px !important; }
+.studio-app [data-nebula-artist-hero-layout] > div:first-child {
+  width: 226px !important;
+  height: 226px !important;
+  border: 1px solid var(--studio-line-strong) !important;
+  box-shadow: 0 24px 48px rgb(0 0 0 / 44%) !important;
+}
+.studio-app [data-nebula-artist-hero-layout] > div:last-child > p:first-child { display: none; }
+.studio-app [data-nebula-artist-hero-layout] h1 {
+  margin-bottom: 17px !important;
+  color: #fff !important;
+  font-size: clamp(42px, 5vw, 66px) !important;
+  font-weight: 720 !important;
+  line-height: .96;
+  letter-spacing: -.04em;
+}
+.studio-app [data-nebula-artist-hero-layout] button {
+  min-height: 44px;
+  padding-inline: 22px !important;
+  color: #fff !important;
+  background: var(--studio-accent) !important;
+}
+.studio-app [data-nebula-view="artist-detail"] > .px-6 > .border-t { display: none; }
+.studio-app [data-nebula-view="artist-detail"] > .px-6.pt-12 { padding: 14px 34px 52px !important; }
+.studio-app [data-nebula-view="artist-detail"] [data-nebula-about] { margin-block: 12px 28px !important; }
+.studio-app [data-nebula-artist-tracks] {
+  overflow: hidden;
+  margin-bottom: 34px !important;
+  border: 1px solid var(--studio-line);
+  border-radius: 18px !important;
+  background: var(--studio-panel) !important;
+}
+.studio-app [data-nebula-artist-tracks] > div { padding: 19px 18px 12px !important; }
+.studio-app [data-nebula-artist-tracks] > div > div { overflow: hidden; border-color: var(--studio-line) !important; border-radius: 0 !important; }
+.studio-app [data-nebula-artist-tracks] > div > div > div { min-height: 62px; border-color: var(--studio-line) !important; }
+.studio-app [data-nebula-artist-tracks] > div > div > div:hover { background: var(--studio-control) !important; }
+.studio-app [data-nebula-artist-discography] { padding-top: 12px; }
+.studio-app [data-nebula-artist-discography] > h2 { margin-bottom: 18px !important; color: var(--studio-faint) !important; font-size: 10px !important; letter-spacing: .12em; }
+
+/* Radio keeps the task familiar, then gives the empty and edit states a room. */
+.studio-app [data-nebula-view="radio"] [data-nebula-view-header] > div > div:first-child { display: none; }
+.studio-app [data-nebula-view="radio"] [data-nebula-view-header] p { color: var(--studio-muted) !important; }
+.studio-app [data-nebula-view="radio"] [data-nebula-view-header] > button {
+  color: var(--studio-accent-ink) !important;
+  border-color: transparent !important;
+  background: var(--studio-accent) !important;
+}
+.studio-app [data-nebula-empty-state] {
+  min-height: 390px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--studio-line) !important;
+  border-radius: 22px !important;
+  background: #140b09;
+}
+.studio-app [data-nebula-empty-state] > svg { color: var(--studio-accent) !important; }
+.studio-app [data-nebula-empty-state] p { color: var(--studio-muted) !important; }
+.studio-app [data-nebula-empty-state] button { color: #fff !important; background: var(--studio-accent) !important; }
+.studio-app [data-nebula-radio-card] {
+  padding: 16px !important;
+  color: var(--studio-text);
+  border-color: var(--studio-line) !important;
+  border-radius: 16px !important;
+  background: var(--studio-panel) !important;
+}
+.studio-app [data-nebula-radio-card]:hover { border-color: var(--studio-line-strong) !important; }
+.studio-app [data-nebula-radio-card] p { color: var(--studio-muted) !important; }
+.studio-app [data-nebula-radio-modal] > .absolute { background: rgb(0 0 0 / 78%) !important; backdrop-filter: none !important; }
+.studio-app [data-nebula-radio-modal] form {
+  color: var(--studio-text);
+  border-color: var(--studio-line-strong) !important;
+  border-radius: 20px !important;
+  background: var(--studio-panel-raised) !important;
+  box-shadow: 0 32px 90px rgb(0 0 0 / 58%) !important;
+}
+.studio-app [data-nebula-radio-modal] form > div { border-color: var(--studio-line) !important; }
+
+/* Settings: a navigable control atlas instead of one anonymous form stack. */
+.studio-app [data-nebula-view="settings"] {
+  height: auto !important;
+  min-height: 100%;
+  overflow: visible !important;
+  scroll-behavior: smooth;
+}
+.studio-app [data-nebula-settings-canvas] {
+  max-width: 1420px;
+  margin-inline: auto;
+  padding: 36px 34px 128px !important;
+}
+.studio-app [data-nebula-settings-header] {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 18px !important;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--studio-line);
+}
+.studio-app [data-nebula-settings-header] h1 {
+  color: var(--studio-text) !important;
+  font-size: clamp(42px, 5vw, 62px) !important;
+  font-weight: 720 !important;
+  line-height: .96;
+  letter-spacing: -.04em !important;
+}
+.studio-app [data-nebula-settings-header] p { max-width: 68ch; color: var(--studio-muted) !important; }
+.studio-app [data-nebula-settings-scope] {
+  margin-top: 13px !important;
+  color: var(--studio-faint) !important;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px !important;
+  letter-spacing: .02em;
+}
+.studio-app [data-nebula-settings-jumps] {
+  position: sticky;
+  z-index: 18;
+  top: 0;
+  display: flex;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 10px 0 14px;
+  overflow-x: auto;
+  background: var(--studio-bg);
+  scrollbar-width: none;
+}
+.studio-app [data-nebula-settings-jumps]::-webkit-scrollbar { display: none; }
+.studio-app [data-nebula-settings-jumps] button {
+  min-height: 38px;
+  flex: 0 0 auto;
+  padding: 0 14px;
+  color: var(--studio-muted);
+  border: 1px solid var(--studio-line);
+  border-radius: 10px;
+  background: var(--studio-panel);
+  font-size: 12px;
+  font-weight: 600;
+}
+.studio-app [data-nebula-settings-jumps] button:hover {
+  color: var(--studio-text);
+  border-color: var(--studio-line-strong);
+  background: var(--studio-control);
+}
+.studio-app [data-nebula-settings-jumps] button[aria-current="true"] {
+  color: var(--studio-accent-ink);
+  border-color: transparent;
+  background: var(--studio-accent);
+}
+.studio-app [data-nebula-settings-stack] { display: grid; gap: 14px; }
+.studio-app [data-nebula-settings-panel] {
+  scroll-margin-top: 150px;
+  grid-template-columns: 224px minmax(0, 1fr) !important;
+  overflow: hidden;
+  color: var(--studio-text);
+  border-color: var(--studio-line) !important;
+  border-radius: 18px !important;
+  background: var(--studio-panel) !important;
+  box-shadow: none !important;
+}
+.studio-app [data-nebula-settings-panel-heading] {
+  min-height: 100%;
+  gap: 13px !important;
+  padding: 20px 18px !important;
+  border-color: var(--studio-line) !important;
+  background: var(--studio-bg) !important;
+}
+.studio-app [data-nebula-settings-panel-heading] > div:first-child {
+  width: 38px !important;
+  height: 38px !important;
+  color: var(--studio-accent) !important;
+  border: 1px solid var(--studio-line) !important;
+  border-radius: 11px !important;
+  background: var(--studio-control) !important;
+  box-shadow: none !important;
+}
+.studio-app [data-nebula-settings-panel-heading] h2 {
+  color: var(--studio-text) !important;
+  font-size: 13px !important;
+  font-weight: 650 !important;
+  letter-spacing: -.01em !important;
+  text-transform: none !important;
+}
+.studio-app [data-nebula-settings-panel-heading] p { color: var(--studio-faint) !important; }
+.studio-app [data-nebula-settings-panel-body],
+.studio-app [data-nebula-settings-panel-body] > * { border-color: var(--studio-line) !important; }
+.studio-app [data-nebula-settings-panel-body] > :is(div, button, form) { background-color: transparent; }
+.studio-app [data-nebula-settings-panel-body] > :is(div, button):hover { background-color: var(--studio-control) !important; }
+.studio-app [data-nebula-settings-panel-body] :is(label, span, p) { border-color: var(--studio-line) !important; }
+.studio-app [data-nebula-settings-panel-body] input:not([type="range"]),
+.studio-app [data-nebula-settings-panel-body] textarea,
+.studio-app [data-nebula-settings-panel-body] [data-nebula-dropdown] > button {
+  min-height: 42px;
+  color: var(--studio-text) !important;
+  border-color: var(--studio-line) !important;
+  border-radius: 11px !important;
+  background: var(--studio-bg) !important;
+}
+.studio-app [data-nebula-settings-panel-body] input:not([type="range"]):hover,
+.studio-app [data-nebula-settings-panel-body] textarea:hover,
+.studio-app [data-nebula-settings-panel-body] [data-nebula-dropdown] > button:hover { background: var(--studio-control) !important; }
+.studio-app [data-nebula-settings-panel-body] button.bg-primary,
+.studio-app [data-nebula-settings-panel-body] button.dark\:bg-white {
+  color: var(--studio-accent-ink) !important;
+  background: var(--studio-accent) !important;
+}
+.studio-app [data-nebula-setting-toggle] > span:last-child {
+  border: 1px solid var(--studio-line);
+  background: var(--studio-control) !important;
+}
+.studio-app [data-nebula-setting-toggle][aria-pressed="true"] > span:last-child {
+  border-color: transparent;
+  background: var(--studio-accent) !important;
+}
+.studio-app [data-nebula-setting-toggle] > span:last-child > span { background: #fff !important; }
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-2.gap-1,
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-2.gap-2,
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-3.gap-2 {
+  gap: 5px !important;
+  background: var(--studio-bg) !important;
+}
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-2.gap-1 > button,
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-2.gap-2 > button,
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-3.gap-2 > button {
+  border: 1px solid transparent;
+  border-radius: 9px !important;
+}
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-2.gap-1 > button:not(.bg-neutral-900),
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-2.gap-2 > button:not(.bg-neutral-900),
+.studio-app [data-nebula-settings-panel-body] .grid.grid-cols-3.gap-2 > button:not(.bg-primary) {
+  color: var(--studio-muted) !important;
+  background: transparent !important;
+}
+
+@media (max-width: 1100px) {
+  .studio-app [data-nebula-mix-grid] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .studio-app [data-nebula-mix-card]:last-child { grid-column: 1 / -1; }
+  .studio-app [data-nebula-mix-card]:last-child > .aspect-square { aspect-ratio: 2 / 1; }
+  .studio-app [data-nebula-settings-panel] { grid-template-columns: 190px minmax(0, 1fr) !important; }
+}
+
+@media (max-width: 900px) {
+  .studio-app :is([data-nebula-view="home"], [data-nebula-view="browse"], [data-nebula-view="library"], [data-nebula-view="search"], [data-nebula-view="radio"]) {
+    padding: 20px 18px 112px !important;
+  }
+  .studio-app [data-nebula-view-header] { min-height: auto; align-items: flex-start !important; }
+  .studio-app [data-nebula-view-header] :is(h1, h2) { font-size: clamp(34px, 8vw, 44px) !important; }
+  .studio-app [data-nebula-mix-grid] { grid-template-columns: 1fr; }
+  .studio-app [data-nebula-mix-card]:last-child { grid-column: auto; }
+  .studio-app [data-nebula-mix-card]:last-child > .aspect-square { aspect-ratio: 1 / 1; }
+  .studio-app [data-nebula-search-state]:not([data-nebula-search-state="results"]) { margin: 12px; min-height: min(500px, 68vh); }
+  .studio-app [data-nebula-artist-hero] { margin: 8px; }
+  .studio-app [data-nebula-artist-hero] > .relative { padding: 72px 24px 28px !important; }
+  .studio-app [data-nebula-artist-hero-layout] { align-items: flex-start !important; }
+  .studio-app [data-nebula-artist-hero-layout] > div:last-child { text-align: left !important; }
+  .studio-app [data-nebula-artist-hero-layout] > div:last-child > div { justify-content: flex-start !important; }
+  .studio-app [data-nebula-view="artist-detail"] > .px-6.pt-12 { padding: 10px 18px 42px !important; }
+  .studio-app [data-nebula-settings-canvas] { padding: 24px 18px 112px !important; }
+  .studio-app [data-nebula-settings-header] h1 { font-size: clamp(40px, 10vw, 52px) !important; }
+  .studio-app [data-nebula-settings-panel] { grid-template-columns: 1fr !important; }
+  .studio-app [data-nebula-settings-panel-heading] { min-height: 0; border-right: 0 !important; border-bottom: 1px solid var(--studio-line) !important; }
+}
+
+@media (max-width: 620px) {
+  .studio-app [data-nebula-view-header] { gap: 16px !important; padding-bottom: 16px; }
+  .studio-app [data-nebula-view-header] :is(h1, h2) { font-size: 36px !important; }
+  .studio-app [data-nebula-library-filters] { width: 100%; }
+  .studio-app [data-nebula-library-filters] > * { flex: 1 1 calc(50% - 8px); min-width: 0 !important; }
+  .studio-app [data-nebula-library-filters] > div:first-child { flex-basis: 100%; }
+  .studio-app [data-nebula-collection-grid] { gap: 20px 12px !important; }
+  .studio-app [data-nebula-track-ledger] th { padding: 10px 8px !important; }
+  .studio-app [data-nebula-track-ledger] td { padding: 9px 8px !important; }
+  .studio-app [data-nebula-view="search"] [data-nebula-view-header] { align-items: flex-start !important; }
+  .studio-app [data-nebula-view="search"] [data-nebula-view-header] h2 { font-size: 34px !important; }
+  .studio-app [data-nebula-artist-hero-layout] > div:first-child { width: 174px !important; height: 174px !important; }
+  .studio-app [data-nebula-artist-hero-layout] h1 { font-size: 40px !important; }
+  .studio-app [data-nebula-settings-canvas] { padding-inline: 14px !important; }
+  .studio-app [data-nebula-settings-header] { margin-bottom: 8px !important; padding-bottom: 18px; }
+  .studio-app [data-nebula-settings-header] h1 { font-size: 42px !important; }
+  .studio-app [data-nebula-settings-jumps] { margin-inline: -2px; }
+  .studio-app [data-nebula-settings-panel-heading],
+  .studio-app [data-nebula-settings-panel-body] > :is(div, button, form) { padding-inline: 16px !important; }
+  .studio-app [data-nebula-settings-panel-body] .grid.md\:grid-cols-2 { grid-template-columns: 1fr !important; }
+}
+
+/* Final cascade lock for the selected compact system. */
+.studio-app :is([data-nebula-view="home"], [data-nebula-view="browse"], [data-nebula-view="library"], [data-nebula-view="search"], [data-nebula-view="radio"]) {
+  max-width: none !important;
+  padding: 24px 28px 104px !important;
+}
+.studio-app [data-nebula-view-header] {
+  min-height: 38px !important;
+  align-items: center !important;
+  margin-bottom: 18px !important;
+  padding-bottom: 0 !important;
+  border-bottom: 0 !important;
+}
+.studio-app [data-nebula-view-header] :is(h1, h2) {
+  font-size: clamp(24px, 2.3vw, 32px) !important;
+  font-weight: 640 !important;
+  line-height: 1 !important;
+  letter-spacing: -.035em !important;
+}
+.studio-app [data-nebula-view-header] > button,
+.studio-app [data-nebula-view-header] > div:last-child button {
+  min-height: 34px !important;
+  border-radius: 8px !important;
+  background: #0c0c0c !important;
+  font-size: 11px !important;
+}
+.studio-app [data-nebula-view="browse"] > .flex.items-center.gap-3 { margin-top: 32px !important; margin-bottom: 13px !important; }
+.studio-app [data-nebula-view="browse"] > .flex.items-center.gap-3 h2 { font-size: 14px !important; }
+.studio-app [data-nebula-collection-grid] { gap: 24px 14px !important; }
+.studio-app [data-nebula-collection-card] > .relative.aspect-square,
+.studio-app [data-nebula-collection-card] > div:first-child { border-radius: 11px !important; box-shadow: none !important; }
+.studio-app [data-nebula-collection-grid] [data-nebula-collection-card] > div:last-child h3 { font-size: 12px !important; font-weight: 610 !important; }
+.studio-app [data-nebula-settings-canvas] { max-width: none !important; padding: 26px 28px 100px !important; }
+.studio-app [data-nebula-settings-header] { align-items: flex-end; margin-bottom: 16px !important; padding-bottom: 15px; }
+.studio-app [data-nebula-settings-header] h1 { font-size: clamp(28px, 3vw, 38px) !important; font-weight: 650 !important; }
+.studio-app [data-nebula-settings-jumps] { gap: 4px !important; margin-bottom: 14px !important; padding: 4px !important; border: 1px solid var(--studio-line); border-radius: 9px !important; background: #090909 !important; }
+.studio-app [data-nebula-settings-jumps] button { min-height: 30px; padding: 0 10px !important; border-color: transparent; border-radius: 6px !important; background: transparent; font-size: 10px !important; }
+.studio-app [data-nebula-settings-jumps] button[aria-current="true"] { color: var(--studio-accent-ink); background: var(--studio-accent); }
+.studio-app [data-nebula-settings-stack] { gap: 10px !important; }
+.studio-app [data-nebula-settings-panel] { grid-template-columns: 205px minmax(0, 1fr) !important; border-radius: 10px !important; background: #090909 !important; }
+.studio-app [data-nebula-settings-panel-heading] { padding: 18px !important; background: #0c0c0c !important; }
+.studio-app [data-nebula-settings-panel-heading] > div:first-child { width: 32px !important; height: 32px !important; border-radius: 8px !important; }
+.studio-app [data-nebula-settings-panel-body] input:not([type="range"]),
+.studio-app [data-nebula-settings-panel-body] textarea,
+.studio-app [data-nebula-settings-panel-body] [data-nebula-dropdown] > button { min-height: 36px; border-radius: 7px !important; background: #111 !important; }
+
+@media (max-width: 900px) {
+  .studio-app :is([data-nebula-view="home"], [data-nebula-view="browse"], [data-nebula-view="library"], [data-nebula-view="search"], [data-nebula-view="radio"]) { padding: 20px 16px 104px !important; }
+  .studio-app [data-nebula-view-header] { align-items: flex-start !important; }
+  .studio-app [data-nebula-view-header] :is(h1, h2) { font-size: 30px !important; }
+  .studio-app [data-nebula-settings-canvas] { padding: 22px 14px 100px !important; }
+  .studio-app [data-nebula-settings-header] h1 { font-size: 34px !important; }
+  .studio-app [data-nebula-settings-panel] { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 620px) {
+  .studio-app [data-nebula-view-header] { padding-bottom: 0 !important; }
+  .studio-app [data-nebula-view-header] :is(h1, h2) { font-size: 28px !important; }
+  .studio-app [data-nebula-settings-header] h1 { font-size: 32px !important; }
+}

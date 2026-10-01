@@ -78,9 +78,9 @@ export const ArtistDetailView: React.FC = () => {
     })();
 
     return (
-        <div className="min-h-full pb-32 w-full">
+        <div data-nebula-view="artist-detail" className="min-h-full pb-32 w-full">
             {/* Hero Header - full width */}
-            <div className="relative pt-4">
+            <div data-nebula-artist-hero className="relative pt-4">
                 {/* Background with extended height */}
                 <div className="absolute inset-x-0 top-0 h-[400px] overflow-hidden pointer-events-none">
                     {info.image ? (
@@ -106,7 +106,7 @@ export const ArtistDetailView: React.FC = () => {
                         <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" /> {backLabel}
                     </button>
 
-                    <div className="flex flex-col md:flex-row gap-5 items-center md:items-end">
+                    <div data-nebula-artist-hero-layout className="flex flex-col md:flex-row gap-5 items-center md:items-end">
                         {/* Artist Image */}
                         <div className="w-44 h-44 md:w-56 md:h-56 rounded-full overflow-hidden shadow-2xl bg-neutral-200 dark:bg-neutral-800 shrink-0 border-4 border-neutral-200 dark:border-white/10">
                             {info.image ? (
@@ -151,6 +151,7 @@ export const ArtistDetailView: React.FC = () => {
                 {info.bio && (
                     <div className="mb-8 mt-8">
                         <div
+                            data-nebula-about
                             className="flex items-start gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-200 transition dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/[0.07]"
                             onClick={() => setShowFullBio(!showFullBio)}
                         >
@@ -175,6 +176,7 @@ export const ArtistDetailView: React.FC = () => {
                 {/* Top Tracks - with artist-colored accent */}
                 {topSongs.length > 0 && (
                     <section
+                        data-nebula-artist-tracks
                         className="mb-8 rounded-xl overflow-hidden"
                         style={{
                             background: `linear-gradient(135deg, ${artistColors.surface} 0%, transparent 100%)`,
@@ -278,7 +280,7 @@ export const ArtistDetailView: React.FC = () => {
                 <div className="border-t border-neutral-200 dark:border-white/10 pt-6 mb-4" />
 
                 {/* Discography - Grid View */}
-                <section className="mb-8">
+                <section data-nebula-artist-discography className="mb-8">
                     <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-4 flex items-center gap-2">
                         <Disc className="w-4 h-4 text-secondary" /> Discography
                     </h2>
@@ -286,6 +288,7 @@ export const ArtistDetailView: React.FC = () => {
                         {albums.map((album) => (
                             <div
                                 key={album.id}
+                                data-nebula-collection-card
                                 className="group cursor-pointer"
                                 onClick={() => setView('ALBUM_DETAIL', album.id)}
                             >
