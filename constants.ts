@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.8';
+export const APP_VERSION = '2.5.0-beta.9';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.9',
+    date: '2026-10-01',
+    title: 'Player and Settings Refinements',
+    changes: [
+      'Added a seekable waveform to the bottom mini player.',
+      'The bottom and side players now replace one another, including when resizing the window.',
+      'Improved Settings section spacing and separated the HTTP connection option from its warning and action buttons.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.9'
+    }
+  },
   {
     version: '2.5.0-beta.8',
     date: '2026-09-30',
