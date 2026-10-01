@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.9';
+export const APP_VERSION = '2.5.0-beta.10';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,21 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.10',
+    date: '2026-10-01',
+    title: 'OLED Theme and Interface Cleanup',
+    changes: [
+      'Replaced placeholder branding with the official Nebula logo.',
+      'Removed Listen Now header shortcuts, sidebar appearance controls, and extra introductory copy while retaining Settings descriptions.',
+      'Enlarged sidebar connection status and added the connected server address.',
+      'Changed dark mode to a pure black canvas with neutral gray surfaces.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.10'
+    }
+  },
   {
     version: '2.5.0-beta.9',
     date: '2026-10-01',
