@@ -55,6 +55,7 @@ The main web resource is about **50% smaller**. Shared code and visited route ch
 
 - Baseline: typecheck, 243 tests, web and Electron bundles passed.
 - Updated code: typecheck and **313 tests across 43 files** passed with coverage enabled.
+- AutoEQ follow-up: typecheck and **323 tests across 44 files** passed. `npm run test:audio` verified full-scale headroom, bypass, and live preamp changes using Chromium's real OfflineAudioContext.
 - Configured coverage gate passed: 94.85% lines, 86.3% branches, 100% functions. This coverage scope covers selected Stream Deck modules, **not the whole application**.
 - Production web and Electron bundles built successfully.
 - Actual Windows Electron 44 launched main and mini-player windows with a disposable profile; renderer mount, synchronous preload information, settings IPC and window IPC were checked. Both windows stayed hidden. Media-key registration was unavailable while another desktop session held the shortcuts; installed media-key behavior is not claimed verified.
@@ -64,7 +65,9 @@ The main web resource is about **50% smaller**. Shared code and visited route ch
 - npm audit reports zero known vulnerabilities, including dev dependencies. Direct stable tag checks passed. Source scans found no matching embedded private keys/GitHub tokens in reviewed source files; this was not a historical Git secret scan.
 - `git diff --check` passed.
 
-Useful local commands: `npm ci`, `npm run typecheck`, `npm run test:coverage`, `npm run build:electron`, `npm run test:desktop`, `npm run dist:win`. The desktop smoke test uses an isolated temporary profile and does not exercise an installed account.
+Useful local commands: `npm ci`, `npm run typecheck`, `npm run test:coverage`, `npm run test:audio`, `npm run build:electron`, `npm run test:desktop`, `npm run dist:win`. The desktop smoke test uses an isolated temporary profile and does not exercise an installed account.
+
+The AutoEQ preamp follow-up is complete: saved profile gain now applies before the shared music/crossfade/radio filters, with bypass, preset clearing, smooth live updates, and settings restore. Store regression tests and Chromium OfflineAudioContext rendering verify routing and headroom. See [AutoEQ preamp](equalizer-preamp.md) for behavior and limits.
 
 ## Remaining follow-ups and limits
 
@@ -73,8 +76,7 @@ Useful local commands: `npm ci`, `npm run typecheck`, `npm run test:coverage`, `
 3. **Docker/CI:** the Docker engine is stopped, so local container build, `nginx -t` and response-header verification are unverified. The added hosted checks must run before release. No global daemon was started. Container base-image vulnerability scanning is outside the npm audit result.
 4. **AI DJ:** its queue orchestrator exists and has unit tests but is not integrated into the application's track-completion/session flow. The previously exposed panel is now reversibly gated. Its Anthropic catalog option uses the generic OpenAI-compatible `/chat/completions` client; provider-specific support is required before enabling that configuration. Model availability was not verified against live provider APIs. Existing AI configuration was preserved.
 5. **Further performance work:** the monolithic Store context broadcasts frequent playback state to many consumers; selected waveform mode still downloads/decodes a full selected track; some hidden visualizer animation loops continue scheduling under Electron's required background playback policy. Profile real workloads before introducing context selectors, visibility-aware animation suspension or bounded waveform sampling.
-6. **Incomplete AutoEQ behavior:** calibration applies filter gains, but the saved preamp is currently display-only, as the Settings UI states. Full calibration needs preamp application in the audio graph and clipping/headroom tests. Index fetch optimization does not complete that feature.
-7. **Storage/network policy:** browser credentials remain in same-origin IndexedDB, and Subsonic authentication parameters are necessarily part of generated media URLs. HTTPS remains important. Cache scoping prevents accidental reuse but does not encrypt metadata or clear historical site data. Desktop HTTP consent is still global; profile-scoped consent can be designed separately.
+6. **Storage/network policy:** browser credentials remain in same-origin IndexedDB, and Subsonic authentication parameters are necessarily part of generated media URLs. HTTPS remains important. Cache scoping prevents accidental reuse but does not encrypt metadata or clear historical site data. Desktop HTTP consent is still global; profile-scoped consent can be designed separately.
 
 ## Primary references
 

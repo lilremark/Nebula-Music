@@ -4,6 +4,15 @@ beforeEach(() => vi.resetModules());
 afterEach(() => vi.unstubAllGlobals());
 
 describe('AutoEq index and profile requests', () => {
+  it('reads profile preamp values and tolerates missing or malformed headers', async () => {
+    const { parseAutoEqFixedBandProfile } = await import('./autoEqService');
+    const bands = 'GraphicEQ: 32 -2; 64 -1; 125 1; 250 2; 500 3; 1000 4; 2000 5; 4000 6; 8000 7; 16000 8';
+    expect(parseAutoEqFixedBandProfile(`Preamp: -7.3 dB\n${bands}`).preamp).toBe(-7.3);
+    expect(parseAutoEqFixedBandProfile(`Preamp: +1.5 dB\n${bands}`).preamp).toBe(1.5);
+    expect(parseAutoEqFixedBandProfile(bands).preamp).toBeUndefined();
+    expect(parseAutoEqFixedBandProfile(`Preamp: NaN dB\n${bands}`).preamp).toBeUndefined();
+    expect(parseAutoEqFixedBandProfile(`Preamp: ${'9'.repeat(400)} dB\n${bands}`).preamp).toBeUndefined();
+  });
   it('deduplicates simultaneous index loads and uses the in-memory index afterwards', async () => {
     const localStorage = { getItem: vi.fn(() => null), setItem: vi.fn() };
     vi.stubGlobal('localStorage', localStorage);

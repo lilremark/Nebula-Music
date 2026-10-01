@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ISong } from '../types';
 import { PlatformProvider } from '../platform/PlatformContext';
 import { StoreProvider, useStore } from './Store';
+import { db } from '../services/db';
 
 vi.mock('../services/db', () => ({
   db: {
@@ -20,6 +21,35 @@ vi.mock('../services/db', () => ({
 }));
 
 type Store = ReturnType<typeof useStore>;
+
+const mockAudioGraph = () => {
+  const param = () => ({ value: 0, cancelScheduledValues: vi.fn(), cancelAndHoldAtTime: vi.fn(), setTargetAtTime: vi.fn() });
+  const node = () => ({ connect: vi.fn(), disconnect: vi.fn() });
+  const gains: Array<ReturnType<typeof node> & { gain: ReturnType<typeof param> }> = [];
+  const filters: Array<ReturnType<typeof node> & { gain: ReturnType<typeof param> }> = [];
+  const sources: Array<ReturnType<typeof node> & { mediaElement: HTMLMediaElement }> = [];
+  const analyser = { ...node(), fftSize: 0, smoothingTimeConstant: 0 };
+  class MockAudioContext {
+    currentTime = 4;
+    state = 'running';
+    destination = node();
+    createGain() { const result = { ...node(), gain: param() }; gains.push(result); return result; }
+    createBiquadFilter() {
+      const result = { ...node(), type: 'peaking', frequency: param(), Q: param(), gain: param() };
+      filters.push(result);
+      return result;
+    }
+    createDynamicsCompressor() {
+      return { ...node(), threshold: param(), knee: param(), ratio: param(), attack: param(), release: param() };
+    }
+    createAnalyser() { return analyser; }
+    createMediaElementSource(mediaElement: HTMLMediaElement) {
+      const result = { ...node(), mediaElement }; sources.push(result); return result;
+    }
+  }
+  vi.stubGlobal('AudioContext', MockAudioContext);
+  return { gains, filters, sources, analyser };
+};
 
 const queue = Array.from({ length: 8 }, (_, index): ISong => ({
   id: `track-${index + 1}`,
@@ -103,6 +133,75 @@ describe('StoreProvider playback transitions', () => {
     }
     expect(latestStore?.isInitialized).toBe(true);
   };
+
+  const applyAutoEq = async (preamp: number) => {
+    await act(async () => latestStore!.updateSettings({ eq: {
+      ...latestStore!.settings.eq, enabled: true, preset: 'custom',
+      autoEq: { name: 'Headphones', source: 'Test', path: 'Test', preamp, appliedAt: 0 },
+      bands: { ...latestStore!.settings.eq.bands, '2k': 6 },
+    } }));
+  };
+
+  it('routes music, crossfade, and radio through one preamp before the filters', async () => {
+    const graph = mockAudioGraph();
+    await mountStore();
+    await applyAutoEq(-7);
+    await act(async () => latestStore!.updateSettings({ magicCrossfade: true }));
+    await act(async () => latestStore!.playSong(queue[0], queue));
+    const [mainAudio, crossfadeAudio, radioAudio] = document.querySelectorAll('audio');
+    await act(async () => mainAudio.dispatchEvent(new Event('ended')));
+    vi.stubGlobal('fetch', vi.fn(async () => ({ headers: new Headers(), body: new ReadableStream() })));
+    await act(async () => latestStore!.playRadioStation({
+      id: 'station', name: 'Live', streamUrl: 'https://radio.example/live', created: '2026-09-30',
+    }));
+    expect(graph.gains).toHaveLength(2);
+    const [input, preamp] = graph.gains;
+    expect(input.connect).toHaveBeenCalledWith(preamp);
+    expect(input.connect).toHaveBeenCalledWith(graph.analyser);
+    expect(preamp.connect).toHaveBeenCalledWith(graph.filters[0]);
+    expect(preamp.gain.value).toBeCloseTo(10 ** (-7 / 20));
+    expect(graph.filters[6].gain.setTargetAtTime).toHaveBeenLastCalledWith(6, 4, 0.015);
+    for (const audio of [mainAudio, crossfadeAudio, radioAudio]) {
+      expect(graph.sources.find(source => source.mediaElement === audio)?.connect).toHaveBeenCalledWith(input);
+    }
+  });
+
+  it('changes preamp live, bypasses and restores it, and clears it without changing volume or bands', async () => {
+    const graph = mockAudioGraph();
+    await mountStore();
+    await act(async () => latestStore!.playSong(queue[0], queue));
+    await act(async () => latestStore!.setVolume(0.4));
+    await applyAutoEq(-6);
+    const preamp = graph.gains[1].gain;
+    expect(preamp.setTargetAtTime).toHaveBeenLastCalledWith(10 ** (-6 / 20), 4, 0.015);
+    await applyAutoEq(-9);
+    expect(preamp.setTargetAtTime).toHaveBeenLastCalledWith(10 ** (-9 / 20), 4, 0.015);
+    await act(async () => latestStore!.updateSettings({ eq: { ...latestStore!.settings.eq, enabled: false } }));
+    expect(preamp.setTargetAtTime).toHaveBeenLastCalledWith(1, 4, 0.015);
+    expect(graph.filters[6].gain.setTargetAtTime).toHaveBeenLastCalledWith(0, 4, 0.015);
+    await act(async () => latestStore!.updateSettings({ eq: { ...latestStore!.settings.eq, enabled: true } }));
+    expect(preamp.setTargetAtTime).toHaveBeenLastCalledWith(10 ** (-9 / 20), 4, 0.015);
+    await act(async () => latestStore!.updateSettings({ eq: { ...latestStore!.settings.eq, autoEq: null } }));
+    expect(preamp.setTargetAtTime).toHaveBeenLastCalledWith(1, 4, 0.015);
+    expect(latestStore!.settings.eq.bands['2k']).toBe(6);
+    expect(latestStore!.volume).toBe(0.4);
+    expect(document.querySelector('audio')!.volume).toBe(0.4);
+    expect(graph.gains).toHaveLength(2);
+  });
+
+  it('starts with the persisted profile preamp and removes it when choosing a built-in preset', async () => {
+    const graph = mockAudioGraph();
+    vi.mocked(db.get).mockResolvedValueOnce({ eq: {
+      enabled: true, preset: 'custom', bands: { '2k': 6 },
+      autoEq: { name: 'Saved', source: 'Test', path: 'Test', preamp: -8, appliedAt: 0 },
+    } });
+    await mountStore();
+    await act(async () => latestStore!.playSong(queue[0], queue));
+    expect(graph.gains[1].gain.value).toBeCloseTo(10 ** (-8 / 20));
+    await act(async () => latestStore!.updateSettings({ eq: { ...latestStore!.settings.eq, preset: 'flat' } }));
+    expect(latestStore!.settings.eq.autoEq).toBeNull();
+    expect(graph.gains[1].gain.setTargetAtTime).toHaveBeenLastCalledWith(1, 4, 0.015);
+  });
 
   it('does not preload another stream when crossfade is disabled', async () => {
     await mountStore();

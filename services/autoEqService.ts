@@ -233,7 +233,8 @@ export const searchAutoEqProfiles = async (query: string, limit = 20): Promise<A
 
 const parsePreamp = (text: string) => {
   const match = text.match(/Preamp:\s*([-+]?\d+(?:\.\d+)?)\s*dB/i);
-  return match ? Number(match[1]) : undefined;
+  const value = match ? Number(match[1]) : undefined;
+  return Number.isFinite(value) ? value : undefined;
 };
 
 const parseGraphicEq = (text: string) => {

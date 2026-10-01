@@ -12,6 +12,7 @@ import { isInsecureHttpUrl, useInsecureHttpSetting } from '../hooks/useInsecureH
 import type { UpdaterState } from '../electron/updater';
 import { VISUALIZER_MODES } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
+import { getAutoEqPreampDb } from '../services/eqPreamp';
 import { CustomDropdown } from '../components/CustomDropdown';
 import { getUpdateAction } from '../components/updateAction';
 import { AVAILABLE_DJ_VOICES as AVAILABLE_DJ_VOICE_IDS } from '../electron/settingsSchema';
@@ -1144,9 +1145,9 @@ export const SettingsView: React.FC = () => {
                                                     <span className="font-bold">Based on AutoEq:</span>
                                                     <span className="min-w-0 truncate">{settings.eq.autoEq.name}</span>
                                                     <span className="text-neutral-600 dark:text-white/45">{settings.eq.autoEq.source}</span>
-                                                    {typeof settings.eq.autoEq.preamp === 'number' && (
-                                                        <span className="text-neutral-600 dark:text-white/45">Preamp {settings.eq.autoEq.preamp.toFixed(1)} dB</span>
-                                                    )}
+                                                    <span className="text-neutral-600 dark:text-white/45">
+                                                        Preamp {getAutoEqPreampDb(settings.eq).toFixed(1)} dB{settings.eq.enabled ? ' · Applied' : ' · EQ bypassed'}
+                                                    </span>
                                                     <button
                                                         type="button"
                                                         onClick={clearAutoEqProfile}
@@ -1187,7 +1188,7 @@ export const SettingsView: React.FC = () => {
                                         </div>
                                         <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-neutral-500 dark:text-white/35">
                                             <span>Index cache: {autoEqLastFetchedLabel}</span>
-                                            <span>AutoEq preamp is stored for display and not applied yet.</span>
+                                            <span>AutoEq preamp applies with the EQ to music and radio, providing headroom for boosted bands. Clearing the profile removes its preamp and keeps your band settings.</span>
                                         </div>
                                     </div>
 

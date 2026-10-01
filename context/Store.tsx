@@ -10,6 +10,7 @@ import { db } from '../services/db';
 import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
 import { defaultAccent } from '../design-system/tokens';
+import { applyEqPreamp, getEqPreampGain } from '../services/eqPreamp';
 
 interface StoreContextType extends AppState {
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
@@ -387,6 +388,7 @@ export const StoreProvider: React.FC<{
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const dspInputRef = useRef<GainNode | null>(null);
+  const eqPreampRef = useRef<GainNode | null>(null);
   const eqFiltersRef = useRef<Array<{ key: EqBandKey; filter: BiquadFilterNode }>>([]);
   const compressorRef = useRef<DynamicsCompressorNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -791,12 +793,14 @@ export const StoreProvider: React.FC<{
     const ctx = audioContextRef.current;
     const now = ctx?.currentTime ?? 0;
 
+    if (eqPreampRef.current) applyEqPreamp(eqPreampRef.current, settings.eq, now);
+
     eqFiltersRef.current.forEach(({ key, filter }) => {
       const targetGain = settings.eq.enabled ? settings.eq.bands[key] || 0 : 0;
       filter.gain.cancelScheduledValues(now);
       filter.gain.setTargetAtTime(targetGain, now, 0.015);
     });
-  }, [settings.eq.bands, settings.eq.enabled]);
+  }, [settings.eq.bands, settings.eq.enabled, settings.eq.autoEq, settings.eq.preset]);
 
   const ensureDspGraph = useCallback((ctx: AudioContext) => {
     if (dspInputRef.current && analyserRef.current) {
@@ -808,7 +812,13 @@ export const StoreProvider: React.FC<{
     input.gain.value = 1;
     dspInputRef.current = input;
 
-    let currentNode: AudioNode = input;
+    const preamp = ctx.createGain();
+    // Start at the saved gain, rather than briefly playing boosted EQ at unity.
+    preamp.gain.value = getEqPreampGain(settings.eq);
+    input.connect(preamp);
+    eqPreampRef.current = preamp;
+
+    let currentNode: AudioNode = preamp;
     eqFiltersRef.current = EQ_BAND_KEYS.map((key, index) => {
       const filter = ctx.createBiquadFilter();
       filter.type = index === 0 ? 'lowshelf' : index === EQ_BAND_KEYS.length - 1 ? 'highshelf' : 'peaking';
@@ -838,7 +848,7 @@ export const StoreProvider: React.FC<{
     analyserRef.current = ana;
     setAnalyser(ana);
     applyEqToGraph();
-  }, [applyEqToGraph]);
+  }, [applyEqToGraph, settings.eq]);
 
   const ensureRadioPitchNode = useCallback(async (ctx: AudioContext) => {
     if (!('audioWorklet' in ctx)) return null;
@@ -2036,6 +2046,9 @@ export const StoreProvider: React.FC<{
         updatedEQ = {
           ...prev.eq,
           ...newSettings.eq,
+          autoEq: newSettings.eq.preset && newSettings.eq.preset !== 'custom'
+            ? null
+            : newSettings.eq.autoEq === undefined ? prev.eq.autoEq : newSettings.eq.autoEq,
           bands: {
             ...prev.eq.bands,
             ...(newSettings.eq.bands || {})
