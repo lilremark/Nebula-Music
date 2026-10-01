@@ -33,32 +33,42 @@ export const SearchModal: React.FC = () => {
     useEffect(() => {
         if (isSearchModalOpen) {
             // Small delay to ensure render
-            setTimeout(() => {
+            const focusTimer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 50);
+            return () => clearTimeout(focusTimer);
         }
     }, [isSearchModalOpen]);
 
     // Debounced Search
     useEffect(() => {
+        let cancelled = false;
+        if (!isSearchModalOpen || query.trim().length <= 1) {
+            setResults({ artists: [], albums: [], songs: [] });
+            setLoading(false);
+            return;
+        }
         const delayDebounceFn = setTimeout(async () => {
             if (query.trim().length > 1) {
                 setLoading(true);
                 try {
                     const res = await service.search(query);
-                    setResults(res);
+                    if (!cancelled) setResults(res);
                 } catch (e) {
-                    console.error(e);
+                    if (!cancelled) console.error(e);
                 } finally {
-                    setLoading(false);
+                    if (!cancelled) setLoading(false);
                 }
             } else {
                 setResults({ artists: [], albums: [], songs: [] });
             }
         }, 300);
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [query, service]);
+        return () => {
+            cancelled = true;
+            clearTimeout(delayDebounceFn);
+        };
+    }, [query, service, isSearchModalOpen]);
 
     const handleClose = () => {
         setQuery('');
@@ -247,4 +257,3 @@ export const SearchModal: React.FC = () => {
         </div>
     );
 };
-

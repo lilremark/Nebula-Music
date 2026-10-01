@@ -176,7 +176,7 @@ npm run start:electron   # builds the renderer + main process and launches Elect
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20.19+ or 22.12+; Node.js 24 LTS is recommended
+- [Node.js](https://nodejs.org/) 22.22.2+, 24.15.0+, or 26+; use Node.js 24 LTS for development and CI
 - npm
 - A reachable Subsonic-compatible server, unless using demo mode
 

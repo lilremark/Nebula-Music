@@ -31,6 +31,15 @@ describe('webSubsonicTransport', () => {
     const result = await webSubsonicTransport.fetchJson('https://music.example/rest/ping.view');
     expect(result).toMatchObject({ status: 502, statusText: 'Bad Gateway', ok: false, body: null });
   });
+
+  it('blocks authentication redirects before sending credentials elsewhere', async () => {
+    const fetchMock = vi.fn(async () => new Response('{}'));
+    vi.stubGlobal('fetch', fetchMock);
+    await webSubsonicTransport.fetchJson('https://music.example/rest/ping.view?apiKey=secret');
+    expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      redirect: 'error', credentials: 'same-origin', referrerPolicy: 'no-referrer', signal: expect.any(AbortSignal),
+    }));
+  });
 });
 
 describe('createDesktopSubsonicTransport', () => {

@@ -7,6 +7,8 @@ import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
 import { SettingPanel, ToggleRow } from '../components/ui';
 import { usePlatform } from '../platform/PlatformContext';
+import { InsecureHttpSetting } from '../components/InsecureHttpSetting';
+import { isInsecureHttpUrl, useInsecureHttpSetting } from '../hooks/useInsecureHttpSetting';
 import type { UpdaterState } from '../electron/updater';
 import { VISUALIZER_MODES } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
@@ -325,6 +327,9 @@ interface AiDjConfig {
 }
 
 const AI_DJ_VAULT_KEY = 'aiDj:apiKey';
+// Queue orchestration is not yet wired into the playback owner. Keep the
+// unfinished settings reversible without deleting configuration or speech code.
+const AI_DJ_SETTINGS_ENABLED = false;
 
 const AI_DJ_VOICE_LABELS: Record<string, string> = {
   'en_US-ryan-high': 'Ryan — US English (high, DJ default)',
@@ -604,6 +609,7 @@ export const SettingsView: React.FC = () => {
     const [authMode, setAuthMode] = useState<'password' | 'apiKey'>(credentials?.authType === 'apiKey' ? 'apiKey' : 'password');
     const [connStatus, setConnStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [isInsecure, setIsInsecure] = useState(false);
+    const httpSetting = useInsecureHttpSetting();
     const [editingKey, setEditingKey] = useState<string | null>(null);
     const [autoEqQuery, setAutoEqQuery] = useState('');
     const [autoEqResults, setAutoEqResults] = useState<AutoEqIndexEntry[]>([]);
@@ -615,11 +621,12 @@ export const SettingsView: React.FC = () => {
     const [activeSettingsJump, setActiveSettingsJump] = useState<string>(SETTINGS_JUMPS[0][0]);
 
     useEffect(() => {
-        setIsInsecure(Boolean(url && !url.startsWith('https://') && url.length > 7));
+        setIsInsecure(isInsecureHttpUrl(url));
     }, [url]);
 
     const handleConnect = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!httpSetting.canConnect(url)) return;
         setConnStatus('loading');
         const success = await connectToSubsonic(url, user, pass, authMode);
         setConnStatus(success ? 'success' : 'error');
@@ -844,10 +851,11 @@ export const SettingsView: React.FC = () => {
                                     </div>
                                 </div>
                                 <div className="px-5 py-4">
+                                    <InsecureHttpSetting setting={httpSetting} />
                                     <div className="flex flex-col gap-3 sm:flex-row">
                                         <button
                                             type="submit"
-                                            disabled={connStatus === 'loading'}
+                                            disabled={connStatus === 'loading' || !httpSetting.canConnect(url)}
                                             className="flex flex-1 items-center justify-center rounded-lg bg-neutral-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-primary"
                                         >
                                             {connStatus === 'loading' ? 'Connecting...' : 'Save & Connect'}
@@ -1299,7 +1307,7 @@ export const SettingsView: React.FC = () => {
 
                         <DesktopSettingsPanel />
                         <DesktopUpdatesPanel />
-                        <AiDjPanel />
+                        {AI_DJ_SETTINGS_ENABLED && <AiDjPanel />}
                 </div>
             </div>
         </div>

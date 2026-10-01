@@ -55,8 +55,8 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 600) : '';
     const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
-    const waveform = useTrackWaveform(currentSong?.id, streamUrl);
     const progressMode = settings.progressVisualization;
+    const waveform = useTrackWaveform(currentSong?.id, progressMode === 'waveform' ? streamUrl : null);
 
     // Adaptive colors from album art
     const { colors } = useAdaptiveColors(coverArt);

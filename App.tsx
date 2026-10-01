@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, useRef } from 'react';
 import { StoreProvider, useStore } from './context/Store';
 import { SplitLayout, TopBar, MacTitleBar, WindowsTitleBar } from './components/layout';
 import { NavDrawer } from './components/navigation';
@@ -9,15 +9,6 @@ import { FloatingMiniPlayer } from './components/player/FloatingMiniPlayer';
 import { DesktopPlaybackBar } from './components/player/DesktopPlaybackBar';
 import { RadioFloatingMiniPlayer, RadioFullPlayer, RadioMobileBar, RadioSidebarPanel } from './components/radio/RadioPlayers';
 import { Player } from './components/Player';
-import { HomeView } from './views/Home';
-import { LibraryView } from './views/Library';
-import { BrowseView } from './views/Browse';
-import { InternetRadioView } from './views/InternetRadio';
-import { SettingsView } from './views/Settings';
-import { ArtistDetailView } from './views/ArtistDetailView';
-import { AlbumDetailView } from './views/AlbumDetail';
-import { PlaylistDetailView } from './views/PlaylistDetail';
-import { SearchView } from './views/Search';
 import { PlaylistModal } from './components/PlaylistModal';
 import { SearchModal } from './components/SearchModal';
 import { SetupScreen } from './components/SetupScreen';
@@ -30,6 +21,19 @@ import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
 import { usePlatform } from './platform/PlatformContext';
 import { NebulaDesignPrototype } from './components/design-prototype/NebulaDesignPrototype';
+import { ViewErrorBoundary } from './components/ViewErrorBoundary';
+
+// Keep the playback owner and controls mounted while loading only the view
+// being visited. Library and settings code need not delay first paint.
+const HomeView = lazy(() => import('./views/Home').then(module => ({ default: module.HomeView })));
+const LibraryView = lazy(() => import('./views/Library').then(module => ({ default: module.LibraryView })));
+const BrowseView = lazy(() => import('./views/Browse').then(module => ({ default: module.BrowseView })));
+const InternetRadioView = lazy(() => import('./views/InternetRadio').then(module => ({ default: module.InternetRadioView })));
+const SettingsView = lazy(() => import('./views/Settings').then(module => ({ default: module.SettingsView })));
+const ArtistDetailView = lazy(() => import('./views/ArtistDetailView').then(module => ({ default: module.ArtistDetailView })));
+const AlbumDetailView = lazy(() => import('./views/AlbumDetail').then(module => ({ default: module.AlbumDetailView })));
+const PlaylistDetailView = lazy(() => import('./views/PlaylistDetail').then(module => ({ default: module.PlaylistDetailView })));
+const SearchView = lazy(() => import('./views/Search').then(module => ({ default: module.SearchView })));
 
 /**
  * The production shell is also composed by the isolated Studio preview.  The
@@ -236,7 +240,11 @@ export const AppContent: React.FC<{
         >
           <div className={`min-h-full ${isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
             <BlurFade key={`${currentView}-${String(viewData ?? '')}`} duration={0.3} blur="4px" offset={10}>
-              <ViewComponent />
+              <ViewErrorBoundary key={currentView}>
+                <Suspense fallback={<div className="p-8 text-neutral-500" role="status">Loading view…</div>}>
+                  <ViewComponent />
+                </Suspense>
+              </ViewErrorBoundary>
             </BlurFade>
           </div>
         </main>

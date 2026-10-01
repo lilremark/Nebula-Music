@@ -146,7 +146,7 @@ export const createUpdater = (options: UpdaterOptions): Updater => {
 
   const check = async (): Promise<boolean> => {
     if (!enabled) return false;
-    if (state.phase === 'checking' || state.phase === 'downloading') return false;
+    if (state.phase === 'checking' || state.phase === 'downloading' || state.phase === 'downloaded') return false;
     emit({ phase: 'checking', message: 'Checking for updates\u2026' });
     try {
       await driver.checkForUpdates();

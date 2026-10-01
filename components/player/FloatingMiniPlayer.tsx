@@ -88,8 +88,8 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
 
     const coverArt = service.getCoverArtUrl(currentSong.coverArt || currentSong.id, 200);
     const streamUrl = service.getStreamUrl(currentSong.id, currentSong.suffix);
-    const waveform = useTrackWaveform(currentSong.id, streamUrl);
     const progressMode = settings.progressVisualization;
+    const waveform = useTrackWaveform(currentSong.id, progressMode === 'waveform' ? streamUrl : null);
     const { colors } = useAdaptiveColors(coverArt);
     const progress = duration ? (currentTime / duration) * 100 : 0;
     const displayProgress = visualProgress || progress;

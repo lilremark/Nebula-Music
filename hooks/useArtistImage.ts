@@ -14,9 +14,11 @@ export const useArtistImage = (artistId?: string, artistName?: string): ArtistIm
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
+        let cancelled = false;
         if (!artistId && !artistName) {
             setImage(null);
             setBio(null);
+            setLoading(false);
             return;
         }
 
@@ -24,18 +26,21 @@ export const useArtistImage = (artistId?: string, artistName?: string): ArtistIm
             setLoading(true);
             try {
                 const info = await service.getArtistInfo(artistId || '', artistName);
+                if (cancelled) return;
                 setImage(info.image || null);
                 setBio(info.bio || null);
             } catch (e) {
+                if (cancelled) return;
                 console.error('Failed to fetch artist info:', e);
                 setImage(null);
                 setBio(null);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
         fetchArtistInfo();
+        return () => { cancelled = true; };
     }, [artistId, artistName, service]);
 
     return { image, bio, loading };

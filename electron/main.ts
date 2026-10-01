@@ -24,7 +24,10 @@ import { createUpdater, type Updater } from './updater';
 import { installMacAppMenu, updateMacPlaybackMenu } from './macMenu';
 import { createCommandClient } from '../playback/commandClient';
 import { createStreamProxy } from './streamProxy';
+import { isRendererDocumentUrl, isTrustedRendererFrame, resolveRendererAsset } from './rendererSecurity';
+import { fetchWithTrustedRedirects, UntrustedTargetError } from './trustedFetch';
 import {
+  desktopCommandEnvelopeSchema,
   desktopSnapshotSchema,
   type DesktopCommand,
   type DesktopCommandEnvelope,
@@ -49,7 +52,8 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: app://nebula https:",
-  "media-src 'self' app://nebula https:",
+  "media-src 'self' app://nebula https: blob:",
+  "worker-src 'self' blob:",
   "connect-src 'self' app://nebula ws://127.0.0.1:* https:",
   "object-src 'none'",
   "base-uri 'none'",
@@ -228,18 +232,14 @@ const streamProxy = createStreamProxy({
 
 const handleProtocol = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
-
-  if (url.pathname === '/proxy') return streamProxy.handle(request);
-
-  const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
-  const normalized = path.posix.normalize(pathname).replace(/^([/\\])+/, '');
-  if (!normalized || normalized === '..' || normalized.startsWith('../')) {
+  if (url.host !== 'nebula' || url.username || url.password) {
     return new Response('Forbidden', { status: 403 });
   }
 
-  const root = rendererRoot();
-  const filePath = path.join(root, normalized);
-  if (!filePath.startsWith(root)) return new Response('Forbidden', { status: 403 });
+  if (url.pathname === '/proxy') return streamProxy.handle(request);
+
+  const filePath = resolveRendererAsset(rendererRoot(), url.pathname);
+  if (!filePath) return new Response('Forbidden', { status: 403 });
 
   try {
     const data = await fs.readFile(filePath);
@@ -300,8 +300,12 @@ const createWindow = (): BrowserWindow => {
   });
 
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(PROTOCOL_URL)) event.preventDefault();
+    if (!isRendererDocumentUrl(url)) event.preventDefault();
   });
+  win.webContents.on('will-redirect', (event, url) => {
+    if (!isRendererDocumentUrl(url)) event.preventDefault();
+  });
+  win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
   win.on('close', (event) => {
     if (!isQuitting) {
@@ -382,8 +386,12 @@ const createMiniPlayerWindow = (): BrowserWindow => {
   });
 
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(PROTOCOL_URL)) event.preventDefault();
+    if (!isRendererDocumentUrl(url)) event.preventDefault();
   });
+  win.webContents.on('will-redirect', (event, url) => {
+    if (!isRendererDocumentUrl(url)) event.preventDefault();
+  });
+  win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
   // The mini-player is a companion window: closing it hides it instead of
   // destroying it, and never quits the app.
@@ -446,7 +454,24 @@ const isTrustedSender = (webContents: Electron.WebContents): boolean => {
 };
 
 const registerIpc = (): void => {
-  ipcMain.on(IPC.app.info, (event) => {
+  // WebContents identity alone also trusts subframes and a navigated renderer.
+  // Gate every channel at registration so new native APIs inherit the policy.
+  const onTrusted = (channel: string, listener: (event: Electron.IpcMainEvent, ...args: any[]) => void): void => {
+    ipcMain.on(channel, (event, ...args) => {
+      if (!isTrustedSender(event.sender) || !isTrustedRendererFrame(event)) {
+        event.returnValue = null;
+        return;
+      }
+      listener(event, ...args);
+    });
+  };
+  const handleTrusted = (channel: string, listener: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown): void => {
+    ipcMain.handle(channel, (event, ...args) => {
+      if (!isTrustedSender(event.sender) || !isTrustedRendererFrame(event)) throw new Error('Unauthorized.');
+      return listener(event, ...args);
+    });
+  };
+  onTrusted(IPC.app.info, (event) => {
     event.returnValue = {
       os: process.platform,
       appName: app.getName(),
@@ -454,35 +479,35 @@ const registerIpc = (): void => {
     };
   });
 
-  ipcMain.handle(IPC.app.openExternal, (_event, url: unknown) => {
+  handleTrusted(IPC.app.openExternal, (_event, url: unknown) => {
     if (typeof url !== 'string') return false;
     return openExternalSafely(url);
   });
 
-  ipcMain.on(IPC.window.minimize, (event) => {
+  onTrusted(IPC.window.minimize, (event) => {
     BrowserWindow.fromWebContents(event.sender)?.minimize();
   });
-  ipcMain.on(IPC.window.toggleMaximize, (event) => {
+  onTrusted(IPC.window.toggleMaximize, (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return;
     if (win.isMaximized()) win.unmaximize();
     else win.maximize();
   });
-  ipcMain.on(IPC.window.close, (event) => {
+  onTrusted(IPC.window.close, (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
   });
-  ipcMain.handle(IPC.window.isMaximized, (event) =>
+  handleTrusted(IPC.window.isMaximized, (event) =>
     BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false,
   );
-  ipcMain.handle(IPC.window.isFullScreen, (event) =>
+  handleTrusted(IPC.window.isFullScreen, (event) =>
     BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false,
   );
 
-  ipcMain.handle(IPC.settings.get, (_event, key: unknown) => {
+  handleTrusted(IPC.settings.get, (_event, key: unknown) => {
     if (typeof key !== 'string') return null;
     return settingsStore.get(key) ?? null;
   });
-  ipcMain.handle(IPC.settings.set, async (_event, key: unknown, value: unknown) => {
+  handleTrusted(IPC.settings.set, async (_event, key: unknown, value: unknown) => {
     if (typeof key !== 'string') return;
     await settingsStore.set(key, value);
     if (key === 'mediaKeysEnabled') {
@@ -496,54 +521,65 @@ const registerIpc = (): void => {
       }
     } else if (key === 'taskbarProgressEnabled') {
       if (value === true && lastSnapshot) updateTaskbarProgress(lastSnapshot);
-      else mainWindow?.setProgressBar(-1);
+      else {
+        lastTaskbarProgress = -1;
+        mainWindow?.setProgressBar(-1);
+      }
     } else if (key === 'updateChannel' && typeof value === 'string') {
       updater.setChannel(value);
     }
   });
 
-  ipcMain.handle(IPC.vault.get, (event, serverUrl: unknown) => {
+  handleTrusted(IPC.vault.get, (event, serverUrl: unknown) => {
     if (!isTrustedSender(event.sender)) return null;
     if (typeof serverUrl !== 'string') return null;
     return credentialVault.get(serverUrl);
   });
-  ipcMain.handle(IPC.vault.set, async (event, credentials: unknown) => {
+  handleTrusted(IPC.vault.set, async (event, credentials: unknown) => {
     if (!isTrustedSender(event.sender)) return;
     await credentialVault.set(credentials as Parameters<CredentialVault['set']>[0]);
   });
-  ipcMain.handle(IPC.vault.clear, async (event, serverUrl: unknown) => {
+  handleTrusted(IPC.vault.clear, async (event, serverUrl: unknown) => {
     if (!isTrustedSender(event.sender)) return;
     if (typeof serverUrl === 'string') await credentialVault.clear(serverUrl);
   });
-  ipcMain.handle(IPC.vault.getSecret, (event, key: unknown) => {
+  handleTrusted(IPC.vault.getSecret, (event, key: unknown) => {
     if (!isTrustedSender(event.sender)) return null;
     if (typeof key !== 'string') return null;
     return credentialVault.getSecret(key);
   });
-  ipcMain.handle(IPC.vault.setSecret, async (event, key: unknown, value: unknown) => {
+  handleTrusted(IPC.vault.setSecret, async (event, key: unknown, value: unknown) => {
     if (!isTrustedSender(event.sender)) return;
     if (typeof key !== 'string' || typeof value !== 'string') return;
     await credentialVault.setSecret(key, value);
   });
-  ipcMain.handle(IPC.vault.clearSecret, async (event, key: unknown) => {
+  handleTrusted(IPC.vault.clearSecret, async (event, key: unknown) => {
     if (!isTrustedSender(event.sender)) return;
     if (typeof key === 'string') await credentialVault.clearSecret(key);
   });
 
-  ipcMain.handle(IPC.http.fetchJson, async (_event, url: unknown) => {
+  handleTrusted(IPC.http.fetchJson, async (_event, url: unknown) => {
     if (typeof url !== 'string' || !isTrustedProxyTarget(url)) {
       return { status: 403, statusText: 'Forbidden', ok: false, body: null };
     }
     try {
-      const res = await net.fetch(url, { redirect: 'follow' });
+      const res = await fetchWithTrustedRedirects(
+        (target, init) => net.fetch(target, init),
+        isTrustedProxyTarget,
+        url,
+        { signal: AbortSignal.timeout(30_000) },
+      );
       const body = await res.json().catch(() => null);
       return { status: res.status, statusText: res.statusText, ok: res.ok, body };
-    } catch {
+    } catch (error) {
+      if (error instanceof UntrustedTargetError) {
+        return { status: 403, statusText: 'Forbidden', ok: false, body: null };
+      }
       throw new Error('Network error while fetching Subsonic server.');
     }
   });
 
-  ipcMain.on(IPC.playback.snapshot, (event, snapshot: unknown) => {
+  onTrusted(IPC.playback.snapshot, (event, snapshot: unknown) => {
     if (!mainWindow || event.sender !== mainWindow.webContents) return;
     const parsed = desktopSnapshotSchema.safeParse(snapshot);
     if (!parsed.success) return;
@@ -557,31 +593,32 @@ const registerIpc = (): void => {
 
   // Commands from the mini-player (a remote client) are validated and
   // forwarded to the playback owner in the main window.
-  ipcMain.on(IPC.playback.clientCommand, (event, envelope: DesktopCommandEnvelope) => {
+  onTrusted(IPC.playback.clientCommand, (event, envelope: unknown) => {
     if (!miniPlayerWindow || event.sender !== miniPlayerWindow.webContents) return;
-    forwardCommand(envelope);
+    const parsed = desktopCommandEnvelopeSchema.safeParse(envelope);
+    if (parsed.success) forwardCommand(parsed.data);
   });
 
-  ipcMain.handle(IPC.miniPlayer.toggle, () => {
+  handleTrusted(IPC.miniPlayer.toggle, () => {
     toggleMiniPlayer();
   });
-  ipcMain.handle(IPC.miniPlayer.showMain, () => {
+  handleTrusted(IPC.miniPlayer.showMain, () => {
     showMainWindow();
   });
 
-  ipcMain.handle(IPC.updater.getState, (event) => {
+  handleTrusted(IPC.updater.getState, (event) => {
     if (!isTrustedSender(event.sender)) return null;
     return updater.getState();
   });
-  ipcMain.handle(IPC.updater.check, (event) => {
+  handleTrusted(IPC.updater.check, (event) => {
     if (!isTrustedSender(event.sender)) return false;
     return updater.check();
   });
-  ipcMain.handle(IPC.updater.installAndRestart, (event) => {
+  handleTrusted(IPC.updater.installAndRestart, (event) => {
     if (!isTrustedSender(event.sender)) return;
     updater.installAndRestart();
   });
-  ipcMain.handle(IPC.updater.openDownloadPage, async (event) => {
+  handleTrusted(IPC.updater.openDownloadPage, async (event) => {
     if (!mainWindow || event.sender !== mainWindow.webContents) return false;
     const state = updater.getState();
     if (
@@ -596,12 +633,12 @@ const registerIpc = (): void => {
     return url ? openExternalSafely(url) : false;
   });
 
-  ipcMain.handle(IPC.aiDj.voices, async () => ({
+  handleTrusted(IPC.aiDj.voices, async () => ({
     voices: [...AVAILABLE_DJ_VOICES],
     defaultVoice: DEFAULT_DJ_VOICE,
   }));
 
-  ipcMain.handle(IPC.aiDj.speak, async (event, text: unknown, voiceId: unknown) => {
+  handleTrusted(IPC.aiDj.speak, async (event, text: unknown, voiceId: unknown) => {
     if (!isTrustedSender(event.sender)) return { ok: false, error: 'Unauthorized.' };
     if (typeof text !== 'string' || text.trim().length === 0) {
       return { ok: false, error: 'Text is required.' };
@@ -617,7 +654,7 @@ const registerIpc = (): void => {
     }
   });
 
-  ipcMain.handle(IPC.aiDj.cancel, async (event) => {
+  handleTrusted(IPC.aiDj.cancel, async (event) => {
     if (!isTrustedSender(event.sender)) return;
     getDjSpeechController().cancel();
   });
@@ -692,6 +729,11 @@ if (!gotLock) {
       path.join(app.getPath('userData'), 'vault.json'),
       createSafeStorageCipher(),
     );
+
+    // Playback does not need device capture, location, or other browser grants.
+    // Cover both asynchronous requests and Chromium's synchronous checks.
+    session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+    session.defaultSession.setPermissionCheckHandler(() => false);
 
     // Auto-update only runs in installed builds; dev launches use the web
     // bundle over `npm run dev` and must never attempt a check.

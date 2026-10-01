@@ -111,4 +111,6 @@ The container is healthy when `http://localhost:8080/healthz` returns HTTP 204.
 - Nebula Music is a static browser app. Subsonic/OpenSubsonic credentials are entered in the UI and stored in the browser, not in the container.
 - Your Subsonic-compatible server must be reachable from the user's browser, not just from the Docker container.
 - If the app cannot connect to your music server, check HTTPS and CORS settings on the Subsonic server.
+- Enter the final server base URL, including any reverse-proxy path. Browser API requests reject redirects so an authentication query cannot be forwarded to another host. Request deadlines also cover stalled response bodies.
+- The bundled NGINX configuration sends a Content Security Policy and denies framing. It permits user-selected HTTP/HTTPS music and radio endpoints, the local Stream Deck websocket, artwork, and Google Fonts. Browser mixed-content and private-network restrictions still apply when the app is served over HTTPS.
 - No runtime environment variables or persistent volumes are required.

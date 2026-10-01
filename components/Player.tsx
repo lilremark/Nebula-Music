@@ -78,8 +78,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 800) : '';
     const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
-    const waveform = useTrackWaveform(currentSong?.id, streamUrl);
     const progressMode = settings.progressVisualization;
+    const waveform = useTrackWaveform(currentSong?.id, progressMode === 'waveform' ? streamUrl : null);
     const { colors } = useAdaptiveColors(coverArt);
     const { image: artistImage } = useArtistImage(currentSong?.artistId, currentSong?.artist);
     const isLightMode = mode === 'light';

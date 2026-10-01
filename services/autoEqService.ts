@@ -1,4 +1,5 @@
 import type { EQBands } from '../constants/eqPresets';
+import { fetchAndRead } from './httpRequest';
 
 export interface AutoEqIndexEntry {
   id: string;
@@ -27,6 +28,8 @@ const INDEX_URLS = [
 ];
 const CACHE_KEY = 'nebula_autoeq_index_v2';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+let memoryIndex: CachedIndex | null = null;
+let pendingIndex: Promise<AutoEqIndexEntry[]> | null = null;
 
 const BAND_KEYS = ['32', '64', '125', '250', '500', '1k', '2k', '4k', '8k', '16k'] as const;
 const BAND_FREQUENCIES: Record<keyof EQBands, number> = {
@@ -68,6 +71,7 @@ const createEntryFromFixedBandPath = (path: string): AutoEqIndexEntry | null => 
   if (!path.startsWith('results/') || !path.endsWith(' FixedBandEQ.txt')) return null;
 
   const parts = path.split('/');
+  if (parts.some(part => !part || part === '.' || part === '..' || part.includes('\\'))) return null;
   const fileName = decodePathSegment(parts[parts.length - 1] || '');
   const name = fileName.replace(/\s+FixedBandEQ\.txt$/i, '').replace(/_/g, ' ').trim();
   if (!name) return null;
@@ -125,9 +129,8 @@ const parseMarkdownIndex = (markdown: string): AutoEqIndexEntry[] => {
 const fetchMarkdownIndex = async () => {
   for (const url of INDEX_URLS) {
     try {
-      const response = await fetch(url);
-      if (!response.ok) continue;
-      const entries = parseMarkdownIndex(await response.text());
+      const markdown = await fetchAndRead(url, async response => response.ok ? response.text() : '');
+      const entries = parseMarkdownIndex(markdown);
       if (entries.length > 100) return entries;
     } catch {
       // Try the next source before falling back to the tree API.
@@ -137,14 +140,10 @@ const fetchMarkdownIndex = async () => {
 };
 
 const fetchTreeIndex = async () => {
-  const response = await fetch(TREE_URL, {
-    headers: { Accept: 'application/vnd.github+json' },
-  });
-  if (!response.ok) {
-    throw new Error(`AutoEq index request failed (${response.status})`);
-  }
-
-  const data = await response.json() as { tree?: Array<{ path?: string; type?: string }>; truncated?: boolean };
+  const data = await fetchAndRead(TREE_URL, async response => {
+    if (!response.ok) throw new Error(`AutoEq index request failed (${response.status})`);
+    return response.json();
+  }, { headers: { Accept: 'application/vnd.github+json' } }) as { tree?: Array<{ path?: string; type?: string }>; truncated?: boolean };
   const entries = new Map<string, AutoEqIndexEntry>();
   for (const node of data.tree || []) {
     if (node.type !== 'blob' || !node.path) continue;
@@ -160,20 +159,29 @@ const fetchTreeIndex = async () => {
 };
 
 const readCachedIndex = (): CachedIndex | null => {
+  if (memoryIndex) return memoryIndex;
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedIndex;
-    if (!Array.isArray(parsed.entries)) return null;
-    return parsed;
+    if (!Array.isArray(parsed.entries) || !Number.isFinite(parsed.fetchedAt)) return null;
+    const entries = parsed.entries.flatMap(entry => {
+      if (typeof entry?.path !== 'string' || typeof entry.name !== 'string') return [];
+      const validated = createEntryFromFixedBandPath(entry.path);
+      return validated ? [{ ...validated, name: entry.name }] : [];
+    });
+    if (entries.length === 0) return null;
+    memoryIndex = { fetchedAt: parsed.fetchedAt, entries };
+    return memoryIndex;
   } catch {
     return null;
   }
 };
 
 const writeCachedIndex = (entries: AutoEqIndexEntry[]) => {
+  memoryIndex = { fetchedAt: Date.now(), entries };
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), entries }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(memoryIndex));
   } catch {
     // Local storage can be unavailable in private browsing; the feature still works without caching.
   }
@@ -187,11 +195,19 @@ export const fetchAutoEqIndex = async (force = false): Promise<AutoEqIndexEntry[
     return cached.entries;
   }
 
-  const markdownEntries = await fetchMarkdownIndex();
-  const entries = markdownEntries.length > 0 ? markdownEntries : await fetchTreeIndex();
-  entries.sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source));
-  writeCachedIndex(entries);
-  return entries;
+  if (pendingIndex) return pendingIndex;
+  pendingIndex = (async () => {
+    const markdownEntries = await fetchMarkdownIndex();
+    const entries = markdownEntries.length > 0 ? markdownEntries : await fetchTreeIndex();
+    entries.sort((a, b) => a.name.localeCompare(b.name) || a.source.localeCompare(b.source));
+    writeCachedIndex(entries);
+    return entries;
+  })();
+  try {
+    return await pendingIndex;
+  } finally {
+    pendingIndex = null;
+  }
 };
 
 export const searchAutoEqProfiles = async (query: string, limit = 20): Promise<AutoEqIndexEntry[]> => {
@@ -279,10 +295,11 @@ export const parseAutoEqFixedBandProfile = (text: string): AutoEqProfile => {
 };
 
 export const fetchAutoEqProfile = async (entry: AutoEqIndexEntry): Promise<AutoEqProfile> => {
-  const response = await fetch(entry.rawUrl);
-  if (!response.ok) {
-    throw new Error(`AutoEq profile request failed (${response.status})`);
-  }
-
-  return parseAutoEqFixedBandProfile(await response.text());
+  const validated = createEntryFromFixedBandPath(entry.path);
+  if (!validated) throw new Error('Invalid AutoEq profile path.');
+  const text = await fetchAndRead(validated.rawUrl, async response => {
+    if (!response.ok) throw new Error(`AutoEq profile request failed (${response.status})`);
+    return response.text();
+  });
+  return parseAutoEqFixedBandProfile(text);
 };

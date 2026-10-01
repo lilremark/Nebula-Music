@@ -360,6 +360,7 @@ export const StoreProvider: React.FC<{
   const [isSearching, setIsSearching] = useState(false);
   const [lastSearchQuery, setLastSearchQuery] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const searchRequestRef = useRef(0);
 
   const [playHistory, setPlayHistory] = useState<Record<string, { count: number, song: ISong }>>({});
   const [history, setHistory] = useState<ISong[]>([]);
@@ -1257,6 +1258,7 @@ export const StoreProvider: React.FC<{
   // Audio Event Listeners
   useEffect(() => {
     const audio = audioRef.current;
+    const crossfadeAudio = crossfadeAudioRef.current;
     if (!audio) return;
 
     const clearEndAdvanceTimer = () => {
@@ -1312,7 +1314,7 @@ export const StoreProvider: React.FC<{
       if (queue.length === 0) return;
       const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
       if (nextIndex >= 0) {
-        if (activatePreparedTrack(nextIndex)) return;
+        if (stateRef.current.magicCrossfade && activatePreparedTrack(nextIndex)) return;
         if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
         if (reason !== 'ended') console.warn(`Advancing after ${reason} near track end.`);
         setCurrentSongIndex(nextIndex);
@@ -1388,6 +1390,19 @@ export const StoreProvider: React.FC<{
       advanceAfterTrackEnd('ended');
     };
 
+    const onCrossfadeEnded = () => {
+      const handoff = crossfadeHandoffRef.current;
+      const { queue, currentSongIndex, isPlaying, magicCrossfade } = stateRef.current;
+      if (
+        !handoff ||
+        !isPlaying ||
+        !magicCrossfade ||
+        queue[currentSongIndex]?.id !== handoff.songId
+      ) return;
+
+      advanceAfterTrackEnd('crossfade ended');
+    };
+
     const onError = (e: any) => {
       console.error("Playback Error Detected:", audio.error);
       if (audio.error?.code === 4) {
@@ -1423,6 +1438,7 @@ export const StoreProvider: React.FC<{
     audio.addEventListener('waiting', onLoadingTrouble);
     audio.addEventListener('stalled', onLoadingTrouble);
     audio.addEventListener('suspend', onLoadingTrouble);
+    crossfadeAudio?.addEventListener('ended', onCrossfadeEnded);
 
     return () => {
       clearEndAdvanceTimer();
@@ -1437,6 +1453,7 @@ export const StoreProvider: React.FC<{
       audio.removeEventListener('waiting', onLoadingTrouble);
       audio.removeEventListener('stalled', onLoadingTrouble);
       audio.removeEventListener('suspend', onLoadingTrouble);
+      crossfadeAudio?.removeEventListener('ended', onCrossfadeEnded);
     };
   }, [activatePreparedTrack, cancelCrossfade, getMagicFadeSeconds, getNextPlaybackIndex, initAudioContext, startCrossfade]);
 
@@ -1562,6 +1579,7 @@ export const StoreProvider: React.FC<{
       if (isRadioPlaying) {
         initAudioContext('radio');
         audio.play().catch(e => {
+          if (cancelled) return;
           if (e.name !== 'AbortError') console.warn("Radio play failed", e);
           audio.pause();
           audio.load();
@@ -1578,6 +1596,11 @@ export const StoreProvider: React.FC<{
       cancelled = true;
     };
   }, [currentRadioStation, initAudioContext, isRadioPlaying, volume]);
+
+  useEffect(() => () => {
+    radioHlsRef.current?.destroy();
+    radioHlsRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!currentRadioStation) {
@@ -1681,6 +1704,9 @@ export const StoreProvider: React.FC<{
         if (error?.name !== 'AbortError') console.warn('Radio metadata unavailable', error);
       } finally {
         window.clearTimeout(timeoutId);
+        // Even a response without ICY headers can be an endless live stream.
+        // Release its connection as soon as this metadata probe finishes.
+        controller.abort();
         if (!cancelled) setIsRadioMetadataLoading(false);
       }
     };
@@ -1724,7 +1750,7 @@ export const StoreProvider: React.FC<{
   useEffect(() => {
     if (isCrossfadingRef.current || isCrossfadeStartingRef.current) return;
 
-    if (!isPlaying || repeatMode === 'ONE') {
+    if (!isPlaying || repeatMode === 'ONE' || !settings.magicCrossfade) {
       stopCrossfadeAudio();
       return;
     }
@@ -1732,42 +1758,49 @@ export const StoreProvider: React.FC<{
     const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
     if (nextIndex >= 0) prepareCrossfadeTrack(nextIndex);
     else stopCrossfadeAudio();
-  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, stopCrossfadeAudio]);
+  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, settings.magicCrossfade, stopCrossfadeAudio]);
 
   // Handle Playback State
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    let cancelled = false;
+    let handoffTimer: number | undefined;
+    let metadataListener: (() => void) | undefined;
 
     const song = queue[currentSongIndex];
 
     if (song) {
       const url = service.getStreamUrl(song.id, song.suffix);
 
-      if (audio.src !== url) {
-        const handoff = crossfadeHandoffRef.current?.songId === song.id
-          ? crossfadeHandoffRef.current
-          : null;
-
+      const handoff = crossfadeHandoffRef.current?.songId === song.id
+        ? crossfadeHandoffRef.current
+        : null;
+      const sourceChanged = audio.src !== url;
+      if (sourceChanged) {
         audio.src = url;
         audio.volume = volume;
         audio.load();
 
         applyPlaybackAttributes(audio);
+      }
 
+      if (sourceChanged || handoff) {
         if (isPlaying) {
           const finishCrossfadeHandoff = () => {
+            if (cancelled || crossfadeHandoffRef.current !== handoff) return;
             stopCrossfadeAudio();
             crossfadeHandoffRef.current = null;
             isCrossfadingRef.current = false;
 
             const nextIndex = getNextPlaybackIndex(currentSongIndex, stateRef.current.queue, stateRef.current.repeatMode);
-            if (stateRef.current.isPlaying && nextIndex >= 0) {
+            if (stateRef.current.isPlaying && stateRef.current.magicCrossfade && nextIndex >= 0) {
               prepareCrossfadeTrack(nextIndex);
             }
           };
 
           const startPlayback = () => {
+            if (cancelled) return;
             if (handoff && Number.isFinite(handoff.currentTime)) {
               try {
                 const handoffAudio = crossfadeAudioRef.current;
@@ -1782,20 +1815,21 @@ export const StoreProvider: React.FC<{
             if (playPromise !== undefined) {
               playPromise
                 .then(() => {
-                  if (handoff) {
-                    window.setTimeout(finishCrossfadeHandoff, 180);
+                  if (handoff && !cancelled) {
+                    handoffTimer = window.setTimeout(finishCrossfadeHandoff, 180);
                   }
                 })
                 .catch(e => {
                   if (e.name !== 'AbortError') console.warn("Play failed", e);
                 });
             } else if (handoff) {
-              window.setTimeout(finishCrossfadeHandoff, 180);
+              handoffTimer = window.setTimeout(finishCrossfadeHandoff, 180);
             }
             initAudioContext(); // Ensure context is ready
           };
 
           if (handoff && audio.readyState < 1) {
+            metadataListener = startPlayback;
             audio.addEventListener('loadedmetadata', startPlayback, { once: true });
           } else {
             startPlayback();
@@ -1814,6 +1848,11 @@ export const StoreProvider: React.FC<{
       audio.removeAttribute('src');
       audio.load();
     }
+    return () => {
+      cancelled = true;
+      if (handoffTimer !== undefined) window.clearTimeout(handoffTimer);
+      if (metadataListener) audio.removeEventListener('loadedmetadata', metadataListener);
+    };
   }, [applyPlaybackAttributes, cancelCrossfade, currentSongIndex, getNextPlaybackIndex, initAudioContext, isPlaying, pitch, pitchCorrection, playbackRate, prepareCrossfadeTrack, queue, service, stopCrossfadeAudio, volume]);
 
   const playSong = (song: ISong, contextQueue?: ISong[]) => {
@@ -1969,10 +2008,20 @@ export const StoreProvider: React.FC<{
     setViewData(target.data);
   }, []);
   const performSearch = async (query: string) => {
+    const requestId = ++searchRequestRef.current;
     setLastSearchQuery(query); setIsSearching(true);
-    const results = await service.search(query);
-    setSearchResults(results); setIsSearching(false);
     setView('SEARCH');
+    try {
+      const results = await service.search(query);
+      if (requestId === searchRequestRef.current) setSearchResults(results);
+    } catch (error) {
+      if (requestId === searchRequestRef.current) {
+        console.warn('Library search failed', error);
+        setSearchResults({ artists: [], albums: [], songs: [] });
+      }
+    } finally {
+      if (requestId === searchRequestRef.current) setIsSearching(false);
+    }
   };
   const openSearchModal = () => setIsSearchModalOpen(true);
   const closeSearchModal = () => setIsSearchModalOpen(false);
@@ -2026,6 +2075,8 @@ export const StoreProvider: React.FC<{
     service.setCredentials(creds);
     const success = await service.getPing();
     if (success) {
+      searchRequestRef.current += 1;
+      setIsSearching(false);
       setCredentialsState(creds);
       setIsDemoMode(false);
       // Clear any demo mode data to prevent mixing
@@ -2057,6 +2108,8 @@ export const StoreProvider: React.FC<{
   };
 
   const disconnect = async () => {
+    searchRequestRef.current += 1;
+    setIsSearching(false);
     cancelCrossfade();
     service.setCredentials(null as any); setCredentialsState(null);
     await clearCredentials(); await db.clear('api_cache');
@@ -2072,6 +2125,8 @@ export const StoreProvider: React.FC<{
   };
 
   const enableDemoMode = () => {
+    searchRequestRef.current += 1;
+    setIsSearching(false);
     setIsDemoMode(true);
     if (!hasRestoredPreviewPlaylists.current) setPlaylists(MOCK_PLAYLISTS);
   };

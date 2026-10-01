@@ -15,6 +15,8 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { WindowControls } from './window/WindowControls';
+import { InsecureHttpSetting } from './InsecureHttpSetting';
+import { isInsecureHttpUrl, useInsecureHttpSetting } from '../hooks/useInsecureHttpSetting';
 
 const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
   ({ WebkitAppRegion: region }) as CSSProperties;
@@ -26,13 +28,15 @@ export const SetupScreen: React.FC = () => {
   const [pass, setPass] = useState('');
   const [authMode, setAuthMode] = useState<'password' | 'apiKey'>('password');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const httpSetting = useInsecureHttpSetting();
 
   const isInsecure = useMemo(() => {
-    return url && !url.startsWith('https://') && url.length > 7;
+    return isInsecureHttpUrl(url);
   }, [url]);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!httpSetting.canConnect(url)) return;
     setStatus('loading');
     const success = await connectToSubsonic(url, user, pass, authMode);
     if (!success) {
@@ -174,6 +178,7 @@ export const SetupScreen: React.FC = () => {
                   <span>HTTPS is recommended for secure server access.</span>
                 </div>
               )}
+              {isInsecure && <InsecureHttpSetting setting={httpSetting} />}
 
               {status === 'error' && (
                 <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-3 text-sm text-red-700 dark:text-red-400">
@@ -187,6 +192,7 @@ export const SetupScreen: React.FC = () => {
                   type="submit"
                   size="md"
                   loading={status === 'loading'}
+                  disabled={!httpSetting.canConnect(url)}
                   icon={status === 'loading' ? undefined : <ArrowRight className="h-4 w-4" />}
                   className="w-full justify-center rounded-2xl"
                 >
