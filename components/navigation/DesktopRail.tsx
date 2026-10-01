@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Compass, Disc3, Heart, Home, ListMusic, Mic2, Moon, Music2, Radio, Search, Settings, Sun } from 'lucide-react';
+import { Compass, Disc3, Heart, Home, ListMusic, Mic2, Music2, Radio, Search, Settings } from 'lucide-react';
 import { useStore } from '../../context/Store';
-import { useTheme } from '../../context/ThemeContext';
+import logo from '../../logo.svg';
+import { ServerConnectionStatus } from './ServerConnectionStatus';
 import type { View } from '../../types';
 
 const sections = [
@@ -24,8 +25,7 @@ const parentView = (view: View): View => {
 };
 
 export const DesktopRail: React.FC = () => {
-  const { currentView, setView, openSearchModal, settings, credentials, isDemoMode, service, playlists } = useStore();
-  const { mode, toggleTheme } = useTheme();
+  const { currentView, setView, openSearchModal, settings, service, playlists } = useStore();
   const reducedMotion = useReducedMotion();
   const visibleSections = sections.map(section => ({
     ...section,
@@ -49,8 +49,8 @@ export const DesktopRail: React.FC = () => {
 
   return <aside className="nebula-rail" aria-label="Music navigation">
     <button type="button" className="nebula-rail-brand" onClick={() => setView('HOME')} aria-label="Nebula Home">
-      <span className="nebula-brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
-      <span><strong>Nebula</strong><small>Your music, your server</small></span>
+      <img className="nebula-brand-mark" src={logo} alt="" />
+      <strong>Nebula</strong>
     </button>
     <div className="nebula-rail-scroll">
       <nav aria-label="Discover" className="nebula-rail-section">
@@ -72,11 +72,7 @@ export const DesktopRail: React.FC = () => {
     </div>
     <div className="nebula-rail-footer">
       <button type="button" className="nebula-rail-item" data-active={currentView === 'SETTINGS'} onClick={() => setView('SETTINGS')}><Settings size={19} strokeWidth={1.9} aria-hidden="true" /><span>Settings</span></button>
-      <button type="button" className="nebula-rail-item" onClick={toggleTheme} aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} theme`}>
-        {mode === 'dark' ? <Sun size={19} strokeWidth={1.9} aria-hidden="true" /> : <Moon size={19} strokeWidth={1.9} aria-hidden="true" />}
-        <span>{mode === 'dark' ? 'Light appearance' : 'Dark appearance'}</span>
-      </button>
-      <div className="nebula-rail-status"><span />{isDemoMode ? 'Demo library' : credentials ? 'Connected to server' : 'Offline'}</div>
+      <ServerConnectionStatus />
     </div>
   </aside>;
 };

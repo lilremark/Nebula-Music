@@ -4,6 +4,7 @@ import { ArrowLeft, Menu, Moon, Search, Settings, Sun } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { useTheme } from '../../context/ThemeContext';
 import { usePlatform } from '../../platform/PlatformContext';
+import logo from '../../logo.svg';
 
 const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
     ({ WebkitAppRegion: region }) as CSSProperties;
@@ -69,17 +70,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }
                     <button
                         data-nebula-topbar-mark
                         onClick={() => setView('HOME')}
-                        className="w-8 h-8 rounded-lg bg-white flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+                        className="w-8 h-8 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
                         title="Go to Home"
                         style={appRegion('no-drag')}
                     >
-                        <svg viewBox="0 0 24 24" className="w-4 h-4 text-black stroke-current" fill="none" strokeWidth="3" strokeLinecap="round">
-                            <path d="M4 10v4" className="opacity-40" />
-                            <path d="M8 7v10" className="opacity-60" />
-                            <path d="M12 3v18" className="opacity-100" />
-                            <path d="M16 7v10" className="opacity-60" />
-                            <path d="M20 10v4" className="opacity-40" />
-                        </svg>
+                        <img src={logo} alt="" className="w-full h-full" />
                     </button>
 
                     <span data-nebula-topbar-title className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">

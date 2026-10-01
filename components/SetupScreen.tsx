@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { CoverFlow } from './CoverFlow';
+import logo from '../logo.svg';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
@@ -75,20 +76,8 @@ export const SetupScreen: React.FC = () => {
             className="nebula-setup-card border-neutral-200/70 bg-white/90 dark:border-white/10 dark:bg-neutral-950/82"
           >
             <div className="mb-3 text-center">
-              <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-black shadow-[0_10px_30px_rgba(0,0,0,0.18)] dark:bg-white">
-                <svg viewBox="0 0 24 24" className="h-7 w-7 stroke-current" fill="none" strokeWidth="2.6" strokeLinecap="round">
-                  <path d="M4 10v4" className="opacity-40" />
-                  <path d="M8 7v10" className="opacity-60" />
-                  <path d="M12 3v18" />
-                  <path d="M16 7v10" className="opacity-60" />
-                  <path d="M20 10v4" className="opacity-40" />
-                </svg>
-              </div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-neutral-500 dark:text-white/40">Nebula Music</p>
+              <img src={logo} alt="" className="mx-auto mb-2 h-14 w-14" />
               <h1 className="mt-1 text-2xl font-bold tracking-tight">Sign in to Nebula</h1>
-              <p className="mt-1 text-sm text-neutral-600 dark:text-white/55">
-                Connect your Subsonic-compatible server and start listening.
-              </p>
             </div>
 
             <form onSubmit={handleConnect} className="space-y-2">

@@ -136,7 +136,6 @@ export const SearchModal: React.FC = () => {
                                 <Command className="w-4 h-4 text-neutral-500" />
                                 <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">Start typing to search</span>
                             </div>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-500 mt-3">Search your entire music library</p>
                         </div>
                     )}
 

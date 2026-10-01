@@ -264,14 +264,7 @@ export const HomeView: React.FC = () => {
         <div data-nebula-view="home" className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
             <div className="nebula-home-intro">
                 <div>
-                    <p className="nebula-home-eyebrow">YOUR MUSIC, ON YOUR SERVER</p>
                     <h1>Listen Now</h1>
-                    <p>Pick up where you left off or find something new in your library.</p>
-                </div>
-                <div className="nebula-home-shortcuts" aria-label="Library shortcuts">
-                    <button type="button" onClick={() => setView('ALBUMS')}>Albums <ChevronRight size={15} aria-hidden="true" /></button>
-                    <button type="button" onClick={() => setView('PLAYLISTS')}>Playlists <ChevronRight size={15} aria-hidden="true" /></button>
-                    <button type="button" onClick={() => setView('RADIO')}>Radio <ChevronRight size={15} aria-hidden="true" /></button>
                 </div>
             </div>
             <HeroSection songs={randomSongs} />
@@ -304,7 +297,6 @@ export const HomeView: React.FC = () => {
                 <section className="nebula-home-rotation" aria-labelledby="nebula-home-rotation-heading">
                     <div className="nebula-home-rotation-heading">
                         <div>
-                            <p className="nebula-home-eyebrow">FROM YOUR LISTENING</p>
                             <h2 id="nebula-home-rotation-heading">Your rotation</h2>
                         </div>
                         <span>{activeTab === 'played'

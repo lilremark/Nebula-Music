@@ -38,24 +38,24 @@ export const lightColors: ThemeColors = {
 };
 
 export const darkColors: ThemeColors = {
-    bg: '#11131c',
-    bgSecondary: '#181a25',
-    bgTertiary: '#242735',
-    text: '#f5f5fa',
-    textSecondary: '#bcc0ce',
-    textTertiary: '#abb0c0',
-    border: '#333746',
-    borderHover: '#4b5163',
-    hover: '#242735',
-    active: '#303446',
-    muted: '#abb0c0'
+    bg: '#000000',
+    bgSecondary: '#080808',
+    bgTertiary: '#181818',
+    text: '#f5f5f5',
+    textSecondary: '#bcbcbc',
+    textTertiary: '#a8a8a8',
+    border: '#303030',
+    borderHover: '#484848',
+    hover: '#181818',
+    active: '#242424',
+    muted: '#a8a8a8'
 };
 
 
 export const themeColors = { light: lightColors, dark: darkColors };
 
 /** Existing defaults from Store; user overrides remain supported. */
-export const defaultAccent = { primaryColor: '#5368d8', secondaryColor: '#7b88e5', backgroundColor: '#11131c' };
+export const defaultAccent = { primaryColor: '#5368d8', secondaryColor: '#7b88e5', backgroundColor: '#000000' };
 
 /**
  * Studio is the tactile direction introduced by refinement E. These values are

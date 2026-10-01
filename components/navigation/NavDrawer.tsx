@@ -5,6 +5,8 @@ import { useStore } from '../../context/Store';
 import { usePlatform } from '../../platform/PlatformContext';
 import { View } from '../../types';
 import { getNavDrawerTopClass } from './drawerLayout';
+import logo from '../../logo.svg';
+import { ServerConnectionStatus } from './ServerConnectionStatus';
 
 const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
     ({ WebkitAppRegion: region }) as CSSProperties;
@@ -15,7 +17,7 @@ interface NavDrawerProps {
 }
 
 export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
-    const { currentView, setView, openSearchModal, isDemoMode, settings, playlists, service } = useStore();
+    const { currentView, setView, openSearchModal, settings, playlists, service } = useStore();
     const platform = usePlatform();
     const drawerTopClass = getNavDrawerTopClass(platform?.info.os);
     const s = settings.sidebar;
@@ -102,18 +104,9 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                 {/* Header */}
                 <div className="flex items-center justify-between p-5 border-b border-neutral-200 dark:border-white/10" style={appRegion('no-drag')}>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                            <svg viewBox="0 0 24 24" className="w-5 h-5 text-black stroke-current" fill="none" strokeWidth="3" strokeLinecap="round">
-                                <path d="M4 10v4" className="opacity-40" />
-                                <path d="M8 7v10" className="opacity-60" />
-                                <path d="M12 3v18" className="opacity-100" />
-                                <path d="M16 7v10" className="opacity-60" />
-                                <path d="M20 10v4" className="opacity-40" />
-                            </svg>
-                        </div>
+                        <img src={logo} alt="" className="w-10 h-10" />
                         <div>
                             <h2 className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">Nebula</h2>
-                            <p className="text-[10px] text-neutral-600 dark:text-white/60">Your music, your server</p>
                         </div>
                     </div>
 
@@ -167,15 +160,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
 
                 {/* Footer - Connection Status */}
                 <div className="p-4 border-t border-white/10">
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/5">
-                        <div className={`w-2 h-2 rounded-full ${isDemoMode
-                            ? 'bg-amber-500'
-                            : 'bg-emerald-500 animate-pulse'
-                            }`} />
-                        <span className="text-xs text-neutral-500 dark:text-white/50 font-mono uppercase tracking-wider">
-                            {isDemoMode ? 'Demo Mode' : 'Connected'}
-                        </span>
-                    </div>
+                    <ServerConnectionStatus />
                 </div>
             </nav>
         </>

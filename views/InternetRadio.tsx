@@ -82,9 +82,6 @@ export const InternetRadioView: React.FC = () => {
                         Internet Radio
                     </div>
                     <h1 className="text-3xl font-black text-neutral-900 dark:text-white">Radio Stations</h1>
-                    <p className="mt-2 max-w-2xl text-sm text-neutral-600 dark:text-white/60">
-                        Add direct MP3, AAC, OGG, or playlist stream URLs from internet radio stations.
-                    </p>
                 </div>
                 <button
                     onClick={openNewStationModal}
@@ -189,7 +186,6 @@ export const InternetRadioView: React.FC = () => {
                         <div className="flex items-center justify-between border-b border-neutral-200 p-5 dark:border-white/10">
                             <div>
                                 <h2 className="text-lg font-bold text-neutral-900 dark:text-white">{editingId ? 'Edit Station' : 'New Station'}</h2>
-                                <p className="mt-1 text-sm text-neutral-600 dark:text-white/55">Add a direct stream or playlist URL.</p>
                             </div>
                             <button
                                 type="button"

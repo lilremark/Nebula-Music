@@ -40,7 +40,6 @@ export const SearchView: React.FC = () => {
                     <SearchIcon className="w-8 h-8 text-neutral-500" />
                 </div>
                 <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-3">Search your library</h1>
-                <p className="max-w-md mx-auto leading-relaxed">Find your favorite artists, albums, and songs. Just start typing to explore your collection.</p>
             </div>
         );
     }

@@ -40,6 +40,19 @@ app.on('browser-window-created', (_event, win) => {
         findButton('Try Demo Mode').click();
         await waitFor(() => document.querySelector('.nebula-quick-song-play'), 'demo library');
         [...document.querySelectorAll('button')].find(button => button.getAttribute('aria-label') === "Close what's new")?.click();
+        document.querySelector('.nebula-topbar-theme[aria-label="Switch to dark theme"]')?.click();
+        await waitFor(() => document.documentElement.classList.contains('dark'), 'dark theme');
+        const intro = document.querySelector('.nebula-home-intro');
+        if (intro.querySelector('button, p') || document.querySelector('.nebula-rail-brand small'))
+          throw new Error('Home shortcuts or introductory copy remained visible');
+        if (document.querySelector('.nebula-rail-footer button[aria-label*="theme"]'))
+          throw new Error('Sidebar appearance toggle remained visible');
+        const logo = document.querySelector('.nebula-rail-brand img');
+        await waitFor(() => logo?.complete && logo.naturalWidth > 0, 'official logo');
+        if (!logo.src.includes('logo-') || getComputedStyle(document.querySelector('.nebula-next')).backgroundColor !== 'rgb(0, 0, 0)')
+          throw new Error('Official branding or OLED background was not applied');
+        if (parseFloat(getComputedStyle(document.querySelector('.nebula-rail-status strong')).fontSize) < 13)
+          throw new Error('Sidebar connection status is too small');
         document.querySelector('.nebula-quick-song-play').click();
         await waitFor(() => document.querySelector('.nebula-transport'), 'bottom player');
         const waveform = document.querySelector('.nebula-transport-waveform');
@@ -50,6 +63,11 @@ app.on('browser-window-created', (_event, win) => {
         await waitFor(() => document.querySelector('[data-nebula-panel="now-playing"]'), 'side player');
         if (document.querySelector('.nebula-transport')) throw new Error('Bottom and side players are visible together');
       })()`);
+      win.setContentSize(1451, 1050);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      win.setContentSize(1450, 1050);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      fs.writeFileSync(path.join(profile, 'home-side-player.png'), (await win.webContents.capturePage()).toPNG());
       // An open sidebar must give way to the bottom player below its breakpoint.
       win.setContentSize(1100, 850);
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -76,6 +94,8 @@ app.on('browser-window-created', (_event, win) => {
         findButton('Settings').click();
         await waitFor(() => document.querySelector('[data-nebula-settings-jumps]'), 'settings');
         await waitFor(() => document.querySelector('[data-nebula-http-consent]'), 'HTTP consent');
+        if (!document.querySelector('[data-nebula-settings-panel-heading] p'))
+          throw new Error('Settings descriptions were removed');
         const nav = document.querySelector('[data-nebula-settings-jumps]');
         const buttons = [...nav.querySelectorAll('button')];
         const bounds = buttons.map(button => button.getBoundingClientRect());
@@ -111,6 +131,12 @@ app.on('browser-window-created', (_event, win) => {
       })()`);
       console.log(JSON.stringify(narrow));
       fs.writeFileSync(path.join(profile, 'settings-narrow.png'), (await win.webContents.capturePage()).toPNG());
+      await win.webContents.executeJavaScript(`(async () => {
+        document.querySelector('.nebula-topbar-theme[aria-label="Switch to light theme"]').click();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        if (document.documentElement.classList.contains('dark') || getComputedStyle(document.querySelector('.nebula-next')).backgroundColor === 'rgb(0, 0, 0)')
+          throw new Error('Light theme no longer works');
+      })()`);
       clearTimeout(timeout);
       finish();
     } catch (error) { finish(error); }

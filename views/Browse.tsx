@@ -5,7 +5,7 @@ import { Play, Pause, ChevronLeft, ChevronRight, Music, RefreshCw, Heart, Radio,
 
 // Mix Card Component
 const MixCard: React.FC<{
-    mix: IPlaylist & { icon: any; desc: string };
+    mix: IPlaylist & { icon: any };
     onOpen: () => void;
     onPlay: () => void;
 }> = ({ mix, onOpen, onPlay }) => {
@@ -56,7 +56,6 @@ const MixCard: React.FC<{
             {/* Info */}
             <div className="p-4">
                 <h3 className="font-bold text-neutral-900 dark:text-white text-base mb-1">{mix.name}</h3>
-                <p className="text-xs text-neutral-600 dark:text-white/70">{mix.desc}</p>
             </div>
         </div>
     );
@@ -174,13 +173,10 @@ const FeaturedCarousel: React.FC<{
             <div data-nebula-featured-shade aria-hidden="true" />
             <div data-nebula-featured-copy>
                 <p data-nebula-featured-context>
-                    {activeSong.genre || activeSong.album || 'Selected from your library'}
+                    {activeSong.genre || activeSong.album}
                 </p>
                 <h2>{activeSong.title}</h2>
                 <p data-nebula-featured-artist>{activeSong.artist}</p>
-                <p data-nebula-featured-description>
-                    {activeSong.album ? `From ${activeSong.album}.` : 'A featured track from your collection.'}
-                </p>
                 <button type="button" onClick={() => onPlay(activeSong)} data-nebula-featured-play>
                     <Play className="h-5 w-5 fill-current" />
                     Play
@@ -274,7 +270,7 @@ const pickRandomGenre = (songs: ISong[]) => {
 export const BrowseView: React.FC = () => {
     const { service, playSong, setView, getMostPlayedSongs, playInstantMix } = useStore();
     const isStudioPreview = typeof document !== 'undefined' && document.body.classList.contains('studio-preview');
-    const [generatedMixes, setGeneratedMixes] = useState<(IPlaylist & { icon: any; desc: string })[]>([]);
+    const [generatedMixes, setGeneratedMixes] = useState<(IPlaylist & { icon: any })[]>([]);
     const [featuredSongs, setFeaturedSongs] = useState<ISong[]>([]);
     const [dailyAlbums, setDailyAlbums] = useState<IAlbum[]>([]);
     const [recommendedAlbums, setRecommendedAlbums] = useState<IAlbum[]>([]);
@@ -380,10 +376,9 @@ export const BrowseView: React.FC = () => {
             },
         );
 
-        const createMix = (idSuffix: string, title: string, desc: string, icon: any, songs: ISong[]) => ({
+        const createMix = (idSuffix: string, title: string, icon: any, songs: ISong[]) => ({
             id: `generated-${idSuffix}-${Date.now()}`,
             name: title,
-            desc,
             icon,
             songCount: songs.length,
             duration: songs.reduce((acc, s) => acc + s.duration, 0),
@@ -393,9 +388,9 @@ export const BrowseView: React.FC = () => {
         });
 
         const mixes = [
-            createMix('flow', 'Flow State', topGenre ? `Focus for ${topGenre} fans` : 'Focus generated for you', Zap, flowSongs),
-            createMix('oldies', 'Nostalgia Trip', 'Timeless favorites from the past', Radio, oldiesSongs),
-            createMix('daily', 'Daily Mix', 'Fresh tracks to start your day', Music, dailySongs),
+            createMix('flow', 'Flow State', Zap, flowSongs),
+            createMix('oldies', 'Nostalgia Trip', Radio, oldiesSongs),
+            createMix('daily', 'Daily Mix', Music, dailySongs),
         ];
 
         const featured = isStudioPreview
@@ -478,9 +473,7 @@ export const BrowseView: React.FC = () => {
             {/* Header */}
             <div data-nebula-view-header className="flex items-center justify-between mb-8">
                 <div>
-                    <p className="nebula-home-eyebrow">EXPLORE YOUR COLLECTION</p>
                     <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">Browse</h1>
-                    <p className="nebula-browse-subtitle">Discover music from your server, shaped by what you play.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {isStudioPreview && (
@@ -532,9 +525,6 @@ export const BrowseView: React.FC = () => {
             </div>
 
             <div data-nebula-browse-intro className="mb-4 flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-100 p-4 dark:border-white/10 dark:bg-neutral-900/60 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-neutral-700 dark:text-white/70">
-                    Builds a mix based off your listening history.
-                </p>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     {instantMixError && (
                         <span className="text-sm text-red-500 dark:text-red-400">{instantMixError}</span>

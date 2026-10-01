@@ -48,17 +48,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --theme-bg: #11131c;
-    --theme-bgSecondary: #181a25;
-    --theme-bgTertiary: #242735;
-    --theme-text: #f5f5fa;
-    --theme-textSecondary: #bcc0ce;
-    --theme-textTertiary: #abb0c0;
-    --theme-border: #333746;
-    --theme-borderHover: #4b5163;
-    --theme-hover: #242735;
-    --theme-active: #303446;
-    --theme-muted: #abb0c0;
+    --theme-bg: #000000;
+    --theme-bgSecondary: #080808;
+    --theme-bgTertiary: #181818;
+    --theme-text: #f5f5f5;
+    --theme-textSecondary: #bcbcbc;
+    --theme-textTertiary: #a8a8a8;
+    --theme-border: #303030;
+    --theme-borderHover: #484848;
+    --theme-hover: #181818;
+    --theme-active: #242424;
+    --theme-muted: #a8a8a8;
   }
 }
 
