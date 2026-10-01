@@ -182,7 +182,11 @@ html.dark .nebula-next {
 .nebula-next [data-nebula-settings-panel-heading] { border-color: var(--next-line); background: var(--next-raised); }
 .nebula-next [data-nebula-settings-panel-heading] h2 { letter-spacing: -.01em; text-transform: none; }
 .nebula-next .nebula-setting-switch[aria-checked="true"] { background: var(--next-accent); }
-.nebula-next [data-nebula-settings-jumps] { border-radius: 13px; }
+.nebula-next [data-nebula-settings-jumps] { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; padding: 6px; border: 1px solid var(--next-line); border-radius: 13px; background: var(--next-surface); }
+.nebula-next [data-nebula-settings-jumps] button { min-height: 40px; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 650; color: var(--next-muted); white-space: nowrap; }
+.nebula-next [data-nebula-settings-jumps] button:hover, .nebula-next [data-nebula-settings-jumps] button[aria-current="true"] { color: var(--next-text); background: var(--next-raised); }
+.nebula-next [data-nebula-settings-jumps] button:focus-visible { outline: 2px solid var(--next-accent); outline-offset: 2px; }
+.nebula-next [data-nebula-http-consent] { border-color: var(--next-line); background: var(--next-raised); }
 .nebula-next [data-nebula-player="sidebar"] { color: var(--next-text); }
 .nebula-next [data-nebula-panel="now-playing"] { border-color: var(--next-line); background: var(--next-surface); }
 .nebula-next [data-nebula-player="floating"] { background: var(--next-surface); border: 1px solid var(--next-line); box-shadow: 0 20px 45px -25px #0a0e23c4 !important; }
@@ -206,8 +210,10 @@ html.dark .nebula-next {
 .nebula-transport-play:hover { transform: scale(1.06); }
 .nebula-transport-progress { display: flex; align-items: center; gap: 10px; width: 100%; }
 .nebula-transport-progress > span { min-width: 30px; color: var(--next-muted); font-size: 9px; text-align: center; font-variant-numeric: tabular-nums; }
-.nebula-transport-progress input, .nebula-transport-tools input { width: 100%; height: 4px; appearance: none; border-radius: 99px; outline: none; background: linear-gradient(to right, var(--next-accent) var(--progress), var(--next-line) var(--progress)); }
-.nebula-transport-progress input::-webkit-slider-thumb, .nebula-transport-tools input::-webkit-slider-thumb { width: 10px; height: 10px; appearance: none; border-radius: 50%; background: var(--next-text); cursor: pointer; }
+.nebula-transport-waveform { flex: 1; min-width: 0; height: 28px; }
+.nebula-transport-waveform:focus-within { outline: 2px solid var(--next-accent); outline-offset: 3px; border-radius: 3px; }
+.nebula-transport-tools input { width: 100%; height: 4px; appearance: none; border-radius: 99px; outline: none; background: linear-gradient(to right, var(--next-accent) var(--progress), var(--next-line) var(--progress)); }
+.nebula-transport-tools input::-webkit-slider-thumb { width: 10px; height: 10px; appearance: none; border-radius: 50%; background: var(--next-text); cursor: pointer; }
 .nebula-transport-live { flex: 1; height: 4px; border-radius: 99px; background: var(--next-accent); }
 .nebula-transport-tools { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-width: 0; }
 .nebula-transport-tools input { width: min(100%, 100px); margin: 0 6px; }

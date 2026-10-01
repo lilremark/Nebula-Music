@@ -166,7 +166,7 @@ export interface AppSettings {
       '16k': number;
     };
   };
-  miniPlayerMode: 'floating' | 'sidebar'; // desktop transport layout; sidebar includes the bottom bar and optional panel
+  miniPlayerMode: 'floating' | 'sidebar'; // sidebar layout uses the bottom bar only while the side panel is closed
   progressVisualization: 'bar' | 'waveform';
   magicCrossfade: boolean;
   streamDeck: {

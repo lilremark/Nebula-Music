@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/Store';
+import { useTrackWaveform } from '../../hooks/useTrackWaveform';
+import { PlaybackProgress } from './PlaybackProgress';
 
 interface DesktopPlaybackBarProps {
   onExpand: () => void;
@@ -21,6 +23,14 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
   } = useStore();
   const song = queue[currentSongIndex];
   const isRadio = !!currentRadioStation;
+  const streamUrl = !isRadio && song ? service.getStreamUrl(song.id, song.suffix) : null;
+  const waveform = useTrackWaveform(isRadio ? undefined : song?.id, streamUrl);
+  // Preserve peaks while keeping bars legible in the narrower bottom transport.
+  const compactWaveform = useMemo(() => waveform?.reduce<number[]>((peaks, peak, index) => {
+    const bucket = Math.floor(index / 2);
+    peaks[bucket] = Math.max(peaks[bucket] || 0, peak);
+    return peaks;
+  }, []) ?? null, [waveform]);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -56,7 +66,7 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
   const seek = (event: React.ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;
     if (!audio || !resolvedDuration) return;
-    const nextPosition = Number(event.target.value);
+    const nextPosition = Number(event.target.value) / 100 * resolvedDuration;
     audio.currentTime = nextPosition;
     setPosition(nextPosition);
   };
@@ -81,7 +91,17 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
       </div>
       <div className="nebula-transport-progress">
         <span>{isRadio ? 'LIVE' : formatTime(position)}</span>
-        {isRadio ? <span className="nebula-transport-live" /> : <input type="range" min={0} max={Math.max(1, resolvedDuration)} step={0.1} value={Math.min(position, resolvedDuration || 0)} onChange={seek} aria-label="Playback position" style={{ '--progress': `${resolvedDuration ? position / resolvedDuration * 100 : 0}%` } as React.CSSProperties} />}
+        {isRadio ? <span className="nebula-transport-live" /> : <PlaybackProgress
+          progress={resolvedDuration ? position / resolvedDuration * 100 : 0}
+          mode="waveform"
+          waveform={compactWaveform}
+          accentColor="var(--next-accent)"
+          baseColor="var(--next-line)"
+          markerColor="var(--next-text)"
+          onScrub={seek}
+          scrubbable={resolvedDuration > 0}
+          trackClassName="nebula-transport-waveform"
+        />}
         <span>{isRadio ? currentRadioStation?.genre || 'RADIO' : formatTime(resolvedDuration)}</span>
       </div>
     </div>

@@ -170,9 +170,9 @@ export const AppContent: React.FC<{
   // Determine player display mode based on settings
   const useSidebarPlayer = settings.miniPlayerMode === 'sidebar';
   const useFloatingPlayer = settings.miniPlayerMode === 'floating';
-  const showSidebarPlayer = viewportWidth >= 1320 && useSidebarPlayer && !isSidebarCollapsed;
+  const showSidebarPlayer = viewportWidth >= 1320 && useSidebarPlayer && isPlayerVisible && !isSidebarCollapsed;
   const showFloatingPlayer = viewportWidth >= 1024 && useFloatingPlayer;
-  const showDesktopPlaybackBar = viewportWidth >= 1024 && useSidebarPlayer && isPlayerVisible;
+  const showDesktopPlaybackBar = viewportWidth >= 1024 && useSidebarPlayer && isPlayerVisible && !showSidebarPlayer;
 
   return (
     <div className="nebula-next relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">

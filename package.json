@@ -19,6 +19,7 @@
     "build": "vite build",
     "build:main": "node esbuild.config.mjs",
     "test:desktop": "electron scripts/smokeDesktop.cjs",
+    "test:player-ui": "electron scripts/smokePlayerUi.cjs",
     "test:audio": "electron scripts/testEqAudio.cjs",
     "build:electron": "node esbuild.config.mjs && vite build",
     "start:electron": "node esbuild.config.mjs && vite build && electron .",
