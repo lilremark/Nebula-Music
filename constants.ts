@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.16';
+export const APP_VERSION = '2.5.0-beta.17';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,24 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.17',
+    date: '2026-10-02',
+    title: 'Player and Library UI Refinements',
+    changes: [
+      'Fixed the sidebar logo staying hidden after mouse interaction and refined active navigation highlights.',
+      'Made the sidebar player available in smaller windows with a compact panel and exclusive player visibility.',
+      'Shared the speed and pitch popover across bottom, sidebar, and full-screen players with 0.1-step buttons and sliders.',
+      'Clarified update status with red Available and green Up to Date badges.',
+      'Removed excess spacing before collection tracks while preserving stable sticky-header scrolling.',
+      'Restyled Songs with divided track rows, larger controls, artwork, and favorite actions.',
+      'Kept Albums filters on a single compact row with a shorter search field.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.17'
+    }
+  },
   {
     version: '2.5.0-beta.16',
     date: '2026-10-02',
