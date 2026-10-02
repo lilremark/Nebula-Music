@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Volume2, Volume1, VolumeX,
     Repeat, Repeat1, Heart, AudioWaveform,
-    ListMusic, Maximize2, PanelRightClose, Gauge, X, Minus, Plus
+    ListMusic, Maximize2, PanelRightClose
 } from 'lucide-react';
+import { SpeedPitchControls } from './SpeedPitchControls';
 import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
@@ -42,15 +43,13 @@ const withAlpha = (color: string, alpha: number) => {
 };
 
 export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCollapse }) => {
-    const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection, repeatMode, toggleRepeat, toggleLike, settings, updateSettings } = useStore();
+    const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, repeatMode, toggleRepeat, toggleLike, settings, updateSettings } = useStore();
 
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isHoveringVolume, setIsHoveringVolume] = useState(false);
-    const [showSpeedPitchModal, setShowSpeedPitchModal] = useState(false);
     const [visualProgress, setVisualProgress] = useState(0);
     const [isQueueCollapsed, setIsQueueCollapsed] = useState(false);
-    const speedPitchPopoverRef = useRef<HTMLDivElement>(null);
 
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 600) : '';
@@ -95,19 +94,6 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
         syncDuration();
         return () => audio.removeEventListener('loadedmetadata', syncDuration);
     }, [audioRef]);
-
-    useEffect(() => {
-        if (!showSpeedPitchModal) return;
-
-        const handlePointerDown = (event: PointerEvent) => {
-            if (!speedPitchPopoverRef.current?.contains(event.target as Node)) {
-                setShowSpeedPitchModal(false);
-            }
-        };
-
-        document.addEventListener('pointerdown', handlePointerDown);
-        return () => document.removeEventListener('pointerdown', handlePointerDown);
-    }, [showSpeedPitchModal]);
 
     const progress = duration ? (currentTime / duration) * 100 : 0;
     const displayProgress = visualProgress || progress;
@@ -296,137 +282,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                     </button>
 
                     {/* Speed Control */}
-                    <div className="relative" ref={speedPitchPopoverRef}>
-                        <button
-                            onClick={() => setShowSpeedPitchModal(!showSpeedPitchModal)}
-                            className={`p-2 transition-colors active:scale-95 ${playbackRate !== 1.0 || pitch !== 0 ? 'text-neutral-900 dark:text-white' : 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white'}`}
-                            title={`Speed: ${playbackRate}x${pitch !== 0 ? ` / Pitch: ${pitch > 0 ? '+' : ''}${pitch}` : ''}`}
-                            aria-label="Open playback speed and pitch settings"
-                        >
-                            <Gauge className="w-5 h-5" />
-                        </button>
-
-                        {/* Speed & Pitch Modal */}
-                        {showSpeedPitchModal && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-950/95 z-50">
-                                <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
-                                    <div>
-                                        <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-white/45">Playback</p>
-                                        <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Speed & Pitch</h3>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowSpeedPitchModal(false)}
-                                        className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 transition-all dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10"
-                                        aria-label="Close playback settings"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4 p-4">
-                                    {/* Speed Control */}
-                                    <div>
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Speed</label>
-                                            <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">0.5x-2.0x</span>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                            <button
-                                                onClick={() => {
-                                                    const newSpeed = Math.max(0.5, Math.round((playbackRate - 0.1) * 10) / 10);
-                                                    setPlaybackRate(newSpeed);
-                                                    if (audioRef.current) audioRef.current.playbackRate = newSpeed;
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                aria-label="Decrease speed"
-                                            >
-                                                <Minus className="w-4 h-4" />
-                                            </button>
-                                            <span className="min-w-16 text-center text-base font-mono text-neutral-900 dark:text-white font-bold tabular-nums">{playbackRate.toFixed(1)}x</span>
-                                            <button
-                                                onClick={() => {
-                                                    const newSpeed = Math.min(2.0, Math.round((playbackRate + 0.1) * 10) / 10);
-                                                    setPlaybackRate(newSpeed);
-                                                    if (audioRef.current) audioRef.current.playbackRate = newSpeed;
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                aria-label="Increase speed"
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Pitch Control */}
-                                    <div>
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Pitch</label>
-                                            <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">semitones</span>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                            <button
-                                                onClick={() => setPitch(Math.max(-12, pitch - 1))}
-                                                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                aria-label="Decrease pitch"
-                                            >
-                                                <Minus className="w-4 h-4" />
-                                            </button>
-                                            <span className="min-w-16 text-center text-base font-mono text-neutral-900 dark:text-white font-bold tabular-nums">{pitch > 0 ? '+' : ''}{pitch}</span>
-                                            <button
-                                                onClick={() => setPitch(Math.min(12, pitch + 1))}
-                                                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                aria-label="Increase pitch"
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Mode Toggle */}
-                                    <div className="border-t border-neutral-200 pt-4 dark:border-white/10">
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Pitch Mode</label>
-                                            <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">{pitchCorrection ? 'locked' : 'linked'}</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-1 rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                            <button
-                                                onClick={() => setPitchCorrection(true)}
-                                                className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${pitchCorrection
-                                                    ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
-                                                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
-                                                    }`}
-                                            >
-                                                Digital
-                                            </button>
-                                            <button
-                                                onClick={() => setPitchCorrection(false)}
-                                                className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${!pitchCorrection
-                                                    ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
-                                                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
-                                                    }`}
-                                            >
-                                                Analogue
-                                            </button>
-                                        </div>
-                                        <p className="text-[10px] text-neutral-500 dark:text-white/50 mt-2 leading-snug">
-                                            {pitchCorrection ? 'Speed and pitch adjust independently.' : 'Speed changes pitch together.'}
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        onClick={() => {
-                                            setPlaybackRate(1.0);
-                                            setPitch(0);
-                                            if (audioRef.current) audioRef.current.playbackRate = 1.0;
-                                        }}
-                                        className="w-full py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 dark:text-white/60 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 rounded-lg transition-all"
-                                    >
-                                        Reset
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <SpeedPitchControls />
 
                     <button
                         onClick={onExpand}

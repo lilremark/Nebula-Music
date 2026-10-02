@@ -17,6 +17,9 @@ export const getUpdateAction = (state: UpdaterState): UpdateAction => {
   if (state.installMode === 'automatic' && state.phase === 'downloaded') {
     return { kind: 'install', label: 'Restart & Install' };
   }
+  if (state.installMode === 'automatic' && state.phase === 'available') {
+    return { kind: 'none', label: 'Preparing download\u2026' };
+  }
   if (state.phase === 'available' || state.phase === 'downloaded') {
     return { kind: 'none', label: 'Update unavailable' };
   }

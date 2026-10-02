@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { AudioLines, Gauge, Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, SlidersHorizontal, Volume2, VolumeX } from 'lucide-react';
+import { AudioLines, Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
+import { SpeedPitchControls } from './SpeedPitchControls';
 
 interface DesktopPlaybackBarProps {
   onExpand: () => void;
@@ -21,7 +22,7 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     queue, currentSongIndex, currentRadioStation, radioMetadata, isRadioPlaying,
     isPlaying, service, audioRef, togglePlay, toggleRadioPlay,
     prevSong, nextSong, toggleLike, volume, setVolume, setView,
-    settings, updateSettings, playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection,
+    settings, updateSettings,
   } = useStore();
   const song = queue[currentSongIndex];
   const isRadio = !!currentRadioStation;
@@ -118,15 +119,7 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     <div className="nebula-transport-tools">
       {!isRadio && <>
         <button type="button" className="nebula-transport-icon" onClick={() => updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' })} aria-label={progressMode === 'waveform' ? 'Switch to progress bar' : 'Switch to waveform'} aria-pressed={progressMode === 'waveform'} title={progressMode === 'waveform' ? 'Progress bar' : 'Waveform'}><AudioLines size={18} /></button>
-        <details className="nebula-speed-pitch">
-          <summary className="nebula-transport-icon" aria-label="Speed and pitch controls" title="Speed and pitch"><Gauge size={18} /></summary>
-          <div className="nebula-speed-pitch-panel" role="group" aria-label="Speed and pitch">
-            <label>Speed <output>{playbackRate.toFixed(1)}×</output><input aria-label="Playback speed" type="range" min="0.5" max="2" step="0.1" value={playbackRate} onChange={event => setPlaybackRate(Number(event.target.value))} /></label>
-            <label>Pitch <output>{pitch > 0 ? '+' : ''}{pitch} st</output><input aria-label="Playback pitch" type="range" min="-12" max="12" step="1" value={pitch} onChange={event => setPitch(Number(event.target.value))} /></label>
-            <button type="button" aria-pressed={pitchCorrection} onClick={() => setPitchCorrection(!pitchCorrection)}><SlidersHorizontal size={15} /> Independent pitch</button>
-            <button type="button" onClick={() => { setPlaybackRate(1); setPitch(0); }}>Reset speed and pitch</button>
-          </div>
-        </details>
+        <SpeedPitchControls />
       </>}
 
       <button type="button" className="nebula-transport-icon" onClick={onTogglePanel} aria-label={panelOpen ? 'Close now playing panel' : 'Open now playing panel'} aria-pressed={panelOpen}><ListMusic size={19} /></button>

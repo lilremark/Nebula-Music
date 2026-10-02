@@ -240,23 +240,25 @@ const DesktopUpdatesPanel = () => {
         ? getUpdateAction(updateState)
         : { kind: 'none' as const, label: 'Loading update status' };
 
-    const badgeClass = phase === 'downloaded'
-        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-        : phase === 'error'
-            ? 'bg-red-500/15 text-red-600 dark:text-red-400'
-            : phase === 'not-available' || phase === 'idle'
-                ? 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/50'
-                : 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
+    const hasUpdate = phase === 'available' || phase === 'downloaded';
+    const badgeLabel = hasUpdate ? 'Available' : phase === 'not-available' ? 'Up to Date'
+        : phase === 'idle' ? 'Not Checked' : phase === 'error' ? 'Check Failed'
+        : phase === 'checking' ? 'Checking' : 'Downloading';
+    const badgeClass = hasUpdate ? 'bg-red-700 text-white'
+        : phase === 'not-available' ? 'bg-green-700 text-white'
+        : phase === 'error' ? 'bg-red-700 text-white'
+        : 'bg-neutral-200 text-neutral-700 dark:bg-white/10 dark:text-white/70';
 
     return (
         <SettingPanel icon={Download} title="Updates">
             <div className="px-5 py-6">
                 <div className="flex flex-col items-center text-center">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${badgeClass}`}>
-                        {phase.replace('-', ' ')}
+                    <span role="status" data-nebula-update-status={phase} className={`rounded-lg px-4 py-2 text-xs font-bold ${badgeClass}`}>
+                        {badgeLabel}
                     </span>
                     <span className="mt-3 block text-lg font-bold text-neutral-900 dark:text-white">
                         {currentVersion ? `Nebula ${currentVersion}` : 'Nebula'}
+                        {hasUpdate && updateState?.newVersion && <small className="block mt-1 text-sm font-medium text-neutral-600 dark:text-white/60">Version {updateState.newVersion} available</small>}
                     </span>
                     <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
                         {updateState?.installMode === 'manual'

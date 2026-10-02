@@ -71,7 +71,7 @@ export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }>
       <img className="nebula-brand-mark" src={logo} alt="" />
       <strong>Nebula</strong>
     </button>
-    <button type="button" className="nebula-rail-toggle" onClick={onToggle} aria-label={collapsed ? 'Expand navigation sidebar' : 'Collapse navigation sidebar'} aria-expanded={!collapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+    <button type="button" className="nebula-rail-toggle" onClick={event => { onToggle(); if (!event.currentTarget.matches(':focus-visible')) event.currentTarget.blur(); }} aria-label={collapsed ? 'Expand navigation sidebar' : 'Collapse navigation sidebar'} aria-expanded={!collapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
       {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
     </button>
     </div>
@@ -96,7 +96,7 @@ export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }>
       </nav>}
     </div>
     <div className="nebula-rail-footer">
-      <button type="button" className="nebula-rail-item" aria-label="Settings" title={collapsed ? 'Settings' : undefined} data-active={currentView === 'SETTINGS'} onClick={() => setView('SETTINGS')}><Settings size={19} strokeWidth={1.9} aria-hidden="true" /><span>Settings</span></button>
+      <button type="button" className="nebula-rail-item" aria-label="Settings" title={collapsed ? 'Settings' : undefined} data-active={currentView === 'SETTINGS'} onClick={() => setView('SETTINGS')}>{currentView === 'SETTINGS' && <motion.span className="nebula-rail-active" layoutId="nebula-rail-active" transition={reducedMotion ? { duration: 0 } : { duration: 0.18 }} />}<Settings size={19} strokeWidth={1.9} aria-hidden="true" /><span>Settings</span></button>
       <ServerConnectionStatus />
     </div>
   </aside>;

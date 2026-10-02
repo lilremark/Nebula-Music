@@ -18,9 +18,18 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = ({ title, artwo
     if (!header || !spacer || !scroller) return;
     const metadata = header.querySelector<HTMLElement>('.nebula-collection-meta');
     let frame = 0;
+    let contractionDistance = 240;
+    const measure = () => {
+      const previous = header.style.getPropertyValue('--collection-collapse');
+      header.style.setProperty('--collection-collapse', '0');
+      const expanded = header.getBoundingClientRect().height;
+      const compact = parseFloat(getComputedStyle(header).getPropertyValue('--collection-compact-height')) || 124;
+      contractionDistance = Math.max(1, expanded - compact);
+      header.style.setProperty('--collection-collapse', previous || '0');
+    };
     const update = () => {
       frame = 0;
-      const collapse = Math.min(1, Math.max(0, scroller.scrollTop / 240));
+      const collapse = Math.min(1, Math.max(0, scroller.scrollTop / contractionDistance));
       header.style.setProperty('--collection-collapse', String(collapse));
       // Preserve the document height while the sticky header contracts.
       spacer.style.setProperty('--collection-collapse', String(collapse));
@@ -30,10 +39,14 @@ export const CollectionHeader: React.FC<CollectionHeaderProps> = ({ title, artwo
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
+    measure();
     update();
+    const resize = () => { measure(); update(); };
+    window.addEventListener('resize', resize);
     scroller.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       scroller.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', resize);
       if (frame) cancelAnimationFrame(frame);
     };
   }, []);

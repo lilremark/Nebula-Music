@@ -33,7 +33,7 @@ export const SplitLayout: React.FC<SplitLayoutProps> = ({
                 <aside
                     data-nebula-panel="now-playing"
                     className="
-                        hidden min-[1320px]:flex flex-col
+                        nebula-side-player flex flex-col
                         w-[340px] min-w-[340px] max-w-[340px]
                         h-full border-l border-neutral-300 dark:border-white/5
                         bg-gradient-to-b from-neutral-100 via-neutral-200 to-neutral-100

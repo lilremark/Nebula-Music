@@ -44,6 +44,14 @@ app.on('browser-window-created', (_event, win) => {
   win.setContentSize(1450, 1050);
   win.webContents.once('did-finish-load', async () => {
     try {
+      const captureFresh = async name => {
+        const [width, height] = win.getContentSize();
+        win.setContentSize(width + 1, height);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        win.setContentSize(width, height);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        fs.writeFileSync(path.join(profile, name), (await win.webContents.capturePage()).toPNG());
+      };
       await win.webContents.executeJavaScript(`(async () => {
         const waitFor = async (check, label) => {
           for (let i = 0; i < 200; i++) {
@@ -107,12 +115,24 @@ app.on('browser-window-created', (_event, win) => {
         if (getComputedStyle(playButton).backgroundColor !== 'rgb(255, 255, 255)' || parseFloat(getComputedStyle(playButton).borderRadius) !== 8 || playButton.getBoundingClientRect().width < 47) throw new Error('Dock transport does not match the full player');
         document.querySelector('[aria-label="Switch to waveform"]').click();
         await waitFor(() => document.querySelector('.has-waveform'), 'waveform toggle');
-        document.querySelector('[aria-label="Speed and pitch controls"]').click();
-        if (!document.querySelector('.nebula-speed-pitch[open] input[aria-label="Playback speed"]') || !document.querySelector('input[aria-label="Playback pitch"]')) throw new Error('Speed and pitch controls missing');
-        document.querySelector('[aria-label="Speed and pitch controls"]').click();
+        document.querySelector('.nebula-transport [aria-label="Speed and pitch controls"]').click();
+        await waitFor(() => document.querySelector('[data-nebula-speed-pitch]'), 'speed pitch panel');
+        if (!document.querySelector('[data-nebula-speed-pitch] input[aria-label="Playback speed"]') || !document.querySelector('input[aria-label="Playback pitch"]')) throw new Error('Speed and pitch controls missing');
+        const speed = document.querySelector('[aria-label="Playback speed"]');
+        document.querySelector('[aria-label="Increase speed"]').click();
+        await waitFor(() => speed.value === '1.1', 'speed increment');
+        document.querySelector('[aria-label="Decrease pitch"]').click();
+        await waitFor(() => document.querySelector('[aria-label="Playback pitch"]').value === '-0.1', 'pitch increment');
+        document.querySelector('[data-nebula-speed-pitch] > button:last-child').click();
+        document.querySelector('[aria-label="Close playback settings"]').click();
         document.querySelector('[aria-label="Open now playing panel"]').click();
         await waitFor(() => document.querySelector('[data-nebula-panel="now-playing"]'), 'side player');
         if (document.querySelector('.nebula-transport')) throw new Error('Bottom and side players are visible together');
+        document.querySelector('[data-nebula-panel="now-playing"] [aria-label="Speed and pitch controls"]').click();
+        await waitFor(() => document.querySelector('[data-nebula-speed-pitch]'), 'sidebar speed pitch panel');
+        const sidePanel = document.querySelector('[data-nebula-speed-pitch]').getBoundingClientRect();
+        if (sidePanel.left < 0 || sidePanel.right > innerWidth || sidePanel.top < 0 || sidePanel.bottom > innerHeight) throw new Error('Sidebar speed pitch panel leaves the viewport');
+        document.querySelector('[aria-label="Close playback settings"]').click();
         const sideMarker = document.querySelector('[data-nebula-sidebar-player-progress] [data-nebula-playhead]');
         if (!sideMarker.style.backgroundImage.includes('gradient')) throw new Error('Sidebar playhead lacks artwork gradient');
         const sidePlay = document.querySelector('[data-nebula-sidebar-player-transport] .nebula-playback-toggle');
@@ -131,6 +151,13 @@ app.on('browser-window-created', (_event, win) => {
           throw new Error('Responsive layout did not replace the side player');
       })()`);
       await win.webContents.executeJavaScript(`(async () => {
+        document.querySelector('[aria-label="Open now playing panel"]').click();
+        for (let i = 0; i < 100 && !document.querySelector('[data-nebula-panel="now-playing"]'); i++) await new Promise(resolve => setTimeout(resolve, 25));
+        const panel = document.querySelector('[data-nebula-panel="now-playing"]');
+        for (const animation of panel?.getAnimations({ subtree: true }) || []) if (animation instanceof CSSAnimation && animation.effect.getTiming().iterations !== Infinity) animation.finish();
+        if (!panel || document.querySelector('.nebula-transport') || getComputedStyle(panel).display === 'none' || panel.getBoundingClientRect().right > innerWidth) throw new Error('Compact sidebar player is missing or overlaps the bottom player');
+        panel.querySelector('[aria-label="Collapse now playing panel"]').click();
+        await new Promise(resolve => setTimeout(resolve, 50));
         document.querySelector('[aria-label="Collapse navigation sidebar"]').click();
         await new Promise(resolve => setTimeout(resolve, 90));
         const widthTransition = document.querySelector('.nebula-next').getAnimations().find(animation => animation instanceof CSSTransition && animation.transitionProperty === '--nebula-rail-width');
@@ -202,7 +229,8 @@ app.on('browser-window-created', (_event, win) => {
         if (parseFloat(getComputedStyle(document.querySelector('.nebula-next')).transitionDuration) > 0.001) throw new Error('Sidebar animation ignores reduced-motion preferences');
       })()`);
       await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [] });
-      win.webContents.debugger.detach();
+      const { nodeId: toggleNodeId } = await win.webContents.debugger.sendCommand('DOM.querySelector', { nodeId: root.nodeId, selector: '.nebula-rail-toggle' });
+      await win.webContents.debugger.sendCommand('CSS.forcePseudoState', { nodeId: toggleNodeId, forcedPseudoClasses: ['focus-visible'] });
       await new Promise(resolve => setTimeout(resolve, 220));
       await win.webContents.executeJavaScript(`(async () => {
         document.querySelector('.nebula-rail-toggle').focus();
@@ -210,6 +238,12 @@ app.on('browser-window-created', (_event, win) => {
         for (const animation of document.getAnimations()) if (animation instanceof CSSTransition) animation.finish();
         if (getComputedStyle(document.querySelector('.nebula-rail-toggle')).opacity !== '1') throw new Error('Keyboard focus did not reveal the expand button');
         document.activeElement.blur();
+      })()`);
+      await win.webContents.debugger.sendCommand('CSS.forcePseudoState', { nodeId: toggleNodeId, forcedPseudoClasses: [] });
+      win.webContents.debugger.detach();
+      await win.webContents.executeJavaScript(`(() => {
+        for (const animation of document.getAnimations()) if (animation instanceof CSSTransition) animation.finish();
+        if (getComputedStyle(document.querySelector('.nebula-brand-mark')).opacity !== '1' || getComputedStyle(document.querySelector('.nebula-rail-toggle')).opacity !== '0') throw new Error('Sidebar expand button sticks after focus leaves');
       })()`);
       await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Switch to progress bar"]').click()`);
       await new Promise(resolve => setTimeout(resolve, 150));
@@ -238,6 +272,7 @@ app.on('browser-window-created', (_event, win) => {
       })()`);
       win.setContentSize(1450, 1050);
       await new Promise(resolve => setTimeout(resolve, 1000));
+      await win.webContents.executeJavaScript(`document.querySelector('.nebula-transport [aria-label="Open now playing panel"]')?.click()`);
       const result = await win.webContents.executeJavaScript(`(async () => {
         const waitFor = async (check, label) => {
           for (let i = 0; i < 200; i++) {
@@ -283,6 +318,17 @@ app.on('browser-window-created', (_event, win) => {
         return { exclusivePlayers: true, waveform: true, settingsTabGap: getComputedStyle(nav).gap, consentSpacing: true };
       })()`);
       console.log(JSON.stringify(result));
+      await win.webContents.executeJavaScript(`document.querySelector('[data-nebula-settings-jumps] button:last-child').click()`);
+      for (const phase of ['available', 'not-available']) {
+        win.webContents.send('nebula:updater:status', { phase, enabled: true, currentVersion: '2.5.0-beta.16', newVersion: phase === 'available' ? '2.5.0-beta.17' : null, installMode: 'automatic', message: '' });
+        await new Promise(resolve => setTimeout(resolve, 80));
+        await win.webContents.executeJavaScript(`(() => {
+          const badge = document.querySelector('[data-nebula-update-status="${phase}"]');
+          if (!badge || badge.textContent.trim() !== '${phase === 'available' ? 'Available' : 'Up to Date'}' || !badge.classList.contains('${phase === 'available' ? 'bg-red-700' : 'bg-green-700'}')) throw new Error('Update status label or color is incorrect');
+        })()`);
+        await captureFresh('updates-' + phase + '.png');
+      }
+      await win.webContents.executeJavaScript(`document.querySelector('[data-nebula-settings-jumps] button:first-child').click()`);
       // Hidden windows can retain an old compositor frame until resized.
       win.setContentSize(1451, 1050);
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -302,6 +348,30 @@ app.on('browser-window-created', (_event, win) => {
       })()`);
       console.log(JSON.stringify(narrow));
       fs.writeFileSync(path.join(profile, 'settings-narrow.png'), (await win.webContents.capturePage()).toPNG());
+      await win.webContents.executeJavaScript(`(async () => {
+        document.querySelector('.nebula-rail [aria-label="Songs"]').click();
+        for (let i = 0; i < 100 && !document.querySelector('.nebula-song-row'); i++) await new Promise(resolve => setTimeout(resolve, 25));
+      })()`);
+      await new Promise(resolve => setTimeout(resolve, 350));
+      await captureFresh('songs-view.png');
+      await win.webContents.executeJavaScript(`document.querySelector('.nebula-transport [aria-label="Open now playing panel"]').click()`);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await win.webContents.executeJavaScript(`(async () => {
+        const panel = document.querySelector('[data-nebula-panel="now-playing"]');
+        for (const animation of panel.getAnimations({ subtree: true })) if (animation instanceof CSSAnimation && animation.effect.getTiming().iterations !== Infinity) animation.finish();
+        panel.querySelector('[aria-label="Speed and pitch controls"]').click();
+        await new Promise(resolve => setTimeout(resolve, 50));
+      })()`);
+      await win.webContents.capturePage();
+      await captureFresh('compact-sidebar-speed.png');
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Close playback settings"]').click(); document.querySelector('[aria-label="Collapse now playing panel"]').click();`);
+      await win.webContents.executeJavaScript(`(async () => {
+        document.querySelector('.nebula-rail [aria-label="Albums"]').click();
+        for (let i = 0; i < 100 && !document.querySelector('[data-nebula-library="albums"] [data-nebula-collection-card]'); i++) await new Promise(resolve => setTimeout(resolve, 25));
+      })()`);
+      await new Promise(resolve => setTimeout(resolve, 350));
+      await captureFresh('albums-filters.png');
+
       const visual = await win.webContents.executeJavaScript(`(async () => {
         const waitFor = async (check, label) => {
           for (let i = 0; i < 200; i++) {
@@ -320,6 +390,14 @@ app.on('browser-window-created', (_event, win) => {
           if (!element) throw new Error('Missing click target: ' + selector);
           element.click();
         };
+        railButton('Songs').click();
+        await waitFor(() => document.querySelector('.nebula-song-row'), 'Songs rows');
+        const songs = document.querySelector('[data-nebula-track-ledger]');
+        if (songs.querySelector('table') || parseFloat(getComputedStyle(songs).borderRadius) > 0 || parseFloat(getComputedStyle(songs.querySelector('[data-nebula-track-row]')).borderBottomWidth) <= 0) throw new Error('Songs does not use collection-style divided rows');
+        const like = songs.querySelector('[aria-label="Like song"]');
+        like.click();
+        await waitFor(() => songs.querySelector('[aria-label="Unlike song"]'), 'Songs favorite');
+        songs.querySelector('[aria-label="Unlike song"]').click();
         railButton('Internet Radio').click();
         await waitFor(() => document.querySelector('[data-nebula-view="radio"]'), 'radio view');
         [...document.querySelectorAll('button')].find(button => button.textContent.trim() === 'New Station').click();
@@ -346,6 +424,10 @@ app.on('browser-window-created', (_event, win) => {
         assertOverlay('search', 2);
         click('[data-nebula-modal-backdrop]');
         railButton('Albums').click();
+        await waitFor(() => document.querySelector('[data-nebula-library="albums"] [data-nebula-library-filters]'), 'album filters');
+        const filters = document.querySelector('[data-nebula-library-filters]');
+        const controls = [...filters.children].map(control => control.getBoundingClientRect());
+        if (controls.some(control => Math.abs(control.top - controls[0].top) > 2) || controls.some(control => control.right > innerWidth)) throw new Error('Albums filters wrap or overflow at compact size');
         await waitFor(() => {
           const card = document.querySelector('[data-nebula-library="albums"] [data-nebula-collection-card]');
           if (!card) return false;
@@ -388,12 +470,13 @@ app.on('browser-window-created', (_event, win) => {
           await new Promise(resolve => setTimeout(resolve, 100));
           const fullHeight = header.getBoundingClientRect().height;
           const documentHeight = scroller.scrollHeight;
-          scroller.scrollTo({ top: 420, behavior: 'instant' });
+          scroller.scrollTo({ top: fullHeight - 124 + 2, behavior: 'instant' });
           for (let i = 0; i < 100 && header.dataset.compact !== 'true'; i++) await new Promise(resolve => setTimeout(resolve, 25));
           const cover = header.querySelector('[data-nebula-detail-cover]').getBoundingClientRect();
           const compact = header.getBoundingClientRect();
           if (header.dataset.compact !== 'true' || compact.height >= fullHeight || cover.width > 49 || Math.abs(compact.top - scroller.getBoundingClientRect().top) > 1)
             throw new Error('${kind} header does not shrink and stick above the tracks');
+          if (view.querySelector('[data-nebula-track-section]').getBoundingClientRect().top - compact.bottom > 30) throw new Error('${kind} leaves a gap before tracks');
           if (Math.abs(scroller.scrollHeight - documentHeight) > 1) throw new Error('${kind} header changes document height while scrolling');
           if (!header.querySelector('h1').textContent.trim() || !header.querySelector('[data-nebula-album-options] button')) throw new Error('Compact collection controls are missing');
           return { collection: '${kind}', stickyHeader: true, stableScrollHeight: true, compactCover: cover.width };
@@ -522,6 +605,11 @@ app.on('browser-window-created', (_event, win) => {
         dock.querySelector('[aria-label="Open full screen player"]').click();
         await new Promise(resolve => setTimeout(resolve, 100));
         const full = document.querySelector('[data-nebula-player="fullscreen"]');
+        full.querySelector('[aria-label="Speed and pitch controls"]').click();
+        for (let i = 0; i < 100 && !document.querySelector('[data-nebula-speed-pitch]'); i++) await new Promise(resolve => setTimeout(resolve, 25));
+        const settings = document.querySelector('[data-nebula-speed-pitch]');
+        if (!settings || Number(getComputedStyle(settings).zIndex) <= Number(getComputedStyle(full).zIndex)) throw new Error('Full player speed pitch panel is missing or behind the player');
+        document.querySelector('[aria-label="Close playback settings"]').click();
         if (![...full.querySelectorAll('[data-nebula-playhead]')].every(marker => marker.style.backgroundImage.includes('gradient'))) throw new Error('Full player lacks artwork playhead gradients');
         if (!full.classList.contains('translate-y-0') || Number(getComputedStyle(full).zIndex) <= Number(getComputedStyle(dock).zIndex)) throw new Error('Full player is covered by the dock');
         full.querySelector('[aria-label="Close player"]').click();

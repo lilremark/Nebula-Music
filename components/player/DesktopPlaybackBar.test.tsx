@@ -82,19 +82,39 @@ describe('bottom player waveform', () => {
     await render();
     await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Switch to progress bar"]')!.click());
     expect(store.updateSettings).toHaveBeenCalledWith({ progressVisualization: 'bar' });
+    await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Speed and pitch controls"]')!.click());
     for (const [label, value, setter] of [['Playback speed', '1.5', store.setPlaybackRate], ['Playback pitch', '-3', store.setPitch]] as const) {
-      const slider = container.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+      const slider = document.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
       await act(async () => {
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(slider, value);
         slider.dispatchEvent(new Event('input', { bubbles: true }));
       });
       expect(setter).toHaveBeenCalledWith(Number(value));
     }
-    await act(async () => container.querySelector<HTMLButtonElement>('[aria-pressed="true"]:not([aria-label])')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-nebula-speed-pitch] [aria-pressed="true"]')!.click());
     expect(store.setPitchCorrection).toHaveBeenCalledWith(false);
     store.settings.progressVisualization = 'bar';
     await render();
     expect(useTrackWaveform).toHaveBeenLastCalledWith('song', null);
+  });
+
+  it('steps speed and pitch by tenths, respects limits, and dismisses with Escape', async () => {
+    await render();
+    await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Speed and pitch controls"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Increase speed"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Decrease pitch"]')!.click());
+    expect(store.setPlaybackRate).toHaveBeenLastCalledWith(1.1);
+    expect(store.setPitch).toHaveBeenLastCalledWith(-0.1);
+    store.pitch = 11.9;
+    await render();
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="Increase pitch"]')!.click());
+    expect(store.setPitch).toHaveBeenLastCalledWith(12);
+    store.pitch = 12; store.playbackRate = 0.5;
+    await render();
+    expect(document.querySelector<HTMLButtonElement>('[aria-label="Increase pitch"]')!.disabled).toBe(true);
+    expect(document.querySelector<HTMLButtonElement>('[aria-label="Decrease speed"]')!.disabled).toBe(true);
+    await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    expect(document.querySelector('[data-nebula-speed-pitch]')).toBeNull();
   });
 
   it('keeps live radio unseekable and avoids track waveform requests', async () => {
