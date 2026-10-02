@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.11';
+export const APP_VERSION = '2.5.0-beta.12';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,22 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.12',
+    date: '2026-10-01',
+    title: 'Floating Playback Dock and Collection Headers',
+    changes: [
+      'Replaced the full-width bottom player with a centered, rounded dock and moved the waveform above its controls.',
+      'Separated album and playlist details from their action bars and replaced track cards with flat rows and dividers.',
+      'Added shared sticky album and playlist headers that shrink while scrolling and expand again at the top.',
+      'Kept artwork, titles, and playback actions visible in compact headers without changing scroll height.',
+      'Restored bottom playback controls in narrower desktop windows and preserved volume, seeking, and full-screen playback.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.12'
+    }
+  },
   {
     version: '2.5.0-beta.11',
     date: '2026-10-01',
