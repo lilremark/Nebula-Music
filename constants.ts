@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.12';
+export const APP_VERSION = '2.5.0-beta.13';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,23 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.13',
+    date: '2026-10-01',
+    title: 'Waveform and Settings Refinements',
+    changes: [
+      'Extended album and playlist track highlights and dividers to the edges of the content pane.',
+      'Added taller, more detailed stereo waveforms with a smooth playhead, white played bars, and a yellow position marker.',
+      'Added bottom-dock speed, pitch, independent-pitch, and waveform/progress controls.',
+      'Showed actual audio-derived peaks and used a progress bar when a waveform is unavailable.',
+      'Separated Settings into individual sections with keyboard-accessible tabs.',
+      'Kept sidebar navigation vertical in short windows and sized playlists to the available space.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.13'
+    }
+  },
   {
     version: '2.5.0-beta.12',
     date: '2026-10-01',
