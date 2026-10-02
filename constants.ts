@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.10';
+export const APP_VERSION = '2.5.0-beta.11';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,22 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.11',
+    date: '2026-10-01',
+    title: 'Album Layout and Modal Refinements',
+    changes: [
+      'Enlarged album artwork, titles, metadata, and controls, and removed the duplicate album back button.',
+      'Blended artwork colors through the album header and track list, with larger track controls and hover feedback.',
+      'Renamed Listen Now to Home, removed Browse shortcuts, and removed introductory Settings copy.',
+      'Scoped radio and Search backdrops to the central pane, with uniform radio blur and lighter Search blur.',
+      'Made sidebar playlist shortcuts adapt to available height and added compact navigation for short windows without sidebar scrolling.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.11'
+    }
+  },
   {
     version: '2.5.0-beta.10',
     date: '2026-10-01',
