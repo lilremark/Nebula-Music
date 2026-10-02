@@ -92,13 +92,14 @@ app.on('browser-window-created', (_event, win) => {
         await waitFor(() => [...document.querySelectorAll('audio')].some(audio => !audio.paused && audio.currentTime > 0), 'fixture audio playback');
         const marker = waveform.querySelector('[style*="left: calc"]');
         const before = marker.style.left;
-        await new Promise(resolve => setTimeout(resolve, 80));
-        if (marker.style.left === before) throw new Error('Playhead is not advancing with real audio');
+        await waitFor(() => marker.style.left !== before, 'playhead advancing with real audio');
         document.querySelector('[aria-label="Switch to progress bar"]').click();
         await waitFor(() => document.querySelector('.has-progress-bar'), 'progress bar toggle');
         const bar = document.querySelector('.has-progress-bar');
         const line = bar.querySelector('[data-nebula-playhead]');
         if (!bar.querySelector('[data-nebula-progress-fill]').style.backgroundImage.includes('gradient') || !line.style.backgroundImage.includes('gradient')) throw new Error('Progress and playhead gradients are missing');
+        const fill = bar.querySelector('[data-nebula-progress-fill]');
+        if (!fill.style.backgroundImage.includes('white 88%') || !fill.style.backgroundImage.includes('white 75%')) throw new Error('Elapsed progress is not a light artwork gradient');
         const barBounds = bar.getBoundingClientRect();
         const lineBounds = line.getBoundingClientRect();
         if (getComputedStyle(bar).overflow !== 'visible' || lineBounds.height <= barBounds.height || lineBounds.top >= barBounds.top || lineBounds.bottom <= barBounds.bottom || lineBounds.width > 2.1 || parseFloat(getComputedStyle(line).borderRadius) !== 0) throw new Error('Progress playhead is not an unclipped vertical line outside the bar');
@@ -131,12 +132,28 @@ app.on('browser-window-created', (_event, win) => {
       })()`);
       await win.webContents.executeJavaScript(`(async () => {
         document.querySelector('[aria-label="Collapse navigation sidebar"]').click();
-        await new Promise(resolve => setTimeout(resolve, 1300));
+        await new Promise(resolve => setTimeout(resolve, 90));
+        const widthTransition = document.querySelector('.nebula-next').getAnimations().find(animation => animation instanceof CSSTransition && animation.transitionProperty === '--nebula-rail-width');
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches && widthTransition?.effect.getTiming().duration !== 260) throw new Error('Sidebar collapse did not create a smooth width transition');
+        const movingDock = document.querySelector('.nebula-transport').getBoundingClientRect();
+        const movingPane = document.querySelector('[data-nebula-content-shell]').getBoundingClientRect();
+        if (Math.abs(movingDock.left + movingDock.width / 2 - movingPane.left - movingPane.width / 2) > 1) throw new Error('Dock moves out of alignment during collapse');
+        // Hidden Windows surfaces may suspend compositor frames. Finish only CSS
+        // transitions after checking they exist, then verify their final layout.
+        for (const animation of document.getAnimations()) if (animation instanceof CSSTransition) animation.finish();
+        await new Promise(resolve => setTimeout(resolve, 1210));
         const rail = document.querySelector('.nebula-rail');
         if (rail.dataset.collapsed !== 'true' || Math.abs(rail.getBoundingClientRect().width - 72) > 1) throw new Error('Sidebar did not collapse to the icon rail');
         for (const button of rail.querySelectorAll('.nebula-rail-item')) {
-          if (!button.getAttribute('aria-label') || !button.title || getComputedStyle(button.querySelector('span:not(.nebula-rail-active)')).display !== 'none') throw new Error('Collapsed navigation lost accessible labels or shows text');
+          if (!button.getAttribute('aria-label') || !button.title || getComputedStyle(button.querySelector('span:not(.nebula-rail-active)')).opacity !== '0') throw new Error('Collapsed navigation lost accessible labels or shows text');
         }
+        const dividers = [...rail.querySelectorAll('[data-nebula-rail-divider]')];
+        if (dividers.length !== 3 || dividers.some(divider => parseFloat(getComputedStyle(divider)[divider.dataset.nebulaRailDivider === 'brand' ? 'borderBottomWidth' : 'borderTopWidth']) < 0.5)) throw new Error('Collapsed sidebar section dividers are missing');
+        const center = rail.getBoundingClientRect().left + rail.clientWidth / 2;
+        const symbols = [...rail.querySelectorAll('.nebula-brand-mark, .nebula-rail-item > svg, .nebula-rail-playlist img, .nebula-rail-playlist > span:first-child')];
+        if (symbols.some(symbol => { const box = symbol.getBoundingClientRect(); return Math.abs(box.left + box.width / 2 - center) > 1; })) throw new Error('Collapsed sidebar icons and artwork are misaligned');
+        document.activeElement?.blur();
+        if (getComputedStyle(rail.querySelector('.nebula-rail-toggle')).opacity !== '0') throw new Error('Collapsed sidebar toggle should be hidden until hover or focus');
         const playlistArt = [...rail.querySelectorAll('.nebula-rail-playlist img')];
         if (playlistArt.length === 0 || playlistArt.some(art => art.getBoundingClientRect().width !== 32)) throw new Error('Collapsed playlist artwork is missing');
         const body = rail.querySelector('.nebula-rail-body');
@@ -161,6 +178,44 @@ app.on('browser-window-created', (_event, win) => {
       win.setContentSize(1100, 850);
       await new Promise(resolve => setTimeout(resolve, 300));
       fs.writeFileSync(path.join(profile, 'navigation-collapsed.png'), (await win.webContents.capturePage()).toPNG());
+      // Hidden native windows do not receive real pointer hover. Force the CSS
+      // pseudo-state through Chromium to test the same rules used in a visible UI.
+      win.webContents.debugger.attach('1.3');
+      const { root } = await win.webContents.debugger.sendCommand('DOM.getDocument');
+      const { nodeId } = await win.webContents.debugger.sendCommand('DOM.querySelector', { nodeId: root.nodeId, selector: '.nebula-rail-header' });
+      await win.webContents.debugger.sendCommand('CSS.enable');
+      await win.webContents.debugger.sendCommand('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: ['hover'] });
+      await new Promise(resolve => setTimeout(resolve, 220));
+      await win.webContents.executeJavaScript(`(() => {
+        const toggle = document.querySelector('.nebula-rail-toggle');
+        for (const animation of document.getAnimations()) if (animation instanceof CSSTransition) animation.finish();
+        const box = toggle.getBoundingClientRect();
+        const mark = document.querySelector('.nebula-brand-mark').getBoundingClientRect();
+        if (Math.abs(box.left + box.width / 2 - mark.left - mark.width / 2) > 1 || Math.abs(box.top + box.height / 2 - mark.top - mark.height / 2) > 1) throw new Error('Expand toggle is not positioned over the logo: ' + JSON.stringify({ box: box.toJSON(), mark: mark.toJSON() }));
+        if (getComputedStyle(toggle).opacity !== '1' || getComputedStyle(toggle).pointerEvents !== 'auto' || getComputedStyle(document.querySelector('.nebula-brand-mark')).opacity !== '0') throw new Error('Hovering the Nebula logo did not reveal the expand button');
+      })()`);
+      await win.webContents.capturePage();
+      fs.writeFileSync(path.join(profile, 'navigation-collapsed-hover.png'), (await win.webContents.capturePage()).toPNG());
+      await win.webContents.debugger.sendCommand('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] });
+      await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+      await win.webContents.executeJavaScript(`(() => {
+        if (parseFloat(getComputedStyle(document.querySelector('.nebula-next')).transitionDuration) > 0.001) throw new Error('Sidebar animation ignores reduced-motion preferences');
+      })()`);
+      await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [] });
+      win.webContents.debugger.detach();
+      await new Promise(resolve => setTimeout(resolve, 220));
+      await win.webContents.executeJavaScript(`(async () => {
+        document.querySelector('.nebula-rail-toggle').focus();
+        await new Promise(resolve => setTimeout(resolve, 220));
+        for (const animation of document.getAnimations()) if (animation instanceof CSSTransition) animation.finish();
+        if (getComputedStyle(document.querySelector('.nebula-rail-toggle')).opacity !== '1') throw new Error('Keyboard focus did not reveal the expand button');
+        document.activeElement.blur();
+      })()`);
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Switch to progress bar"]').click()`);
+      await new Promise(resolve => setTimeout(resolve, 150));
+      await win.webContents.capturePage();
+      fs.writeFileSync(path.join(profile, 'progress-bar-light.png'), (await win.webContents.capturePage()).toPNG());
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Switch to waveform"]').click()`);
       for (const height of [600, 650, 850]) {
         win.setContentSize(1100, height);
         await new Promise(resolve => setTimeout(resolve, 150));
@@ -171,7 +226,16 @@ app.on('browser-window-created', (_event, win) => {
           if (rows.some((row, index) => index && row.top < rows[index - 1].bottom - 1)) throw new Error('Collapsed navigation is not vertical');
         })()`);
       }
-      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Expand navigation sidebar"]').click()`);
+      await win.webContents.executeJavaScript(`(async () => {
+        document.querySelector('[aria-label="Expand navigation sidebar"]').click();
+        await new Promise(resolve => setTimeout(resolve, 90));
+        const transition = document.querySelector('.nebula-next').getAnimations().find(animation => animation instanceof CSSTransition && animation.transitionProperty === '--nebula-rail-width');
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches && transition?.effect.getTiming().duration !== 260) throw new Error('Sidebar expansion did not create a smooth width transition');
+        for (const animation of document.getAnimations()) if (animation instanceof CSSTransition) animation.finish();
+        await new Promise(resolve => setTimeout(resolve, 250));
+        const dividers = [...document.querySelectorAll('.nebula-rail [data-nebula-rail-divider]')];
+        if (dividers.length !== 3 || dividers.some(divider => parseFloat(getComputedStyle(divider)[divider.dataset.nebulaRailDivider === 'brand' ? 'borderBottomWidth' : 'borderTopWidth']) < 0.5)) throw new Error('Expanded sidebar section dividers are missing');
+      })()`);
       win.setContentSize(1450, 1050);
       await new Promise(resolve => setTimeout(resolve, 1000));
       const result = await win.webContents.executeJavaScript(`(async () => {

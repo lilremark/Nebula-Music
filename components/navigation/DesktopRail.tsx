@@ -36,7 +36,7 @@ export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }>
     if (!body || !core) return;
     const measure = () => {
       // Reserve body padding, the playlist heading and the section gap.
-      const slots = Math.floor((body.clientHeight - core.offsetHeight - (collapsed ? 16 : 60)) / (collapsed ? 44 : 32));
+      const slots = Math.floor((body.clientHeight - core.offsetHeight - (collapsed ? 30 : 62)) / (collapsed ? 44 : 32));
       setPlaylistLimit(Math.max(0, Math.min(4, slots)));
     };
     measure();
@@ -66,7 +66,7 @@ export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }>
   };
 
   return <aside className="nebula-rail" data-collapsed={collapsed} aria-label="Music navigation">
-    <div className="nebula-rail-header">
+    <div className="nebula-rail-header" data-nebula-rail-divider="brand">
     <button type="button" className="nebula-rail-brand" onClick={() => setView('HOME')} aria-label="Nebula Home">
       <img className="nebula-brand-mark" src={logo} alt="" />
       <strong>Nebula</strong>
@@ -82,13 +82,13 @@ export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }>
           {listenItems.filter(item => item.flag).map(navButton)}
           <button type="button" className="nebula-rail-item" aria-label="Search" title={collapsed ? 'Search' : undefined} onClick={openSearchModal}><Search size={19} strokeWidth={1.9} aria-hidden /><span>Search</span></button>
         </nav>
-        {visibleSections.map(section => <nav key={section.title} aria-label={section.title} className="nebula-rail-section">
+        {visibleSections.map(section => <nav key={section.title} data-nebula-rail-divider="library" aria-label={section.title} className="nebula-rail-section">
           <h2>{section.title}</h2>
           {section.items.map(navButton)}
         </nav>)}
       </div>
-      {settings.sidebar.showPlaylists && playlists.length > 0 && playlistLimit > 0 && <nav aria-label="Your playlists" className="nebula-rail-section nebula-rail-playlists">
-        <h2>Playlists</h2>
+      {settings.sidebar.showPlaylists && playlists.length > 0 && <nav data-nebula-rail-divider="playlists" aria-label="Your playlists" className="nebula-rail-section nebula-rail-playlists">
+        {playlistLimit > 0 && <h2>Playlists</h2>}
         {playlists.slice(0, playlistLimit).map(playlist => <button key={playlist.id} type="button" className="nebula-rail-playlist" aria-label={playlist.name} title={collapsed ? playlist.name : undefined} onClick={() => setView('PLAYLIST_DETAIL', playlist.id)}>
           {playlist.coverArt ? <img src={service.getCoverArtUrl(playlist.coverArt, 48)} alt="" /> : <span><ListMusic size={15} aria-hidden /></span>}
           <span title={playlist.name}>{playlist.name}</span>

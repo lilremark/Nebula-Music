@@ -1,5 +1,12 @@
+@property --nebula-rail-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 234px;
+}
+
 .nebula-next {
   --nebula-rail-width: 234px;
+  transition: --nebula-rail-width 260ms cubic-bezier(.2, .8, .2, 1);
   --next-canvas: #f3f4f8;
   --next-rail: #e8eaf1;
   --next-surface: #ffffff;
@@ -32,6 +39,7 @@ html.dark .nebula-next {
 
 .nebula-rail {
   container: nebula-rail / size;
+  overflow: hidden;
   display: none;
   width: var(--nebula-rail-width);
   min-width: var(--nebula-rail-width);
@@ -53,7 +61,7 @@ html.dark .nebula-next {
   align-items: center;
   gap: 13px;
   height: 72px;
-  padding: 0 21px;
+  padding: 0 16px;
   text-align: left;
   flex-shrink: 0;
 }
@@ -267,7 +275,7 @@ html:not(.dark) .nebula-transport { --next-waveform: #b8b8b8; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nebula-next *, .nebula-next *::before, .nebula-next *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .nebula-next, .nebula-next *, .nebula-next *::before, .nebula-next *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
 .nebula-next-setup { background: #f3f4f8; color: #191b27; font-family: 'Manrope', 'Inter', sans-serif; }
@@ -355,22 +363,38 @@ html.dark .nebula-next-setup .nebula-setup-card { border-color: #303030; backgro
   .nebula-content-modal { padding: 12px; }
 }
 
+/* One animated width keeps the rail, content pane, and dock in sync. */
 .nebula-next[data-nebula-rail-collapsed="true"] { --nebula-rail-width: 72px; }
-.nebula-rail-header { display: flex; align-items: center; flex-shrink: 0; padding-right: 12px; }
-.nebula-rail-header .nebula-rail-brand { flex: 1; min-width: 0; }
-.nebula-rail-toggle { display: grid; place-items: center; width: 28px; height: 28px; flex: none; color: var(--next-muted); border-radius: 6px; }
+.nebula-rail-header { position: relative; display: flex; align-items: center; flex-shrink: 0; padding-right: 44px; border-bottom: 1px solid var(--next-line); }
+.nebula-rail-header .nebula-rail-brand { flex: 1; min-width: 0; overflow: hidden; }
+.nebula-rail-brand strong { white-space: nowrap; }
+.nebula-rail-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 28px; height: 28px; color: var(--next-muted); border-radius: 6px; transition: opacity 160ms ease, background-color 160ms ease; }
 .nebula-rail-toggle:hover { color: var(--next-text); background: var(--next-surface); }
 .nebula-rail :is(button, a):focus-visible { outline: 2px solid var(--next-accent); outline-offset: 2px; }
-.nebula-rail[data-collapsed="true"] .nebula-rail-header { flex-direction: column; padding: 0 0 8px; }
-.nebula-rail[data-collapsed="true"] .nebula-rail-brand { width: 100%; padding: 0; justify-content: center; }
-.nebula-rail[data-collapsed="true"] :is(.nebula-rail-brand strong, .nebula-rail-section h2, .nebula-rail-item > span:not(.nebula-rail-active), .nebula-rail-playlist > span:last-child, .nebula-rail-status > div) { display: none; }
+.nebula-rail-core > .nebula-rail-section + .nebula-rail-section, .nebula-rail-playlists { border-top: 1px solid var(--next-line); margin-top: 8px; padding-top: 8px; }
+.nebula-rail-item > svg { flex: none; }
+.nebula-rail-item > span:not(.nebula-rail-active), .nebula-rail-brand strong, .nebula-rail-playlist > span:last-child { white-space: nowrap; transition: opacity 160ms ease; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-header { padding-right: 0; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-brand { width: 100%; padding: 0 16px; gap: 0; }
+.nebula-rail[data-collapsed="true"] .nebula-brand-mark { transition: opacity 160ms ease; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-toggle { left: 50%; right: auto; transform: translate(-50%, -50%); width: 40px; height: 40px; opacity: 0; pointer-events: none; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-header:is(:hover, :focus-within) .nebula-rail-toggle { opacity: 1; pointer-events: auto; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-header:is(:hover, :focus-within) .nebula-brand-mark { opacity: 0; }
+.nebula-rail[data-collapsed="true"] :is(.nebula-rail-brand strong, .nebula-rail-item > span:not(.nebula-rail-active), .nebula-rail-playlist > span:last-child) { opacity: 0; max-width: 0; overflow: hidden; }
+.nebula-rail[data-collapsed="true"] :is(.nebula-rail-section h2, .nebula-rail-status > div) { display: none; }
 .nebula-rail[data-collapsed="true"] .nebula-rail-body { padding: 4px 12px 8px; }
-.nebula-rail[data-collapsed="true"] .nebula-rail-item { justify-content: center; height: 40px; padding: 0; gap: 0; }
-.nebula-rail[data-collapsed="true"] .nebula-rail-section + .nebula-rail-section { margin-top: 8px; }
-.nebula-rail[data-collapsed="true"] .nebula-rail-playlists { margin-top: 8px; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-item { justify-content: flex-start; height: 40px; padding: 0 14px; gap: 0; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-item:hover { transform: none; }
 .nebula-rail[data-collapsed="true"] .nebula-rail-playlist { height: 44px; padding: 4px 0; justify-content: center; gap: 0; }
 .nebula-rail[data-collapsed="true"] .nebula-rail-playlist :is(img, span:first-child) { width: 32px; height: 32px; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-footer { padding: 12px; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-core .nebula-rail-item > svg { width: 19px; height: 19px; }
 .nebula-rail[data-collapsed="true"] .nebula-rail-status { justify-content: center; height: 28px; padding: 0; margin-top: 4px; }
 @container nebula-rail (max-height: 720px) {
+  .nebula-rail[data-collapsed="true"] .nebula-rail-brand { padding-inline: 19.5px; }
   .nebula-rail[data-collapsed="true"] .nebula-rail-item { height: 32px; min-height: 32px; }
+}
+@container nebula-rail (max-height: 500px) {
+  .nebula-rail[data-collapsed="true"] .nebula-rail-brand { padding-inline: 22.5px; }
+  .nebula-rail[data-collapsed="true"] .nebula-rail-item { height: 25px; min-height: 25px; }
 }

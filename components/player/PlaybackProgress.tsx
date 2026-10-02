@@ -89,7 +89,8 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     const resolvedBaseColor = baseColor || withAlpha(accentColor, effectiveMode === 'waveform' ? 0.28 : 0.18);
     const resolvedMarkerColor = markerColor || accentColor;
     const resolvedSecondaryColor = secondaryColor || resolvedMarkerColor;
-    const progressGradient = `linear-gradient(90deg, ${accentColor}, ${resolvedSecondaryColor})`;
+    // Keep the elapsed bar bright even when the artwork palette is dark.
+    const progressGradient = `linear-gradient(90deg, color-mix(in srgb, white 88%, ${accentColor}), color-mix(in srgb, white 75%, ${resolvedSecondaryColor}))`;
     const markerGradient = `linear-gradient(180deg, ${resolvedSecondaryColor}, ${accentColor})`;
 
     return (
