@@ -174,7 +174,7 @@ export const AppContent: React.FC<{
   const showDesktopPlaybackBar = isPlayerVisible && !showSidebarPlayer && !showFloatingPlayer && (!isNavOpen || viewportWidth >= 768);
 
   return (
-    <div className="nebula-next relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
+    <div data-nebula-rail-collapsed={settings.sidebar.collapsed ? 'true' : 'false'} className="nebula-next relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
       <WindowsTitleBar />
       <MacTitleBar />
 
@@ -187,7 +187,7 @@ export const AppContent: React.FC<{
       {/* Split Screen Layout */}
       <div className="flex-1 min-h-0">
         <SplitLayout
-        leftPanel={<DesktopRail />}
+        leftPanel={<DesktopRail collapsed={settings.sidebar.collapsed} onToggle={() => updateSettings({ sidebar: { ...settings.sidebar, collapsed: !settings.sidebar.collapsed } })} />}
         isPlayerVisible={isPlayerVisible}
         isCollapsed={isSidebarCollapsed || useFloatingPlayer}
         rightPanel={

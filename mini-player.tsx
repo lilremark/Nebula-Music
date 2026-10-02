@@ -9,6 +9,8 @@ import {
   ExternalLink,
   Music2,
 } from 'lucide-react';
+import { useAdaptiveColors } from './hooks/useAdaptiveColors';
+import { PlaybackProgress } from './components/player/PlaybackProgress';
 import { PlatformProvider, usePlatform } from './platform/PlatformContext';
 import { createCommandClient } from './playback/commandClient';
 import type { DesktopSnapshot, DesktopUpcomingTrack } from './playback/desktopProtocol';
@@ -64,6 +66,7 @@ const MiniPlayerContent: React.FC = () => {
   }, [platform]);
 
   const [displayProgress, setDisplayProgress] = useState(0);
+  const { colors } = useAdaptiveColors(snapshot?.track?.coverArtUrl);
 
   useEffect(() => {
     let raf = 0;
@@ -121,12 +124,9 @@ const MiniPlayerContent: React.FC = () => {
           <p className="truncate text-xs text-white/50">
             {track ? `${track.artist}${track.album ? ` — ${track.album}` : ''}` : 'Nebula Music'}
           </p>
-          <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-cyan-500 transition-[width] duration-200"
-              style={{ width: `${displayProgress}%` }}
-            />
-          </div>
+          <PlaybackProgress progress={displayProgress} mode="bar" accentColor={colors.primary}
+            secondaryColor={colors.secondary} markerColor={colors.secondary} baseColor="rgba(255,255,255,.1)"
+            scrubbable={false} showHandle trackClassName="mt-1.5 h-0.5 w-full rounded-full" />
         </div>
 
         {/* Transport controls */}

@@ -396,6 +396,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     progress={displayProgress}
                                     mode={progressMode}
                                     accentColor={colors.primary}
+                                    secondaryColor={colors.secondary}
                                     baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.24 : 0.16)}
                                     markerColor={colors.secondary || colors.primary}
                                     waveform={waveform}
@@ -775,6 +776,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                             progress={displayProgress}
                                             mode={progressMode}
                                             accentColor={colors.primary}
+                                            secondaryColor={colors.secondary}
                                             baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
                                             markerColor={colors.secondary || colors.primary}
                                             waveform={waveform}

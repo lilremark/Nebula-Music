@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AudioLines, Gauge, Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, SlidersHorizontal, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/Store';
+import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
 
@@ -57,11 +58,13 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     };
   }, [audioRef, isRadio, song?.id, isPlaying]);
 
-  if (!song && !currentRadioStation) return null;
-
   const artwork = isRadio
     ? radioMetadata?.artworkUrl || currentRadioStation?.imageUrl
-    : service.getCoverArtUrl(song.coverArt || song.id, 120);
+    : song ? service.getCoverArtUrl(song.coverArt || song.id, 120) : undefined;
+  const { colors } = useAdaptiveColors(artwork);
+
+  if (!song && !currentRadioStation) return null;
+
   const title = isRadio ? radioMetadata?.title || currentRadioStation?.name : song.title;
   const subtitle = isRadio ? radioMetadata?.artist || currentRadioStation?.name : song.artist;
   const playing = isRadio ? isRadioPlaying : isPlaying;
@@ -77,13 +80,14 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
 
   return <footer className="nebula-transport" aria-label="Playback controls">
     <div className="nebula-transport-progress">
-      {isRadio ? <span className="nebula-transport-live" /> : <PlaybackProgress
+      {isRadio ? <span className="nebula-transport-live" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }} /> : <PlaybackProgress
         progress={resolvedDuration ? position / resolvedDuration * 100 : 0}
         mode={progressMode}
         waveform={waveform}
-        accentColor="var(--next-text)"
+        accentColor={colors.primary}
+        secondaryColor={colors.secondary}
         baseColor="var(--next-waveform)"
-        markerColor="var(--next-playhead)"
+        markerColor={colors.secondary}
         onScrub={seek}
         scrubbable={resolvedDuration > 0}
         showHandle

@@ -79,6 +79,9 @@ app.on('browser-window-created', (_event, win) => {
         const slider = waveform?.querySelector('input[aria-label="Playback position"]');
         if (!slider || waveform.querySelectorAll('span').length < 500 || slider.getBoundingClientRect().height < 79)
           throw new Error('Bottom waveform is missing or its seek input is compressed');
+        await waitFor(() => waveform.querySelector('[data-nebula-playhead]').style.backgroundImage.includes('gradient'), 'artwork playhead gradient');
+        const wavePlayed = waveform.querySelectorAll('span')[waveform.querySelectorAll('span').length / 2];
+        if (!wavePlayed.style.backgroundImage.includes('gradient')) throw new Error('Played waveform lacks the artwork gradient');
         const dock = document.querySelector('.nebula-transport');
         const dockBounds = dock.getBoundingClientRect();
         const paneBounds = document.querySelector('[data-nebula-content-shell]').getBoundingClientRect();
@@ -95,6 +98,7 @@ app.on('browser-window-created', (_event, win) => {
         await waitFor(() => document.querySelector('.has-progress-bar'), 'progress bar toggle');
         const bar = document.querySelector('.has-progress-bar');
         const line = bar.querySelector('[data-nebula-playhead]');
+        if (!bar.querySelector('[data-nebula-progress-fill]').style.backgroundImage.includes('gradient') || !line.style.backgroundImage.includes('gradient')) throw new Error('Progress and playhead gradients are missing');
         const barBounds = bar.getBoundingClientRect();
         const lineBounds = line.getBoundingClientRect();
         if (getComputedStyle(bar).overflow !== 'visible' || lineBounds.height <= barBounds.height || lineBounds.top >= barBounds.top || lineBounds.bottom <= barBounds.bottom || lineBounds.width > 2.1 || parseFloat(getComputedStyle(line).borderRadius) !== 0) throw new Error('Progress playhead is not an unclipped vertical line outside the bar');
@@ -108,6 +112,8 @@ app.on('browser-window-created', (_event, win) => {
         document.querySelector('[aria-label="Open now playing panel"]').click();
         await waitFor(() => document.querySelector('[data-nebula-panel="now-playing"]'), 'side player');
         if (document.querySelector('.nebula-transport')) throw new Error('Bottom and side players are visible together');
+        const sideMarker = document.querySelector('[data-nebula-sidebar-player-progress] [data-nebula-playhead]');
+        if (!sideMarker.style.backgroundImage.includes('gradient')) throw new Error('Sidebar playhead lacks artwork gradient');
         const sidePlay = document.querySelector('[data-nebula-sidebar-player-transport] .nebula-playback-toggle');
         if (getComputedStyle(sidePlay).backgroundColor !== 'rgb(255, 255, 255)' || parseFloat(getComputedStyle(sidePlay).borderRadius) !== 8 || sidePlay.getBoundingClientRect().width < 63) throw new Error('Sidebar transport does not match the full player');
       })()`);
@@ -123,6 +129,49 @@ app.on('browser-window-created', (_event, win) => {
         if (!document.querySelector('.nebula-transport') || document.querySelector('[data-nebula-panel="now-playing"]'))
           throw new Error('Responsive layout did not replace the side player');
       })()`);
+      await win.webContents.executeJavaScript(`(async () => {
+        document.querySelector('[aria-label="Collapse navigation sidebar"]').click();
+        await new Promise(resolve => setTimeout(resolve, 1300));
+        const rail = document.querySelector('.nebula-rail');
+        if (rail.dataset.collapsed !== 'true' || Math.abs(rail.getBoundingClientRect().width - 72) > 1) throw new Error('Sidebar did not collapse to the icon rail');
+        for (const button of rail.querySelectorAll('.nebula-rail-item')) {
+          if (!button.getAttribute('aria-label') || !button.title || getComputedStyle(button.querySelector('span:not(.nebula-rail-active)')).display !== 'none') throw new Error('Collapsed navigation lost accessible labels or shows text');
+        }
+        const playlistArt = [...rail.querySelectorAll('.nebula-rail-playlist img')];
+        if (playlistArt.length === 0 || playlistArt.some(art => art.getBoundingClientRect().width !== 32)) throw new Error('Collapsed playlist artwork is missing');
+        const body = rail.querySelector('.nebula-rail-body');
+        if (body.scrollHeight > body.clientHeight + 1) throw new Error('Collapsed sidebar needs scrolling');
+        const dock = document.querySelector('.nebula-transport').getBoundingClientRect();
+        const pane = document.querySelector('[data-nebula-content-shell]').getBoundingClientRect();
+        if (Math.abs(dock.left + dock.width / 2 - pane.left - pane.width / 2) > 1) throw new Error('Dock is not centered after sidebar collapse');
+        const saved = await new Promise((resolve, reject) => {
+          const request = indexedDB.open('nebula_music_db');
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            const database = request.result;
+            const read = database.transaction('settings').objectStore('settings').get('user_settings');
+            read.onsuccess = () => { resolve(read.result); database.close(); };
+            read.onerror = () => { reject(read.error); database.close(); };
+          };
+        });
+        if (saved?.sidebar?.collapsed !== true) throw new Error('Sidebar collapse was not persisted');
+      })()`);
+      win.setContentSize(1101, 850);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      win.setContentSize(1100, 850);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      fs.writeFileSync(path.join(profile, 'navigation-collapsed.png'), (await win.webContents.capturePage()).toPNG());
+      for (const height of [600, 650, 850]) {
+        win.setContentSize(1100, height);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        await win.webContents.executeJavaScript(`(() => {
+          const body = document.querySelector('.nebula-rail-body');
+          if (body.scrollHeight > body.clientHeight + 1) throw new Error('Collapsed sidebar clips at height ${height}');
+          const rows = [...document.querySelectorAll('.nebula-rail-core .nebula-rail-item')].map(item => item.getBoundingClientRect());
+          if (rows.some((row, index) => index && row.top < rows[index - 1].bottom - 1)) throw new Error('Collapsed navigation is not vertical');
+        })()`);
+      }
+      await win.webContents.executeJavaScript(`document.querySelector('[aria-label="Expand navigation sidebar"]').click()`);
       win.setContentSize(1450, 1050);
       await new Promise(resolve => setTimeout(resolve, 1000));
       const result = await win.webContents.executeJavaScript(`(async () => {
@@ -409,6 +458,7 @@ app.on('browser-window-created', (_event, win) => {
         dock.querySelector('[aria-label="Open full screen player"]').click();
         await new Promise(resolve => setTimeout(resolve, 100));
         const full = document.querySelector('[data-nebula-player="fullscreen"]');
+        if (![...full.querySelectorAll('[data-nebula-playhead]')].every(marker => marker.style.backgroundImage.includes('gradient'))) throw new Error('Full player lacks artwork playhead gradients');
         if (!full.classList.contains('translate-y-0') || Number(getComputedStyle(full).zIndex) <= Number(getComputedStyle(dock).zIndex)) throw new Error('Full player is covered by the dock');
         full.querySelector('[aria-label="Close player"]').click();
       })()`);

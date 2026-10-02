@@ -139,6 +139,7 @@ export interface AppSettings {
     backgroundColor: string; // hex - for background tint
   };
   sidebar: {
+    collapsed: boolean;
     showHome: boolean;
     showBrowse: boolean;
     showRadio: boolean;

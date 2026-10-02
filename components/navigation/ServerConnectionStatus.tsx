@@ -11,8 +11,9 @@ export const ServerConnectionStatus: React.FC = () => {
       server = `${url.host}${url.pathname.replace(/\/+$/, '')}`;
     } catch { server = 'Server'; }
   }
+  const label = `${isDemoMode ? 'Demo library' : credentials ? 'Connected to server' : 'Offline'}${server ? `: ${server}` : ''}`;
   const state = isDemoMode ? 'demo' : credentials ? 'connected' : 'offline';
-  return <div className="nebula-rail-status" data-state={state}>
+  return <div className="nebula-rail-status" data-state={state} role="status" aria-label={label} title={label}>
     <span className="nebula-rail-status-dot" aria-hidden="true" />
     <div>
       <strong>{isDemoMode ? 'Demo library' : credentials ? 'Connected to server' : 'Offline'}</strong>

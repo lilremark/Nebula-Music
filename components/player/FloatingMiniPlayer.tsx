@@ -125,11 +125,12 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
             }}
         >
             {/* Progress bar at top - clickable with hover expand */}
-            <div onMouseEnter={() => setIsHoverProgress(true)} onMouseLeave={() => setIsHoverProgress(false)}>
+            <div className="px-3 pt-2" onMouseEnter={() => setIsHoverProgress(true)} onMouseLeave={() => setIsHoverProgress(false)}>
                 <PlaybackProgress
                     progress={displayProgress}
                     mode={progressMode}
                     accentColor={colors.primary}
+                    secondaryColor={colors.secondary}
                     baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
                     markerColor={colors.secondary || colors.primary}
                     waveform={waveform}

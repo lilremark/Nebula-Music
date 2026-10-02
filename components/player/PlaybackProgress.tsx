@@ -8,6 +8,7 @@ interface PlaybackProgressProps {
     accentColor: string;
     baseColor?: string;
     markerColor?: string;
+    secondaryColor?: string;
     waveform?: number[] | null;
     onScrub?: (e: React.ChangeEvent<HTMLInputElement>) => void;
     scrubbable?: boolean;
@@ -44,9 +45,9 @@ const withAlpha = (color: string, alpha: number) => {
     return color;
 };
 
-const WaveformBars = React.memo(({ peaks, color }: { peaks: number[]; color: string }) => (
+const WaveformBars = React.memo(({ peaks, color, secondary }: { peaks: number[]; color: string; secondary?: string }) => (
     <div className="h-full w-full flex items-end gap-[1px]" aria-hidden="true">
-        {peaks.map((peak, index) => <span key={index} className="flex-1 min-w-0" style={{ height: getWaveHeight(peak), backgroundColor: color }} />)}
+        {peaks.map((peak, index) => <span key={index} className="flex-1 min-w-0" style={{ height: getWaveHeight(peak), backgroundColor: color, backgroundImage: secondary ? `linear-gradient(180deg, ${secondary}, ${color})` : undefined }} />)}
     </div>
 ));
 
@@ -56,12 +57,13 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     accentColor,
     baseColor,
     markerColor,
+    secondaryColor,
     waveform,
     onScrub,
     scrubbable = true,
     trackClassName = '',
     trackStyle,
-    showHandle = false,
+    showHandle = true,
 }) => {
     const trackRef = useRef<HTMLDivElement>(null);
     const [barCount, setBarCount] = useState(320);
@@ -82,15 +84,18 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     }, [waveform, barCount]);
     const safeProgress = clamp(progress, 0, 100);
     const effectiveMode = mode === 'waveform' && waveform?.length ? 'waveform' : 'bar';
-    const progressWidth = `${safeProgress}%`;
     const progressClipPath = `inset(0 ${100 - safeProgress}% 0 0)`;
     const shouldShowMarker = effectiveMode === 'waveform' || showHandle;
     const resolvedBaseColor = baseColor || withAlpha(accentColor, effectiveMode === 'waveform' ? 0.28 : 0.18);
     const resolvedMarkerColor = markerColor || accentColor;
+    const resolvedSecondaryColor = secondaryColor || resolvedMarkerColor;
+    const progressGradient = `linear-gradient(90deg, ${accentColor}, ${resolvedSecondaryColor})`;
+    const markerGradient = `linear-gradient(180deg, ${resolvedSecondaryColor}, ${accentColor})`;
 
     return (
         <div
             ref={trackRef}
+            data-nebula-progress={effectiveMode}
             className={`relative ${effectiveMode === 'waveform' ? 'overflow-hidden' : 'overflow-visible'} ${trackClassName}`}
             style={{
                 ...trackStyle,
@@ -105,12 +110,12 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
                     className="absolute inset-0 overflow-hidden pointer-events-none"
                         style={{ clipPath: progressClipPath }}
                     >
-                        <WaveformBars peaks={displayPeaks!} color={accentColor} />
+                        <WaveformBars peaks={displayPeaks!} color={accentColor} secondary={resolvedSecondaryColor} />
                     </div>
                 </>
             ) : (
                 <div className="absolute inset-0 overflow-hidden" style={{ borderRadius: 'inherit', backgroundColor: resolvedBaseColor }}>
-                    <div className="absolute inset-y-0 left-0" style={{ width: progressWidth, backgroundColor: accentColor }} />
+                    <div data-nebula-progress-fill className="absolute inset-0" style={{ clipPath: progressClipPath, backgroundImage: progressGradient }} />
                 </div>
             )}
 
@@ -124,6 +129,7 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
                         bottom: effectiveMode === 'bar' ? -6 : 0,
                         left: `calc(${safeProgress}% - 1px)`,
                         backgroundColor: resolvedMarkerColor,
+                        backgroundImage: markerGradient,
                         boxShadow: `0 0 10px ${withAlpha(resolvedMarkerColor, 0.45)}`,
                     }}
                 />

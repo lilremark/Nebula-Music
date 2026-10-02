@@ -82,6 +82,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 const DEFAULT_SETTINGS: AppSettings = {
   theme: { ...defaultAccent },
   sidebar: {
+    collapsed: false,
     showHome: true,
     showBrowse: true,
     showRadio: true,

@@ -224,6 +224,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         progress={displayProgress}
                         mode={progressMode}
                         accentColor={colors.primary}
+                        secondaryColor={colors.secondary}
                         baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
                         markerColor={colors.secondary || colors.primary}
                         waveform={waveform}
