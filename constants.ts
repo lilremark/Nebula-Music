@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.14';
+export const APP_VERSION = '2.5.0-beta.15';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.15',
+    date: '2026-10-01',
+    title: 'Artwork Gradients and Collapsible Navigation',
+    changes: [
+      'Applied artwork-color gradients to progress bars, played waveform bars, and playheads across all music players, including the native mini-player.',
+      'Added a collapsible left sidebar with navigation icons, playlist artwork, accessible labels, and saved collapse state.',
+      'Kept navigation vertical without scrolling in short windows and centered the playback dock as the sidebar changes width.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.15'
+    }
+  },
   {
     version: '2.5.0-beta.14',
     date: '2026-10-01',
