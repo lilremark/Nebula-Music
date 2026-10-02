@@ -24,9 +24,9 @@ export const SplitLayout: React.FC<SplitLayoutProps> = ({
         <div className="nebula-split-layout flex h-full w-full bg-neutral-200 dark:bg-black">
             {leftPanel}
             {/* Left Panel - Content Area */}
-            <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+            <section data-nebula-content-shell className="relative isolate flex-1 flex flex-col min-w-0 h-full overflow-hidden">
                 {children}
-            </main>
+            </section>
 
             {/* Right Panel - Now Playing (Desktop, when not collapsed) */}
             {showSidebar && (

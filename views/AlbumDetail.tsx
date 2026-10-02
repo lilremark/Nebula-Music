@@ -1,45 +1,45 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useStore } from '../context/Store';
 import { IAlbum, ISong } from '../types';
-import { Play, Shuffle, Heart, ArrowLeft, ListPlus, BarChart2, Disc, Pause, Info } from 'lucide-react';
+import { Play, Shuffle, Heart, ListPlus, BarChart2, Disc, Pause, Info } from 'lucide-react';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { containsSameSongs } from '../utils/playback';
 
 export const AlbumDetailView: React.FC = () => {
-    const { viewData, setView, goBack, backTarget, service, playSong, togglePlay, isPlaying, queue, currentSongIndex, currentRadioStation, openPlaylistModal, toggleLike } = useStore();
+    const { viewData, setView, service, playSong, togglePlay, isPlaying, queue, currentSongIndex, currentRadioStation, openPlaylistModal, toggleLike } = useStore();
     const [album, setAlbum] = useState<IAlbum | null>(null);
     const [relatedAlbums, setRelatedAlbums] = useState<IAlbum[]>([]);
     const [showFullNotes, setShowFullNotes] = useState(false);
-    const [artistImage, setArtistImage] = useState<string>('');
 
     // Extract colors from album art for accent backgrounds
     const albumArtUrl = album ? service.getCoverArtUrl(album.coverArt || album.id, 200) : undefined;
-    const { colors: albumColors } = useAdaptiveColors(albumArtUrl);
+    const { colors: albumColors, defaultColors, isLoading: isColorLoading } = useAdaptiveColors(albumArtUrl);
 
     useEffect(() => {
+        let cancelled = false;
+        setAlbum(null);
+        setRelatedAlbums([]);
+        setShowFullNotes(false);
         const load = async () => {
             if (viewData) {
                 const data = await service.getAlbum(viewData);
+                if (cancelled) return;
                 setAlbum(data);
                 if (!data) return;
 
                 if (data.artistId) {
                     try {
                         const { albums } = await service.getArtist(data.artistId);
+                        if (cancelled) return;
                         setRelatedAlbums(albums.filter(a => a.id !== data.id).slice(0, 6));
-
-                        // Fetch artist info for background image
-                        const artistInfo = await service.getArtistInfo(data.artistId, data.artist);
-                        if (artistInfo.image) {
-                            setArtistImage(artistInfo.image);
-                        }
                     } catch (e) {
-                        console.warn('Could not load related albums or artist info');
+                        console.warn('Could not load related albums');
                     }
                 }
             }
         };
         load();
+        return () => { cancelled = true; };
     }, [viewData, service]);
 
     const hasMultiDisc = useMemo(() => {
@@ -75,7 +75,7 @@ export const AlbumDetailView: React.FC = () => {
         const s = suffix.toUpperCase();
         const isLossless = s === 'FLAC' || s === 'ALAC' || s === 'WAV';
         return (
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLossless ? 'bg-yellow-500/20 text-yellow-400' : 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/60'}`}>
+            <span data-nebula-track-quality className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLossless ? 'bg-yellow-500/20 text-yellow-400' : 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/60'}`}>
                 {s}
             </span>
         );
@@ -108,56 +108,13 @@ export const AlbumDetailView: React.FC = () => {
 
         playSong(album.songs[0], album.songs);
     };
-    const backLabel = (() => {
-        switch (backTarget?.view) {
-            case 'HOME': return 'Home';
-            case 'BROWSE': return 'Browse';
-            case 'ARTISTS': return 'Artists';
-            case 'ARTIST_DETAIL': return 'Artist';
-            case 'ALBUM_DETAIL': return 'Album';
-            case 'PLAYLISTS': return 'Playlists';
-            case 'PLAYLIST_DETAIL': return 'Playlist';
-            case 'SEARCH': return 'Search';
-            case 'LIKED_ALBUMS': return 'Liked Albums';
-            case 'LIKED_SONGS': return 'Liked Songs';
-            case 'SONGS': return 'Songs';
-            default: return 'Albums';
-        }
-    })();
-
     return (
-        <div className="min-h-full pb-32 w-full" data-nebula-view="album-detail">
+        <div className="min-h-full pb-32 w-full" data-nebula-view="album-detail" style={{
+            '--album-color': isColorLoading || albumColors === defaultColors ? 'var(--next-surface)' : albumColors.primary,
+        } as React.CSSProperties}>
             {/* Hero Header - full width */}
             <div className="relative pt-4" data-nebula-detail-hero>
-                {/* Background with artist image and blur */}
-                <div className="absolute inset-x-0 top-0 h-[420px] overflow-hidden pointer-events-none" data-nebula-detail-backdrop>
-                    {artistImage ? (
-                        <img
-                            src={artistImage}
-                            className="absolute w-full h-full object-cover blur-2xl opacity-20 scale-110"
-                            alt=""
-                            onError={(e) => e.currentTarget.style.display = 'none'}
-                        />
-                    ) : (
-                        <img
-                            src={service.getCoverArtUrl(album.coverArt || album.id, 400)}
-                            className="absolute w-full h-full object-cover blur-3xl opacity-25 scale-150"
-                            alt=""
-                        />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-neutral-200/90 to-neutral-200 dark:from-neutral-950/40 dark:via-neutral-950/85 dark:to-neutral-950" />
-                </div>
-
                 <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10" data-nebula-detail-hero-inner>
-                    {/* Back button */}
-                    <button
-                        onClick={() => goBack('ALBUMS')}
-                        className="mb-5 flex items-center text-neutral-600 hover:text-neutral-900 transition text-sm font-medium group dark:text-white/50 dark:hover:text-white"
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                        {backLabel}
-                    </button>
-
                     <div className="flex flex-col md:flex-row gap-8" data-nebula-detail-layout>
                         {/* Cover Art */}
                         <div className="shrink-0 w-56 h-56 md:w-72 md:h-72 rounded-xl overflow-hidden shadow-2xl bg-neutral-200 dark:bg-neutral-900" data-nebula-detail-cover>
@@ -172,7 +129,7 @@ export const AlbumDetailView: React.FC = () => {
                         <div className="flex-1 flex flex-col justify-end" data-nebula-detail-info>
                             <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white mb-2 leading-tight">{album.name}</h1>
 
-                            <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-white/60 mb-4">
+                            <div data-nebula-album-meta className="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-white/60 mb-4">
                                 <button
                                     className="hover:text-neutral-900 transition font-medium dark:hover:text-white"
                                     onClick={() => album.artistId && setView('ARTIST_DETAIL', album.artistId)}
@@ -189,7 +146,7 @@ export const AlbumDetailView: React.FC = () => {
                                 <span>{displayedSongCount} {displayedSongCount === 1 ? 'song' : 'songs'}, {formatTotalTime(displayedDuration)}</span>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div data-nebula-album-options className="flex flex-wrap items-center gap-2">
                                 <button
                                     onClick={handleAlbumPlay}
                                     className="flex items-center gap-2 px-5 py-2 bg-neutral-900 text-white font-bold rounded-lg hover:bg-neutral-800 transition text-sm dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
@@ -259,15 +216,12 @@ export const AlbumDetailView: React.FC = () => {
                 <section
                     data-nebula-track-section
                     className="mb-8 rounded-xl overflow-hidden"
-                    style={{
-                        background: `linear-gradient(135deg, ${albumColors.surface} 0%, transparent 100%)`,
-                    }}
                 >
                     <div className="p-4" data-nebula-track-section-inner>
                         <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-3">Tracks</h2>
-                        <div className="border border-neutral-300 dark:border-white/10 rounded-lg overflow-hidden" style={{ borderColor: albumColors.primaryMuted }} data-nebula-track-list>
+                        <div className="border border-neutral-300 dark:border-white/10 rounded-lg overflow-hidden" data-nebula-track-list>
                             {album.songs?.map((song, idx) => {
-                                const isCurrent = currentSong?.id === song.id;
+                                const isCurrent = !currentRadioStation && currentSong?.id === song.id;
                                 const discNumber = song.discNumber || 1;
                                 const prevDisc = idx > 0 ? (album.songs![idx - 1].discNumber || 1) : 0;
                                 const showDiscHeader = hasMultiDisc && discNumber !== prevDisc;
@@ -282,11 +236,15 @@ export const AlbumDetailView: React.FC = () => {
                                         )}
                                         <div
                                             data-nebula-track-row
+                                            data-current={isCurrent}
                                             className={`group flex items-center gap-4 px-5 py-4 cursor-pointer transition border-b border-neutral-200 dark:border-white/5 last:border-0 hover:bg-neutral-100 dark:hover:bg-white/5 ${isCurrent ? 'bg-neutral-100 dark:bg-white/5' : ''}`}
                                             onClick={() => album.songs && playSong(song, album.songs)}
                                         >
                                             {/* Track number / Play */}
-                                            <div className="w-7 text-center relative shrink-0">
+                                            <button type="button" data-nebula-track-play aria-label={`Play ${song.title}`} className="w-7 text-center relative shrink-0" onClick={event => {
+                                                event.stopPropagation();
+                                                if (album.songs) playSong(song, album.songs);
+                                            }}>
                                                 {isCurrent && isPlaying ? (
                                                     <div className="flex gap-0.5 items-end justify-center h-4">
                                                         <div className="w-0.5 bg-primary animate-pulse h-2"></div>
@@ -301,11 +259,11 @@ export const AlbumDetailView: React.FC = () => {
                                                         <Play className="w-3.5 h-3.5 text-neutral-900 dark:text-white absolute inset-0 m-auto opacity-0 group-hover:opacity-100 transition fill-current" />
                                                     </>
                                                 )}
-                                            </div>
+                                            </button>
 
                                             {/* Title & Artist */}
                                             <div className="flex-1 min-w-0">
-                                                <p className={`text-sm font-medium truncate transition ${isCurrent ? 'text-primary' : 'text-neutral-900 dark:text-white group-hover:text-neutral-900 dark:group-hover:text-white'}`}>
+                                                <p data-nebula-track-title className={`text-sm font-medium truncate transition ${isCurrent ? 'text-primary' : 'text-neutral-900 dark:text-white group-hover:text-neutral-900 dark:group-hover:text-white'}`}>
                                                     {song.title}
                                                 </p>
                                                 {song.artist !== album.artist && (
@@ -324,7 +282,7 @@ export const AlbumDetailView: React.FC = () => {
                                             )}
 
                                             {/* Duration */}
-                                            <span className="text-xs text-neutral-500 dark:text-white/60 font-mono w-10 text-right shrink-0">
+                                            <span data-nebula-track-duration className="text-xs text-neutral-500 dark:text-white/60 font-mono w-10 text-right shrink-0">
                                                 {formatTime(song.duration)}
                                             </span>
 

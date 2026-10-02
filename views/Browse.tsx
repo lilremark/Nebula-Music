@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStore } from '../context/Store';
 import { ISong, IAlbum, IPlaylist } from '../types';
-import { Play, Pause, ChevronLeft, ChevronRight, Music, RefreshCw, Heart, Radio, Zap, Calendar, Sparkles, Loader2, Disc3, Mic2, ListMusic } from 'lucide-react';
+import { Play, Pause, ChevronLeft, ChevronRight, Music, RefreshCw, Heart, Radio, Zap, Calendar, Sparkles, Loader2 } from 'lucide-react';
 
 // Mix Card Component
 const MixCard: React.FC<{
@@ -496,14 +496,6 @@ export const BrowseView: React.FC = () => {
                     </button>
                 </div>
             </div>
-
-            <nav className="nebula-browse-categories" aria-label="Browse your library">
-                <button type="button" onClick={() => setView('ALBUMS')}><Disc3 size={20} aria-hidden="true" /><span>Albums</span></button>
-                <button type="button" onClick={() => setView('ARTISTS')}><Mic2 size={20} aria-hidden="true" /><span>Artists</span></button>
-                <button type="button" onClick={() => setView('SONGS')}><Music size={20} aria-hidden="true" /><span>Songs</span></button>
-                <button type="button" onClick={() => setView('PLAYLISTS')}><ListMusic size={20} aria-hidden="true" /><span>Playlists</span></button>
-                <button type="button" onClick={() => setView('RADIO')}><Radio size={20} aria-hidden="true" /><span>Radio</span></button>
-            </nav>
 
             {isStudioPreview && instantMixError && <p data-nebula-instant-mix-error className="mb-4 text-sm text-red-500 dark:text-red-400">{instantMixError}</p>}
 

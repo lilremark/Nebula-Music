@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Compass, Disc3, Heart, Home, ListMusic, Mic2, Music2, Radio, Search, Settings } from 'lucide-react';
 import { useStore } from '../../context/Store';
@@ -27,12 +27,30 @@ const parentView = (view: View): View => {
 export const DesktopRail: React.FC = () => {
   const { currentView, setView, openSearchModal, settings, service, playlists } = useStore();
   const reducedMotion = useReducedMotion();
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const coreRef = useRef<HTMLDivElement>(null);
+  const [playlistLimit, setPlaylistLimit] = useState(0);
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    const core = coreRef.current;
+    if (!body || !core) return;
+    const measure = () => {
+      // Reserve body padding, the playlist heading and the section gap.
+      const slots = Math.floor((body.clientHeight - core.offsetHeight - 60) / 32);
+      setPlaylistLimit(Math.max(0, Math.min(4, slots)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(body);
+    observer.observe(core);
+    return () => observer.disconnect();
+  }, []);
   const visibleSections = sections.map(section => ({
     ...section,
     items: section.items.filter(item => !('flag' in item) || settings.sidebar[item.flag]),
   })).filter(section => section.items.length);
   const listenItems = [
-    { view: 'HOME', label: 'Listen Now', icon: Home, flag: settings.sidebar.showHome },
+    { view: 'HOME', label: 'Home', icon: Home, flag: settings.sidebar.showHome },
     { view: 'BROWSE', label: 'Browse', icon: Compass, flag: settings.sidebar.showBrowse },
     { view: 'RADIO', label: 'Internet Radio', icon: Radio, flag: settings.sidebar.showRadio },
   ] as const;
@@ -52,19 +70,21 @@ export const DesktopRail: React.FC = () => {
       <img className="nebula-brand-mark" src={logo} alt="" />
       <strong>Nebula</strong>
     </button>
-    <div className="nebula-rail-scroll">
-      <nav aria-label="Discover" className="nebula-rail-section">
-        <h2>Discover</h2>
-        {listenItems.filter(item => item.flag).map(navButton)}
-        <button type="button" className="nebula-rail-item" onClick={openSearchModal}><Search size={19} strokeWidth={1.9} aria-hidden /><span>Search</span></button>
-      </nav>
-      {visibleSections.map(section => <nav key={section.title} aria-label={section.title} className="nebula-rail-section">
-        <h2>{section.title}</h2>
-        {section.items.map(navButton)}
-      </nav>)}
-      {settings.sidebar.showPlaylists && playlists.length > 0 && <nav aria-label="Your playlists" className="nebula-rail-section nebula-rail-playlists">
+    <div className="nebula-rail-body" ref={bodyRef}>
+      <div className="nebula-rail-core" ref={coreRef}>
+        <nav aria-label="Discover" className="nebula-rail-section">
+          <h2>Discover</h2>
+          {listenItems.filter(item => item.flag).map(navButton)}
+          <button type="button" className="nebula-rail-item" onClick={openSearchModal}><Search size={19} strokeWidth={1.9} aria-hidden /><span>Search</span></button>
+        </nav>
+        {visibleSections.map(section => <nav key={section.title} aria-label={section.title} className="nebula-rail-section">
+          <h2>{section.title}</h2>
+          {section.items.map(navButton)}
+        </nav>)}
+      </div>
+      {settings.sidebar.showPlaylists && playlists.length > 0 && playlistLimit > 0 && <nav aria-label="Your playlists" className="nebula-rail-section nebula-rail-playlists">
         <h2>Playlists</h2>
-        {playlists.slice(0, 8).map(playlist => <button key={playlist.id} type="button" className="nebula-rail-playlist" onClick={() => setView('PLAYLIST_DETAIL', playlist.id)}>
+        {playlists.slice(0, playlistLimit).map(playlist => <button key={playlist.id} type="button" className="nebula-rail-playlist" onClick={() => setView('PLAYLIST_DETAIL', playlist.id)}>
           {playlist.coverArt ? <img src={service.getCoverArtUrl(playlist.coverArt, 48)} alt="" /> : <span><ListMusic size={15} aria-hidden /></span>}
           <span title={playlist.name}>{playlist.name}</span>
         </button>)}

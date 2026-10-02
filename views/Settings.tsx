@@ -770,10 +770,6 @@ export const SettingsView: React.FC = () => {
                 <header data-nebula-settings-header className="mb-8">
                     <div data-nebula-settings-intro>
                         <h1 className="text-3xl font-black tracking-tight text-neutral-950 dark:text-white">Settings</h1>
-                        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-600 dark:text-white/55">
-                            Tune the connection, playback, appearance, navigation, and keyboard controls for this device.
-                        </p>
-                        <p data-nebula-settings-scope>Changes are saved to this device.</p>
                     </div>
                 </header>
 

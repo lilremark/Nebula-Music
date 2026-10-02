@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Edit3, Globe2, Play, Plus, Radio, Save, Trash2, X } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { IRadioStation } from '../types';
+import { ContentModal } from '../components/ContentModal';
 
 const emptyForm = {
     name: '',
@@ -177,15 +178,18 @@ export const InternetRadioView: React.FC = () => {
             )}
 
             {isStationModalOpen && (
-                <div data-nebula-radio-modal className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-xs dark:bg-neutral-950/80" onClick={resetForm} />
+                <ContentModal kind="radio" onDismiss={resetForm}>
                     <form
+                        data-nebula-radio-modal
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="nebula-station-modal-title"
                         onSubmit={submitStation}
                         className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xl dark:border-white/10 dark:bg-neutral-950"
                     >
                         <div className="flex items-center justify-between border-b border-neutral-200 p-5 dark:border-white/10">
                             <div>
-                                <h2 className="text-lg font-bold text-neutral-900 dark:text-white">{editingId ? 'Edit Station' : 'New Station'}</h2>
+                                <h2 id="nebula-station-modal-title" className="text-lg font-bold text-neutral-900 dark:text-white">{editingId ? 'Edit Station' : 'New Station'}</h2>
                             </div>
                             <button
                                 type="button"
@@ -201,6 +205,7 @@ export const InternetRadioView: React.FC = () => {
                             <label className="block">
                                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-white/50">Station Name</span>
                                 <input
+                                    autoFocus
                                     value={form.name}
                                     onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
                                     placeholder="Station name"
@@ -262,7 +267,7 @@ export const InternetRadioView: React.FC = () => {
                             </button>
                         </div>
                     </form>
-                </div>
+                </ContentModal>
             )}
         </div>
     );

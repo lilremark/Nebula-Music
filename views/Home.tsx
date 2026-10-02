@@ -264,7 +264,7 @@ export const HomeView: React.FC = () => {
         <div data-nebula-view="home" className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
             <div className="nebula-home-intro">
                 <div>
-                    <h1>Listen Now</h1>
+                    <h1>Home</h1>
                 </div>
             </div>
             <HeroSection songs={randomSongs} />

@@ -124,7 +124,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                 <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
                     <SectionLabel>Discover</SectionLabel>
                     <div className="space-y-1">
-                        {s.showHome && <NavItem icon={Home} label="Listen Now" view="HOME" />}
+                        {s.showHome && <NavItem icon={Home} label="Home" view="HOME" />}
                         {s.showBrowse && <NavItem icon={Compass} label="Browse" view="BROWSE" />}
                         {s.showRadio && <NavItem icon={Radio} label="Internet Radio" view="RADIO" />}
                         <button type="button" onClick={() => { onClose(); openSearchModal(); }} className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-neutral-700 dark:text-white/70 hover:bg-neutral-100 dark:hover:bg-white/10 text-left"><Search size={20} aria-hidden="true" /><span className="text-sm">Search</span></button>

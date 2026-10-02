@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useStore } from '../context/Store';
 import { Search, X, Disc, Mic2, Music, Play, ArrowRight, Command } from 'lucide-react';
 import { ISong, IAlbum, IArtist } from '../types';
+import { ContentModal } from './ContentModal';
 
 export const SearchModal: React.FC = () => {
     const { isSearchModalOpen, closeSearchModal, service, setView, playSong, openSearchModal, performSearch } = useStore();
@@ -81,12 +82,9 @@ export const SearchModal: React.FC = () => {
     const hasResults = results.artists.length > 0 || results.albums.length > 0 || results.songs.length > 0;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 px-4 animate-fade-in">
-            {/* Enhanced Backdrop */}
-            <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/20 via-neutral-900/30 to-neutral-900/40 dark:from-black/60 dark:via-black/80 dark:to-black/90 backdrop-blur-extra" onClick={handleClose} />
-
+        <ContentModal kind="search" onDismiss={handleClose}>
             {/* Command Palette Modal */}
-            <div className="relative w-full max-w-3xl floating-card-3 rounded-3xl shadow-float-3 overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+            <div role="dialog" aria-modal="true" aria-label="Search music" className="nebula-search-dialog relative w-full max-w-3xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
                 {/* Search Input Header */}
                 <div className="relative flex items-center p-5 border-b border-neutral-200 dark:border-white/10 bg-gradient-to-r from-primary/[0.03] to-secondary/[0.03]">
                     {/* Gradient overlay */}
@@ -253,6 +251,6 @@ export const SearchModal: React.FC = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </ContentModal>
     );
 };
