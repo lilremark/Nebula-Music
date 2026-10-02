@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.15';
+export const APP_VERSION = '2.5.0-beta.16';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.16',
+    date: '2026-10-02',
+    title: 'Sidebar and Progress Refinements',
+    changes: [
+      'Lightened elapsed progress bars with a pale artwork-tinted gradient for clearer playback position.',
+      'Aligned collapsed navigation icons and playlist artwork, and added smooth sidebar opening and closing with reduced-motion support.',
+      'Added section dividers in both sidebar states and revealed the expand button over the collapsed Nebula logo on hover or keyboard focus.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.16'
+    }
+  },
   {
     version: '2.5.0-beta.15',
     date: '2026-10-01',
