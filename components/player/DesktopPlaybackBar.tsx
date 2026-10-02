@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { AudioLines, Gauge, Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, SlidersHorizontal, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
@@ -20,17 +20,13 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     queue, currentSongIndex, currentRadioStation, radioMetadata, isRadioPlaying,
     isPlaying, service, audioRef, togglePlay, toggleRadioPlay,
     prevSong, nextSong, toggleLike, volume, setVolume, setView,
+    settings, updateSettings, playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection,
   } = useStore();
   const song = queue[currentSongIndex];
   const isRadio = !!currentRadioStation;
   const streamUrl = !isRadio && song ? service.getStreamUrl(song.id, song.suffix) : null;
-  const waveform = useTrackWaveform(isRadio ? undefined : song?.id, streamUrl);
-  // Preserve peaks while keeping bars legible in the narrower bottom transport.
-  const compactWaveform = useMemo(() => waveform?.reduce<number[]>((peaks, peak, index) => {
-    const bucket = Math.floor(index / 2);
-    peaks[bucket] = Math.max(peaks[bucket] || 0, peak);
-    return peaks;
-  }, []) ?? null, [waveform]);
+  const progressMode = settings.progressVisualization;
+  const waveform = useTrackWaveform(isRadio ? undefined : song?.id, progressMode === 'waveform' ? streamUrl : null);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
 
@@ -43,15 +39,23 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
       setDuration(Number.isFinite(audio.duration) ? audio.duration : song.duration || 0);
     };
     sync();
+    let frame = 0;
+    const animate = () => {
+      // Read the Store's current owner on every frame, including crossfade handoffs.
+      setPosition(audioRef.current?.currentTime || 0);
+      frame = window.requestAnimationFrame(animate);
+    };
+    if (isPlaying && window.requestAnimationFrame) frame = window.requestAnimationFrame(animate);
     audio.addEventListener('timeupdate', sync);
     audio.addEventListener('durationchange', sync);
     audio.addEventListener('loadedmetadata', sync);
     return () => {
+      window.cancelAnimationFrame?.(frame);
       audio.removeEventListener('timeupdate', sync);
       audio.removeEventListener('durationchange', sync);
       audio.removeEventListener('loadedmetadata', sync);
     };
-  }, [audioRef, isRadio, song?.id]);
+  }, [audioRef, isRadio, song?.id, isPlaying]);
 
   if (!song && !currentRadioStation) return null;
 
@@ -73,18 +77,19 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
 
   return <footer className="nebula-transport" aria-label="Playback controls">
     <div className="nebula-transport-progress">
-      <span>{isRadio ? 'LIVE' : formatTime(position)}</span>
       {isRadio ? <span className="nebula-transport-live" /> : <PlaybackProgress
         progress={resolvedDuration ? position / resolvedDuration * 100 : 0}
-        mode="waveform"
-        waveform={compactWaveform}
-        accentColor="var(--next-accent)"
-        baseColor="var(--next-line)"
-        markerColor="var(--next-text)"
+        mode={progressMode}
+        waveform={waveform}
+        accentColor="var(--next-text)"
+        baseColor="var(--next-waveform)"
+        markerColor="var(--next-playhead)"
         onScrub={seek}
         scrubbable={resolvedDuration > 0}
-        trackClassName="nebula-transport-waveform"
+        showHandle
+        trackClassName={`nebula-transport-waveform ${progressMode === 'waveform' && waveform ? 'has-waveform' : 'has-progress-bar'}`}
       />}
+      <span>{isRadio ? 'LIVE' : formatTime(position)}</span>
       <span>{isRadio ? currentRadioStation?.genre || 'RADIO' : formatTime(resolvedDuration)}</span>
     </div>
     <div className="nebula-transport-track">
@@ -107,6 +112,19 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     </div>
 
     <div className="nebula-transport-tools">
+      {!isRadio && <>
+        <button type="button" className="nebula-transport-icon" onClick={() => updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' })} aria-label={progressMode === 'waveform' ? 'Switch to progress bar' : 'Switch to waveform'} aria-pressed={progressMode === 'waveform'} title={progressMode === 'waveform' ? 'Progress bar' : 'Waveform'}><AudioLines size={18} /></button>
+        <details className="nebula-speed-pitch">
+          <summary className="nebula-transport-icon" aria-label="Speed and pitch controls" title="Speed and pitch"><Gauge size={18} /></summary>
+          <div className="nebula-speed-pitch-panel" role="group" aria-label="Speed and pitch">
+            <label>Speed <output>{playbackRate.toFixed(1)}×</output><input aria-label="Playback speed" type="range" min="0.5" max="2" step="0.1" value={playbackRate} onChange={event => setPlaybackRate(Number(event.target.value))} /></label>
+            <label>Pitch <output>{pitch > 0 ? '+' : ''}{pitch} st</output><input aria-label="Playback pitch" type="range" min="-12" max="12" step="1" value={pitch} onChange={event => setPitch(Number(event.target.value))} /></label>
+            <button type="button" aria-pressed={pitchCorrection} onClick={() => setPitchCorrection(!pitchCorrection)}><SlidersHorizontal size={15} /> Independent pitch</button>
+            <button type="button" onClick={() => { setPlaybackRate(1); setPitch(0); }}>Reset speed and pitch</button>
+          </div>
+        </details>
+      </>}
+
       <button type="button" className="nebula-transport-icon" onClick={onTogglePanel} aria-label={panelOpen ? 'Close now playing panel' : 'Open now playing panel'} aria-pressed={panelOpen}><ListMusic size={19} /></button>
       <button type="button" className="nebula-transport-icon" onClick={() => setVolume(volume === 0 ? 0.7 : 0)} aria-label={volume === 0 ? 'Unmute' : 'Mute'}>{volume === 0 ? <VolumeX size={19} /> : <Volume2 size={19} />}</button>
       <input type="range" min={0} max={1} step={0.01} value={volume} onChange={event => setVolume(Number(event.target.value))} aria-label="Volume" style={{ '--progress': `${volume * 100}%` } as React.CSSProperties} />

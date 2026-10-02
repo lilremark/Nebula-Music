@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 export type ProgressVisualizationMode = 'bar' | 'waveform';
 
@@ -16,14 +16,8 @@ interface PlaybackProgressProps {
     showHandle?: boolean;
 }
 
-const FALLBACK_WAVEFORM = Array.from({ length: 180 }, (_, i) => {
-    const phase = i / 180;
-    const value = Math.abs(Math.sin(phase * Math.PI * 4));
-    return 0.1 + value * 0.5;
-});
-
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-const getWaveHeight = (peak: number) => `${Math.max(10, Math.min(98, peak * 100))}%`;
+const getWaveHeight = (peak: number) => `${Math.max(1, Math.min(98, peak * 100))}%`;
 const withAlpha = (color: string, alpha: number) => {
     if (color.startsWith('#')) {
         const hex = color.slice(1);
@@ -50,6 +44,12 @@ const withAlpha = (color: string, alpha: number) => {
     return color;
 };
 
+const WaveformBars = React.memo(({ peaks, color }: { peaks: number[]; color: string }) => (
+    <div className="h-full w-full flex items-end gap-[1px]" aria-hidden="true">
+        {peaks.map((peak, index) => <span key={index} className="flex-1 min-w-0" style={{ height: getWaveHeight(peak), backgroundColor: color }} />)}
+    </div>
+));
+
 export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     progress,
     mode,
@@ -63,47 +63,50 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     trackStyle,
     showHandle = false,
 }) => {
+    const trackRef = useRef<HTMLDivElement>(null);
+    const [barCount, setBarCount] = useState(320);
+    useEffect(() => {
+        const track = trackRef.current;
+        if (!track || typeof ResizeObserver === 'undefined') return;
+        const observer = new ResizeObserver(() => setBarCount(Math.max(8, Math.floor(track.clientWidth / 3))));
+        observer.observe(track);
+        return () => observer.disconnect();
+    }, []);
+    const displayPeaks = useMemo(() => {
+        if (!waveform || waveform.length <= barCount) return waveform;
+        return Array.from({ length: barCount }, (_, index) => {
+            const start = Math.floor(index * waveform.length / barCount);
+            const end = Math.floor((index + 1) * waveform.length / barCount);
+            return Math.max(...waveform.slice(start, end));
+        });
+    }, [waveform, barCount]);
     const safeProgress = clamp(progress, 0, 100);
-    const peaks = waveform && waveform.length ? waveform : FALLBACK_WAVEFORM;
+    const effectiveMode = mode === 'waveform' && waveform?.length ? 'waveform' : 'bar';
     const progressWidth = `${safeProgress}%`;
     const progressClipPath = `inset(0 ${100 - safeProgress}% 0 0)`;
-    const shouldShowMarker = mode === 'waveform' || showHandle;
-    const resolvedBaseColor = baseColor || withAlpha(accentColor, mode === 'waveform' ? 0.28 : 0.18);
+    const shouldShowMarker = effectiveMode === 'waveform' || showHandle;
+    const resolvedBaseColor = baseColor || withAlpha(accentColor, effectiveMode === 'waveform' ? 0.28 : 0.18);
     const resolvedMarkerColor = markerColor || accentColor;
-
-    const waveformBars = (barClassName: string, barStyle?: React.CSSProperties) => (
-        <div className="h-full w-full flex items-end gap-[1px]">
-            {peaks.map((peak, idx) => (
-                <span
-                    key={`wave-${idx}`}
-                    className={`flex-1 min-w-[1px] ${barClassName}`}
-                    style={{
-                        height: getWaveHeight(peak),
-                        ...barStyle,
-                    }}
-                />
-            ))}
-        </div>
-    );
 
     return (
         <div
+            ref={trackRef}
             className={`relative overflow-hidden ${trackClassName}`}
             style={{
-                ...(mode === 'bar' ? { backgroundColor: resolvedBaseColor } : undefined),
+                ...(effectiveMode === 'bar' ? { backgroundColor: resolvedBaseColor } : undefined),
                 ...trackStyle,
             }}
         >
-            {mode === 'waveform' ? (
+            {effectiveMode === 'waveform' ? (
                 <>
                     <div className="absolute inset-0">
-                        {waveformBars('', { backgroundColor: resolvedBaseColor })}
+                        <WaveformBars peaks={displayPeaks!} color={resolvedBaseColor} />
                     </div>
                     <div
                     className="absolute inset-0 overflow-hidden pointer-events-none"
                         style={{ clipPath: progressClipPath }}
                     >
-                        {waveformBars('', { backgroundColor: accentColor })}
+                        <WaveformBars peaks={displayPeaks!} color={accentColor} />
                     </div>
                 </>
             ) : (
@@ -114,7 +117,7 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
             )}
 
             {shouldShowMarker && (
-                mode === 'waveform' ? (
+                effectiveMode === 'waveform' ? (
                     <div
                         className="absolute top-0 bottom-0 w-[2px] pointer-events-none"
                         style={{

@@ -26,6 +26,8 @@ describe('bottom player waveform', () => {
       isRadioPlaying: false, isPlaying: true, audioRef: { current: audio },
       service: { getCoverArtUrl: vi.fn(() => 'https://music.test/art'), getStreamUrl: vi.fn(() => 'https://music.test/stream') },
       togglePlay: vi.fn(), toggleRadioPlay: vi.fn(), prevSong: vi.fn(), nextSong: vi.fn(),
+      settings: { progressVisualization: 'waveform' }, updateSettings: vi.fn(),
+      playbackRate: 1, pitch: 0, pitchCorrection: true, setPlaybackRate: vi.fn(), setPitch: vi.fn(), setPitchCorrection: vi.fn(),
       toggleLike: vi.fn(), volume: 0.5, setVolume: vi.fn(), setView: vi.fn(),
     });
   });
@@ -41,8 +43,8 @@ describe('bottom player waveform', () => {
     await render();
     expect(useTrackWaveform).toHaveBeenLastCalledWith('song', 'https://music.test/stream');
     const peaks = container.querySelectorAll('.nebula-transport-waveform span');
-    expect(peaks).toHaveLength(4); // Two peak buckets, each rendered as base and played layers.
-    expect((peaks[0] as HTMLElement).style.height).toBe('80%');
+    expect(peaks).toHaveLength(8); // All four measured peaks in both layers.
+    expect((peaks[0] as HTMLElement).style.height).toBe('20%');
     const slider = container.querySelector<HTMLInputElement>('input[aria-label="Playback position"]')!;
     expect(Number(slider.value)).toBe(20);
     await act(async () => {
@@ -58,6 +60,41 @@ describe('bottom player waveform', () => {
     await render();
     await act(async () => { audio.currentTime = 100; audio.dispatchEvent(new Event('timeupdate')); });
     expect(container.querySelector<HTMLInputElement>('input[aria-label="Playback position"]')!.value).toBe('50');
+  });
+
+  it('reads the active audio owner between timeupdate events and cancels animation on unmount', async () => {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let frame = 0;
+    vi.stubGlobal('requestAnimationFrame', vi.fn(callback => { callbacks.set(++frame, callback); return frame; }));
+    const cancel = vi.fn();
+    vi.stubGlobal('cancelAnimationFrame', cancel);
+    await render();
+    const replacement = document.createElement('audio');
+    replacement.currentTime = 60;
+    store.audioRef.current = replacement;
+    await act(async () => callbacks.get(1)!(16));
+    expect(container.querySelector<HTMLInputElement>('input[aria-label="Playback position"]')!.value).toBe('30');
+    await act(async () => root.render(null));
+    expect(cancel).toHaveBeenCalledWith(2);
+  });
+
+  it('uses existing Store controls for visualization, speed and pitch', async () => {
+    await render();
+    await act(async () => container.querySelector<HTMLButtonElement>('[aria-label="Switch to progress bar"]')!.click());
+    expect(store.updateSettings).toHaveBeenCalledWith({ progressVisualization: 'bar' });
+    for (const [label, value, setter] of [['Playback speed', '1.5', store.setPlaybackRate], ['Playback pitch', '-3', store.setPitch]] as const) {
+      const slider = container.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(slider, value);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      expect(setter).toHaveBeenCalledWith(Number(value));
+    }
+    await act(async () => container.querySelector<HTMLButtonElement>('[aria-pressed="true"]:not([aria-label])')!.click());
+    expect(store.setPitchCorrection).toHaveBeenCalledWith(false);
+    store.settings.progressVisualization = 'bar';
+    await render();
+    expect(useTrackWaveform).toHaveBeenLastCalledWith('song', null);
   });
 
   it('keeps live radio unseekable and avoids track waveform requests', async () => {

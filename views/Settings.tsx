@@ -761,7 +761,8 @@ export const SettingsView: React.FC = () => {
 
     const jumpToSetting = (panelId: string) => {
         setActiveSettingsJump(panelId);
-        document.getElementById(panelId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setEditingKey(null);
+        document.querySelector('[data-nebula-view="settings"]')?.scrollTo({ top: 0 });
     };
 
     return (
@@ -773,11 +774,26 @@ export const SettingsView: React.FC = () => {
                     </div>
                 </header>
 
-                <nav data-nebula-settings-jumps aria-label="Settings sections">
+                <nav data-nebula-settings-jumps role="tablist" aria-label="Settings sections">
                     {SETTINGS_JUMPS.map(([panelId, label]) => (
                         <button
                             key={panelId}
                             type="button"
+                            role="tab"
+                            id={panelId + '-tab'}
+                            aria-selected={activeSettingsJump === panelId}
+                            aria-controls="settings-options"
+                            tabIndex={activeSettingsJump === panelId ? 0 : -1}
+                            onKeyDown={event => {
+                                const index = SETTINGS_JUMPS.findIndex(([id]) => id === panelId);
+                                const next = event.key === 'ArrowRight' ? (index + 1) % SETTINGS_JUMPS.length
+                                    : event.key === 'ArrowLeft' ? (index + SETTINGS_JUMPS.length - 1) % SETTINGS_JUMPS.length
+                                    : event.key === 'Home' ? 0 : event.key === 'End' ? SETTINGS_JUMPS.length - 1 : -1;
+                                if (next < 0) return;
+                                event.preventDefault();
+                                jumpToSetting(SETTINGS_JUMPS[next][0]);
+                                document.getElementById(SETTINGS_JUMPS[next][0] + '-tab')?.focus();
+                            }}
                             aria-current={activeSettingsJump === panelId ? 'true' : undefined}
                             onClick={() => jumpToSetting(panelId)}
                         >
@@ -786,8 +802,8 @@ export const SettingsView: React.FC = () => {
                     ))}
                 </nav>
 
-                <div data-nebula-settings-stack className="space-y-5">
-                        <SettingPanel icon={Server} title="Server Connection" description="Subsonic-compatible server credentials are stored locally.">
+                <div data-nebula-settings-stack id="settings-options" role="tabpanel" aria-labelledby={activeSettingsJump + '-tab'} className="space-y-5">
+                        {activeSettingsJump === 'settings-server-connection' && (<SettingPanel icon={Server} title="Server Connection" description="Subsonic-compatible server credentials are stored locally.">
                             <form onSubmit={handleConnect} className="divide-y divide-neutral-200 dark:divide-white/10">
                                 <div className="grid grid-cols-2 gap-1 px-5 py-4">
                                     {([
@@ -887,9 +903,9 @@ export const SettingsView: React.FC = () => {
                                     )}
                                 </div>
                             </form>
-                        </SettingPanel>
+                        </SettingPanel>)}
 
-                        <SettingPanel icon={Cable} title="Stream Deck" description="Control this browser tab from the Nebula Music Stream Deck plugin.">
+                        {activeSettingsJump === 'settings-stream-deck' && (<SettingPanel icon={Cable} title="Stream Deck" description="Control this browser tab from the Nebula Music Stream Deck plugin.">
                             <ToggleRow
                                 label="Enable Stream Deck bridge"
                                 description="Connect only to the plugin on this computer. Disabled by default."
@@ -1021,9 +1037,9 @@ export const SettingsView: React.FC = () => {
                                     Revoke pairing
                                 </button>
                             </div>
-                        </SettingPanel>
+                        </SettingPanel>)}
 
-                        <SettingPanel icon={Sliders} title="Equalizer" description="Shape playback with presets or individual frequency bands.">
+                        {activeSettingsJump === 'settings-equalizer' && (<SettingPanel icon={Sliders} title="Equalizer" description="Shape playback with presets or individual frequency bands.">
                             <div className="px-5 py-4">
                                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                     <ToggleRow
@@ -1220,9 +1236,18 @@ export const SettingsView: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                        </SettingPanel>
+                        </SettingPanel>)}
 
-                        <SettingPanel icon={Palette} title="Appearance">
+                        {activeSettingsJump === 'settings-equalizer' && (<SettingPanel icon={Headphones} title="Playback">
+                            <ToggleRow
+                                label="Magic Crossfade"
+                                description="Detects track endings and fades into the next song."
+                                checked={settings.magicCrossfade}
+                                onChange={(v) => updateSettings({ magicCrossfade: v })}
+                            />
+                        </SettingPanel>)}
+
+                        {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Palette} title="Appearance">
                             <OptionRow
                                 label="Theme Mode"
                                 options={[
@@ -1247,9 +1272,9 @@ export const SettingsView: React.FC = () => {
                                 value={settings.theme.backgroundColor}
                                 onChange={(v) => updateSettings({ theme: { ...settings.theme, backgroundColor: v } })}
                             />
-                        </SettingPanel>
+                        </SettingPanel>)}
 
-                        <SettingPanel icon={Monitor} title="Player Display">
+                        {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Monitor} title="Player Display">
                             <OptionRow
                                 label="Desktop Playback Layout"
                                 options={[
@@ -1259,15 +1284,10 @@ export const SettingsView: React.FC = () => {
                                 value={settings.miniPlayerMode}
                                 onChange={(v) => updateSettings({ miniPlayerMode: v as 'floating' | 'sidebar' })}
                             />
-                            <ToggleRow
-                                label="Magic Crossfade"
-                                description="Detects track endings and fades into the next song."
-                                checked={settings.magicCrossfade}
-                                onChange={(v) => updateSettings({ magicCrossfade: v })}
-                            />
-                        </SettingPanel>
 
-                        <SettingPanel icon={Activity} title="Visualizer Style">
+                        </SettingPanel>)}
+
+                        {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Activity} title="Visualizer Style">
                             <div className="grid grid-cols-3 gap-2 px-5 py-4">
                                 {VISUALIZER_MODES.map((mode) => (
                                     <button
@@ -1283,9 +1303,9 @@ export const SettingsView: React.FC = () => {
                                     </button>
                                 ))}
                             </div>
-                        </SettingPanel>
+                        </SettingPanel>)}
 
-                        <SettingPanel icon={Layout} title="Navigation Items">
+                        {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Layout} title="Navigation Items">
                             <ToggleRow label="Show Home" checked={settings.sidebar.showHome} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showHome: v } })} />
                             <ToggleRow label="Show Browse" checked={settings.sidebar.showBrowse} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showBrowse: v } })} />
                             <ToggleRow label="Show Internet Radio" checked={settings.sidebar.showRadio} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showRadio: v } })} />
@@ -1293,20 +1313,20 @@ export const SettingsView: React.FC = () => {
                             <ToggleRow label="Show Albums" checked={settings.sidebar.showAlbums} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showAlbums: v } })} />
                             <ToggleRow label="Show Songs" checked={settings.sidebar.showSongs} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showSongs: v } })} />
                             <ToggleRow label="Show Playlists" checked={settings.sidebar.showPlaylists} onChange={(v) => updateSettings({ sidebar: { ...settings.sidebar, showPlaylists: v } })} />
-                        </SettingPanel>
+                        </SettingPanel>)}
 
-                        <SettingPanel icon={Keyboard} title="Keyboard Shortcuts">
+                        {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Keyboard} title="Keyboard Shortcuts">
                             <ShortcutRow id="playPause" label="Play / Pause" value={settings.shortcuts.playPause} editingKey={editingKey} setEditingKey={setEditingKey} />
                             <ShortcutRow id="prev" label="Previous Song" value={settings.shortcuts.prev} editingKey={editingKey} setEditingKey={setEditingKey} />
                             <ShortcutRow id="next" label="Next Song" value={settings.shortcuts.next} editingKey={editingKey} setEditingKey={setEditingKey} />
                             <ShortcutRow id="loop" label="Toggle Loop" value={settings.shortcuts.loop} editingKey={editingKey} setEditingKey={setEditingKey} />
                             <ShortcutRow id="zen" label="Toggle Zen Mode" value={settings.shortcuts.zen} editingKey={editingKey} setEditingKey={setEditingKey} />
                             <ShortcutRow id="visualizer" label="Cycle Visualizer" value={settings.shortcuts.visualizer} editingKey={editingKey} setEditingKey={setEditingKey} />
-                        </SettingPanel>
+                        </SettingPanel>)}
 
-                        <DesktopSettingsPanel />
-                        <DesktopUpdatesPanel />
-                        {AI_DJ_SETTINGS_ENABLED && <AiDjPanel />}
+                        {activeSettingsJump === 'settings-desktop-integration' && <DesktopSettingsPanel />}
+                        {activeSettingsJump === 'settings-desktop-integration' && <DesktopUpdatesPanel />}
+                        {AI_DJ_SETTINGS_ENABLED && activeSettingsJump === 'settings-stream-deck' && <AiDjPanel />}
                 </div>
             </div>
         </div>

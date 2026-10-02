@@ -7,13 +7,12 @@ import { BlurFade } from './components/vendor/magic-blur-fade';
 import { NowPlayingPanel } from './components/player/NowPlayingPanel';
 import { FloatingMiniPlayer } from './components/player/FloatingMiniPlayer';
 import { DesktopPlaybackBar } from './components/player/DesktopPlaybackBar';
-import { RadioFloatingMiniPlayer, RadioFullPlayer, RadioMobileBar, RadioSidebarPanel } from './components/radio/RadioPlayers';
+import { RadioFloatingMiniPlayer, RadioFullPlayer, RadioSidebarPanel } from './components/radio/RadioPlayers';
 import { Player } from './components/Player';
 import { PlaylistModal } from './components/PlaylistModal';
 import { SearchModal } from './components/SearchModal';
 import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
-import { MobilePlayerBar } from './components/MobilePlayerBar';
 import { UpdateBanner } from './components/UpdateBanner';
 import { DjSpeechPlayer } from './components/DjSpeechPlayer';
 import { VISUALIZER_MODES } from './types';
@@ -172,7 +171,7 @@ export const AppContent: React.FC<{
   const useFloatingPlayer = settings.miniPlayerMode === 'floating';
   const showSidebarPlayer = viewportWidth >= 1320 && useSidebarPlayer && isPlayerVisible && !isSidebarCollapsed;
   const showFloatingPlayer = viewportWidth >= 1024 && useFloatingPlayer;
-  const showDesktopPlaybackBar = viewportWidth >= 768 && isPlayerVisible && !showSidebarPlayer && !showFloatingPlayer;
+  const showDesktopPlaybackBar = isPlayerVisible && !showSidebarPlayer && !showFloatingPlayer && (!isNavOpen || viewportWidth >= 768);
 
   return (
     <div className="nebula-next relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
@@ -258,19 +257,6 @@ export const AppContent: React.FC<{
         panelOpen={showSidebarPlayer}
         onTogglePanel={() => viewportWidth < 1320 ? setIsExpanded(true) : setIsSidebarCollapsed(value => !value)}
       />}
-
-      {/* Mini Player */}
-      {!isNavOpen && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden">
-          {isRadioPlayerVisible ? (
-            <RadioMobileBar onExpand={() => setIsExpanded(true)} />
-          ) : (
-            <MobilePlayerBar onExpand={() => setIsExpanded(true)} />
-          )}
-        </div>
-      )}
-
-
 
       {/* Full Screen Player (expanded mode) */}
       {isRadioPlayerVisible ? (

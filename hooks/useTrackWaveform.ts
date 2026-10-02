@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { createTrackWaveformLoader, type TrackWaveformSubscription } from './trackWaveformLoader';
 
-const STORAGE_PREFIX = 'nebula_waveform_v4:';
-const WAVEFORM_SAMPLES = 180;
+import { buildWaveformPeaks, WAVEFORM_SAMPLES } from './waveformPeaks';
+
+const STORAGE_PREFIX = 'nebula_waveform_v5:';
 const MAX_MEMORY_ENTRIES = 128;
 
 interface WaveformCacheEntry {
-    version: 4;
+    version: 5;
     peaks: number[];
     updatedAt: number;
 }
@@ -19,17 +20,7 @@ const rememberWaveform = (cacheKey: string, peaks: number[]) => {
     if (memoryCache.size > MAX_MEMORY_ENTRIES) memoryCache.delete(memoryCache.keys().next().value!);
 };
 
-const FALLBACK_WAVEFORM = Array.from({ length: WAVEFORM_SAMPLES }, (_, i) => {
-    const phase = i / WAVEFORM_SAMPLES;
-    const wave = Math.abs(Math.sin(phase * Math.PI * 6));
-    return 0.12 + wave * 0.45;
-});
-
-const normalizePeaks = (peaks: number[]) => {
-    if (!peaks.length) return [...FALLBACK_WAVEFORM];
-    const maxPeak = Math.max(...peaks, 0.001);
-    return peaks.map((peak) => Math.min(1, Math.max(0.01, peak / maxPeak)));
-};
+const normalizePeaks = (peaks: number[]) => peaks.map(peak => Math.min(1, Math.max(0, peak)));
 
 const getWaveformCacheKey = (songId: string, streamUrl: string) => {
     try {
@@ -47,7 +38,7 @@ const readCachedWaveform = (cacheKey: string): number[] | null => {
         const raw = localStorage.getItem(`${STORAGE_PREFIX}${cacheKey}`);
         if (!raw) return null;
         const parsed = JSON.parse(raw) as WaveformCacheEntry;
-        if (parsed?.version !== 4 || !Array.isArray(parsed.peaks) || parsed.peaks.length !== WAVEFORM_SAMPLES
+        if (parsed?.version !== 5 || !Array.isArray(parsed.peaks) || parsed.peaks.length !== WAVEFORM_SAMPLES
             || parsed.peaks.some(peak => !Number.isFinite(peak) || peak < 0)) return null;
         const peaks = normalizePeaks(parsed.peaks);
         rememberWaveform(cacheKey, peaks);
@@ -62,7 +53,7 @@ const writeCachedWaveform = (cacheKey: string, peaks: number[]) => {
     rememberWaveform(cacheKey, normalized);
     try {
         const payload: WaveformCacheEntry = {
-            version: 4,
+            version: 5,
             peaks: normalized,
             updatedAt: Date.now(),
         };
@@ -70,48 +61,6 @@ const writeCachedWaveform = (cacheKey: string, peaks: number[]) => {
     } catch {
         // Ignore storage limits/errors and keep in-memory cache.
     }
-};
-
-const buildWaveformFromBuffer = (audioBuffer: AudioBuffer) => {
-    const blockSize = Math.max(1, Math.floor(audioBuffer.length / WAVEFORM_SAMPLES));
-    const channels: Float32Array[] = [];
-    const peaks: number[] = new Array(WAVEFORM_SAMPLES).fill(0);
-
-    for (let channel = 0; channel < audioBuffer.numberOfChannels; channel += 1) {
-        channels.push(audioBuffer.getChannelData(channel));
-    }
-
-    for (let i = 0; i < WAVEFORM_SAMPLES; i += 1) {
-        const start = i * blockSize;
-        const end = Math.min(audioBuffer.length, start + blockSize);
-        let squareSum = 0;
-        let samples = 0;
-
-        for (let j = start; j < end; j += 1) {
-            let monoSample = 0;
-            for (let channel = 0; channel < channels.length; channel += 1) {
-                monoSample += channels[channel][j] || 0;
-            }
-            monoSample /= Math.max(1, channels.length);
-            squareSum += monoSample * monoSample;
-            samples += 1;
-        }
-
-        const rms = samples > 0 ? Math.sqrt(squareSum / samples) : 0;
-        peaks[i] = rms;
-    }
-
-    // Light smoothing to avoid jagged "spike-only" look.
-    const smoothed = peaks.map((value, index) => {
-        const prev = peaks[index - 1] ?? value;
-        const next = peaks[index + 1] ?? value;
-        return (prev + value * 2 + next) / 4;
-    });
-
-    // Perceptual compression keeps quieter parts visible like SoundCloud bars.
-    const compressed = smoothed.map((value) => Math.pow(value, 0.55));
-
-    return normalizePeaks(compressed);
 };
 
 const decodeWaveform = async (streamUrl: string, signal: AbortSignal) => {
@@ -127,7 +76,7 @@ const decodeWaveform = async (streamUrl: string, signal: AbortSignal) => {
     try {
         const decoded = await audioContext.decodeAudioData(audioData);
         signal.throwIfAborted();
-        return buildWaveformFromBuffer(decoded);
+        return buildWaveformPeaks(Array.from({ length: decoded.numberOfChannels }, (_, channel) => decoded.getChannelData(channel)));
     } finally {
         audioContext.close().catch(() => undefined);
     }
@@ -136,7 +85,7 @@ const decodeWaveform = async (streamUrl: string, signal: AbortSignal) => {
 const waveformLoader = createTrackWaveformLoader(decodeWaveform);
 
 export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => {
-    const [waveform, setWaveform] = useState<number[] | null>(FALLBACK_WAVEFORM);
+    const [waveform, setWaveform] = useState<number[] | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -145,7 +94,7 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
         let subscription: TrackWaveformSubscription<number[]> | null = null;
 
         if (!songId || !streamUrl) {
-            setWaveform(FALLBACK_WAVEFORM);
+            setWaveform(null);
             return () => {
                 cancelled = true;
             };
@@ -156,7 +105,7 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
         if (cached) {
             setWaveform(cached);
         } else {
-            setWaveform(FALLBACK_WAVEFORM);
+            setWaveform(null);
         }
 
         const loadWaveform = () => {
@@ -169,9 +118,9 @@ export const useTrackWaveform = (songId?: string, streamUrl?: string | null) => 
                 })
                 .catch((error) => {
                     if (!(error instanceof Error && error.name === 'AbortError')) {
-                        console.warn('Waveform unavailable, using fallback for this session', error);
+                        console.warn('Waveform unavailable, showing playback progress', error);
                     }
-                    return [...FALLBACK_WAVEFORM];
+                    return null;
                 })
                 .then((peaks) => {
                     if (!cancelled) setWaveform(peaks);
