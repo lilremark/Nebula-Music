@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.13';
+export const APP_VERSION = '2.5.0-beta.14';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.14',
+    date: '2026-10-01',
+    title: 'Playback Control Visuals',
+    changes: [
+      'Replaced the progress-bar knob with an unclipped vertical playhead extending beyond the bar.',
+      'Reduced bottom waveform height slightly while preserving its detail and smooth playback position.',
+      'Matched bottom and sidebar transport controls to the large player with white square play buttons and outlined skip controls.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.14'
+    }
+  },
   {
     version: '2.5.0-beta.13',
     date: '2026-10-01',
