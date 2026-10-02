@@ -172,7 +172,7 @@ export const AppContent: React.FC<{
   const useFloatingPlayer = settings.miniPlayerMode === 'floating';
   const showSidebarPlayer = viewportWidth >= 1320 && useSidebarPlayer && isPlayerVisible && !isSidebarCollapsed;
   const showFloatingPlayer = viewportWidth >= 1024 && useFloatingPlayer;
-  const showDesktopPlaybackBar = viewportWidth >= 1024 && useSidebarPlayer && isPlayerVisible && !showSidebarPlayer;
+  const showDesktopPlaybackBar = viewportWidth >= 768 && isPlayerVisible && !showSidebarPlayer && !showFloatingPlayer;
 
   return (
     <div className="nebula-next relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
@@ -236,9 +236,10 @@ export const AppContent: React.FC<{
         {/* Scrollable Content */}
         <main
           ref={mainRef}
+          data-nebula-main-scroll
           className="flex-1 overflow-y-auto custom-scrollbar"
         >
-          <div className={`min-h-full ${isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
+          <div className={`min-h-full ${showDesktopPlaybackBar ? 'nebula-content-with-dock' : isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
             <BlurFade key={`${currentView}-${String(viewData ?? '')}`} duration={0.3} blur="4px" offset={10}>
               <ViewErrorBoundary key={currentView}>
                 <Suspense fallback={<div className="p-8 text-neutral-500" role="status">Loading view…</div>}>

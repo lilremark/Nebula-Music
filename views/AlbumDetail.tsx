@@ -4,6 +4,7 @@ import { IAlbum, ISong } from '../types';
 import { Play, Shuffle, Heart, ListPlus, BarChart2, Disc, Pause, Info } from 'lucide-react';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { containsSameSongs } from '../utils/playback';
+import { CollectionHeader } from '../components/CollectionHeader';
 
 export const AlbumDetailView: React.FC = () => {
     const { viewData, setView, service, playSong, togglePlay, isPlaying, queue, currentSongIndex, currentRadioStation, openPlaylistModal, toggleLike } = useStore();
@@ -112,114 +113,73 @@ export const AlbumDetailView: React.FC = () => {
         <div className="min-h-full pb-32 w-full" data-nebula-view="album-detail" style={{
             '--album-color': isColorLoading || albumColors === defaultColors ? 'var(--next-surface)' : albumColors.primary,
         } as React.CSSProperties}>
-            {/* Hero Header - full width */}
-            <div className="relative pt-4" data-nebula-detail-hero>
-                <div className="relative z-10 px-6 lg:px-10 pt-2 pb-10" data-nebula-detail-hero-inner>
-                    <div className="flex flex-col md:flex-row gap-8" data-nebula-detail-layout>
-                        {/* Cover Art */}
-                        <div className="shrink-0 w-56 h-56 md:w-72 md:h-72 rounded-xl overflow-hidden shadow-2xl bg-neutral-200 dark:bg-neutral-900" data-nebula-detail-cover>
-                            <img
-                                src={service.getCoverArtUrl(album.coverArt || album.id, 500)}
-                                alt={album.name}
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 flex flex-col justify-end" data-nebula-detail-info>
-                            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white mb-2 leading-tight">{album.name}</h1>
-
-                            <div data-nebula-album-meta className="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-white/60 mb-4">
-                                <button
-                                    className="hover:text-neutral-900 transition font-medium dark:hover:text-white"
-                                    onClick={() => album.artistId && setView('ARTIST_DETAIL', album.artistId)}
-                                >
-                                    {album.artist}
-                                </button>
-                                {album.year && (
-                                    <>
-                                        <span className="text-neutral-400 dark:text-white/50">•</span>
-                                        <span>{album.year}</span>
-                                    </>
-                                )}
-                                <span className="text-neutral-400 dark:text-white/50">•</span>
-                                <span>{displayedSongCount} {displayedSongCount === 1 ? 'song' : 'songs'}, {formatTotalTime(displayedDuration)}</span>
-                            </div>
-
-                            <div data-nebula-album-options className="flex flex-wrap items-center gap-2">
-                                <button
-                                    onClick={handleAlbumPlay}
-                                    className="flex items-center gap-2 px-5 py-2 bg-neutral-900 text-white font-bold rounded-lg hover:bg-neutral-800 transition text-sm dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
-                                >
-                                    {isPlaying && isAlbumQueueActive ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                                    {isPlaying && isAlbumQueueActive ? 'Pause' : 'Play'}
-                                </button>
-                                <button
-                                    className="p-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 hover:text-neutral-900 transition dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
-                                    title="Shuffle"
-                                    aria-label="Shuffle album"
-                                    onClick={() => {
-                                        if (album.songs) {
-                                            const shuffled = [...album.songs].sort(() => Math.random() - 0.5);
-                                            playSong(shuffled[0], shuffled);
-                                        }
-                                    }}
-                                >
-                                    <Shuffle className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={toggleAlbumLike}
-                                    className={`p-2 rounded-lg transition ${album.starred ? 'bg-red-500/10 text-red-500 dark:bg-red-500/20 dark:text-red-400' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300 hover:text-neutral-900 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'}`}
-                                    title={album.starred ? "Unlike" : "Like"}
-                                    aria-label={album.starred ? 'Unlike album' : 'Like album'}
-                                >
-                                    <Heart className={`w-4 h-4 ${album.starred ? 'fill-current' : ''}`} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <CollectionHeader title={album.name} artwork={
+                <img
+                    src={service.getCoverArtUrl(album.coverArt || album.id, 500)}
+                    alt={album.name}
+                    className="w-full h-full object-cover"
+                />
+            } metadata={
+                <div data-nebula-album-meta className="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-white/60 mb-4">
+                    <button
+                        className="hover:text-neutral-900 transition font-medium dark:hover:text-white"
+                        onClick={() => album.artistId && setView('ARTIST_DETAIL', album.artistId)}
+                    >
+                        {album.artist}
+                    </button>
+                    {album.year && (
+                        <>
+                            <span className="text-neutral-400 dark:text-white/50">•</span>
+                            <span>{album.year}</span>
+                        </>
+                    )}
+                    <span className="text-neutral-400 dark:text-white/50">•</span>
+                    <span>{displayedSongCount} {displayedSongCount === 1 ? 'song' : 'songs'}, {formatTotalTime(displayedDuration)}</span>
                 </div>
-            </div>
 
-            {/* Separator */}
-            <div className="px-6 lg:px-10" data-nebula-detail-separator>
-                <div className="border-t border-neutral-200 dark:border-white/10 my-2" />
-            </div>
+            } actions={
+                <div data-nebula-album-options className="flex flex-wrap items-center gap-2">
+                    <button
+                        onClick={handleAlbumPlay}
+                        className="flex items-center gap-2 px-5 py-2 bg-neutral-900 text-white font-bold rounded-lg hover:bg-neutral-800 transition text-sm dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
+                    >
+                        {isPlaying && isAlbumQueueActive ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+                        {isPlaying && isAlbumQueueActive ? 'Pause' : 'Play'}
+                    </button>
+                    <button
+                        className="p-2 bg-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-300 hover:text-neutral-900 transition dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                        title="Shuffle"
+                        aria-label="Shuffle album"
+                        onClick={() => {
+                            if (album.songs) {
+                                const shuffled = [...album.songs].sort(() => Math.random() - 0.5);
+                                playSong(shuffled[0], shuffled);
+                            }
+                        }}
+                    >
+                        <Shuffle className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={toggleAlbumLike}
+                        className={`p-2 rounded-lg transition ${album.starred ? 'bg-red-500/10 text-red-500 dark:bg-red-500/20 dark:text-red-400' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300 hover:text-neutral-900 dark:bg-white/10 dark:text-white dark:hover:bg-white/20'}`}
+                        title={album.starred ? "Unlike" : "Like"}
+                        aria-label={album.starred ? 'Unlike album' : 'Like album'}
+                    >
+                        <Heart className={`w-4 h-4 ${album.starred ? 'fill-current' : ''}`} />
+                    </button>
+                </div>
+            } />
 
             {/* Main Content - full width */}
             <div className="px-6 lg:px-10 pt-4" data-nebula-detail-content>
-                {/* About Section */}
-                {album.info?.notes && (
-                    <div className="mb-8 mt-4">
-                        <div
-                            data-nebula-about
-                            className="flex items-start gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-200 transition dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/[0.07]"
-                            onClick={() => setShowFullNotes(!showFullNotes)}
-                        >
-                            <Info className="w-4 h-4 text-neutral-500 dark:text-white/60 shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-xs font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-1">About</h3>
-                                <p className={`text-sm text-neutral-700 dark:text-white/70 leading-relaxed ${!showFullNotes ? 'line-clamp-2' : ''}`}>
-                                    {album.info.notes}
-                                </p>
-                                {album.info.notes.length > 120 && (
-                                    <span className="text-xs text-primary mt-1 inline-block">
-                                        {showFullNotes ? 'Show less' : 'Read more'}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Track List Section - with album-colored accent */}
                 <section
                     data-nebula-track-section
-                    className="mb-8 rounded-xl overflow-hidden"
+                    className="mb-8"
                 >
-                    <div className="p-4" data-nebula-track-section-inner>
+                    <div data-nebula-track-section-inner>
                         <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-3">Tracks</h2>
-                        <div className="border border-neutral-300 dark:border-white/10 rounded-lg overflow-hidden" data-nebula-track-list>
+                        <div data-nebula-track-list>
                             {album.songs?.map((song, idx) => {
                                 const isCurrent = !currentRadioStation && currentSong?.id === song.id;
                                 const discNumber = song.discNumber || 1;
@@ -316,6 +276,31 @@ export const AlbumDetailView: React.FC = () => {
                         </div>
                     </div>
                 </section>
+
+
+                {/* About Section */}
+                {album.info?.notes && (
+                    <div className="mb-8 mt-4">
+                        <div
+                            data-nebula-about
+                            className="flex items-start gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-200 transition dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/[0.07]"
+                            onClick={() => setShowFullNotes(!showFullNotes)}
+                        >
+                            <Info className="w-4 h-4 text-neutral-500 dark:text-white/60 shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                                <h3 className="text-xs font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-1">About</h3>
+                                <p className={`text-sm text-neutral-700 dark:text-white/70 leading-relaxed ${!showFullNotes ? 'line-clamp-2' : ''}`}>
+                                    {album.info.notes}
+                                </p>
+                                {album.info.notes.length > 120 && (
+                                    <span className="text-xs text-primary mt-1 inline-block">
+                                        {showFullNotes ? 'Show less' : 'Read more'}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Related Albums */}
                 {relatedAlbums.length > 0 && (

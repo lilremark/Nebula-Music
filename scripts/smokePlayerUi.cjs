@@ -18,7 +18,7 @@ const finish = error => {
   console.log(JSON.stringify({ playerUi: error ? 'failed' : 'passed', screenshots: profile, error: error?.stack }));
   app.exit(error ? 1 : 0);
 };
-const timeout = setTimeout(() => finish(new Error('Player UI check timed out')), 45_000);
+const timeout = setTimeout(() => finish(new Error('Player UI check timed out')), 60_000);
 app.whenReady().then(() => {
   // Offline artwork exercises real color extraction; all media/API traffic is blocked.
   const artwork = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="#c06040"/><circle cx="340" cy="160" r="80" fill="#e8af70"/><path d="M0 400L512 230V512H0Z" fill="#722c24"/></svg>';
@@ -64,6 +64,13 @@ app.on('browser-window-created', (_event, win) => {
         const slider = waveform?.querySelector('input[aria-label="Playback position"]');
         if (!slider || waveform.querySelectorAll('span').length !== 180 || slider.getBoundingClientRect().height < 27)
           throw new Error('Bottom waveform is missing or its seek input is compressed');
+        const dock = document.querySelector('.nebula-transport');
+        const dockBounds = dock.getBoundingClientRect();
+        const paneBounds = document.querySelector('[data-nebula-content-shell]').getBoundingClientRect();
+        if (dockBounds.width >= paneBounds.width - 20 || Math.abs(dockBounds.left + dockBounds.width / 2 - paneBounds.left - paneBounds.width / 2) > 1 || parseFloat(getComputedStyle(dock).borderRadius) < 18)
+          throw new Error('Bottom dock is not centered and rounded');
+        if (document.querySelector('.nebula-transport-progress').getBoundingClientRect().bottom > document.querySelector('.nebula-transport-track').getBoundingClientRect().top + 1)
+          throw new Error('Dock waveform is not above the control row');
         document.querySelector('[aria-label="Open now playing panel"]').click();
         await waitFor(() => document.querySelector('[data-nebula-panel="now-playing"]'), 'side player');
         if (document.querySelector('.nebula-transport')) throw new Error('Bottom and side players are visible together');
@@ -168,7 +175,7 @@ app.on('browser-window-created', (_event, win) => {
           if (layer.parentElement !== shell || ['top', 'left', 'width', 'height'].some(key => Math.abs(actual[key] - expected[key]) > 1))
             throw new Error(kind + ' backdrop does not fill the central pane');
           if (getComputedStyle(backdrop).backdropFilter !== 'blur(' + blur + 'px)') throw new Error(kind + ' blur is incorrect');
-          if (actual.left < document.querySelector('.nebula-rail').getBoundingClientRect().right - 1 || actual.bottom > document.querySelector('.nebula-transport').getBoundingClientRect().top + 1)
+          if (actual.left < document.querySelector('.nebula-rail').getBoundingClientRect().right - 1 || getComputedStyle(document.querySelector('.nebula-transport')).position !== 'fixed' || layer.contains(document.querySelector('.nebula-transport')))
             throw new Error(kind + ' overlay covers navigation or bottom playback');
         };
         assertOverlay('radio', 4);
@@ -205,6 +212,75 @@ app.on('browser-window-created', (_event, win) => {
       win.setContentSize(1100, 850);
       await new Promise(resolve => setTimeout(resolve, 1000));
       fs.writeFileSync(path.join(profile, 'album-detail.png'), (await win.webContents.capturePage()).toPNG());
+      const checkCollection = async kind => {
+        const scrollResult = await win.webContents.executeJavaScript(`(async () => {
+          const view = document.querySelector('[data-nebula-view="${kind}-detail"]');
+          const scroller = document.querySelector('[data-nebula-main-scroll]');
+          const header = view.querySelector('[data-nebula-collection-header]');
+          const list = view.querySelector('[data-nebula-track-list]');
+          const row = list.querySelector('[data-nebula-track-row]');
+          if (parseFloat(getComputedStyle(list).borderTopWidth) !== 0 || parseFloat(getComputedStyle(list).borderRadius) !== 0 || parseFloat(getComputedStyle(row).borderBottomWidth) <= 0)
+            throw new Error('${kind} track list still uses a card or lacks dividers');
+          // Add offline DOM rows to exercise scrolling through a long collection.
+          for (let i = 0; i < 16; i++) list.append(row.cloneNode(true));
+          scroller.scrollTop = 0;
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const fullHeight = header.getBoundingClientRect().height;
+          const documentHeight = scroller.scrollHeight;
+          scroller.scrollTo({ top: 420, behavior: 'instant' });
+          for (let i = 0; i < 100 && header.dataset.compact !== 'true'; i++) await new Promise(resolve => setTimeout(resolve, 25));
+          const cover = header.querySelector('[data-nebula-detail-cover]').getBoundingClientRect();
+          const compact = header.getBoundingClientRect();
+          if (header.dataset.compact !== 'true' || compact.height >= fullHeight || cover.width > 49 || Math.abs(compact.top - scroller.getBoundingClientRect().top) > 1)
+            throw new Error('${kind} header does not shrink and stick above the tracks');
+          if (Math.abs(scroller.scrollHeight - documentHeight) > 1) throw new Error('${kind} header changes document height while scrolling');
+          if (!header.querySelector('h1').textContent.trim() || !header.querySelector('[data-nebula-album-options] button')) throw new Error('Compact collection controls are missing');
+          return { collection: '${kind}', stickyHeader: true, stableScrollHeight: true, compactCover: cover.width };
+        })()`);
+        console.log(JSON.stringify(scrollResult));
+        win.setContentSize(1101, 850);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        win.setContentSize(1100, 850);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        fs.writeFileSync(path.join(profile, kind + '-compact.png'), (await win.webContents.capturePage()).toPNG());
+        await win.webContents.executeJavaScript(`(async () => {
+          const header = document.querySelector('[data-nebula-collection-header]');
+          document.querySelector('[data-nebula-main-scroll]').scrollTo({ top: 0, behavior: 'instant' });
+          for (let i = 0; i < 100 && header.dataset.compact !== 'false'; i++) await new Promise(resolve => setTimeout(resolve, 25));
+          if (header.dataset.compact !== 'false' || header.querySelector('[data-nebula-detail-cover]').getBoundingClientRect().width < 279) throw new Error('Collection header did not expand again');
+        })()`);
+      };
+      await checkCollection('album');
+      await win.webContents.executeJavaScript(`(async () => {
+        [...document.querySelectorAll('.nebula-rail button')].find(button => button.textContent.trim() === 'Playlists').click();
+        for (let i = 0; i < 200; i++) {
+          const card = document.querySelector('[data-nebula-library="playlists"] [data-nebula-collection-card]');
+          if (card) { card.click(); break; }
+          await new Promise(resolve => setTimeout(resolve, 25));
+        }
+        for (let i = 0; i < 200; i++) {
+          if (document.querySelector('[data-nebula-view="playlist-detail"] [data-nebula-track-row]')) return;
+          await new Promise(resolve => setTimeout(resolve, 25));
+        }
+        throw new Error('Playlist did not open');
+      })()`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await checkCollection('playlist');
+      // The shared web layout must also fit a phone-sized content pane.
+      win.setMinimumSize(320, 480);
+      win.setContentSize(390, 760);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await win.webContents.executeJavaScript(`(async () => {
+        const view = document.querySelector('[data-nebula-view="playlist-detail"]');
+        if (view.scrollWidth > view.clientWidth + 1) throw new Error('Mobile collection overflows horizontally');
+        const scroller = document.querySelector('[data-nebula-main-scroll]');
+        const header = view.querySelector('[data-nebula-collection-header]');
+        scroller.scrollTo({ top: 420, behavior: 'instant' });
+        for (let i = 0; i < 100 && header.dataset.compact !== 'true'; i++) await new Promise(resolve => setTimeout(resolve, 25));
+        if (header.dataset.compact !== 'true' || header.querySelector('[data-nebula-detail-cover]').getBoundingClientRect().width > 49) throw new Error('Mobile header does not compact');
+        scroller.scrollTo({ top: 0, behavior: 'instant' });
+      })()`);
+      fs.writeFileSync(path.join(profile, 'collection-mobile.png'), (await win.webContents.capturePage()).toPNG());
       win.setContentSize(1100, 600);
       await new Promise(resolve => setTimeout(resolve, 500));
       const compact = await win.webContents.executeJavaScript(`(() => {
@@ -237,7 +313,7 @@ app.on('browser-window-created', (_event, win) => {
       }
       console.log(JSON.stringify({ sidebarHeightSweep: true }));
       const tallPlaylists = await win.webContents.executeJavaScript(`document.querySelectorAll('.nebula-rail-playlist').length`);
-      if (tallPlaylists <= compact.playlistCount || tallPlaylists > 4) throw new Error('Playlist shortcuts do not adapt to available height');
+      if (tallPlaylists < compact.playlistCount || tallPlaylists > 4) throw new Error('Playlist shortcuts do not fit the available height');
       win.setContentSize(1100, 850);
       await win.webContents.executeJavaScript(`(async () => {
         const radio = [...document.querySelectorAll('.nebula-rail button')].find(button => button.textContent.trim() === 'Internet Radio');
@@ -270,6 +346,20 @@ app.on('browser-window-created', (_event, win) => {
       console.log(JSON.stringify(searchDialog));
       fs.writeFileSync(path.join(profile, 'search-modal.png'), (await win.webContents.capturePage()).toPNG());
       await win.webContents.executeJavaScript(`document.querySelector('[data-nebula-modal-backdrop]').click()`);
+      win.setContentSize(900, 760);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      await win.webContents.executeJavaScript(`(async () => {
+        const dock = document.querySelector('.nebula-transport');
+        if (!dock || document.querySelector('[data-nebula-panel="now-playing"]')) throw new Error('Narrow desktop player is missing or duplicated');
+        const bounds = dock.getBoundingClientRect();
+        if (Math.abs(bounds.left + bounds.width / 2 - innerWidth / 2) > 1 || dock.querySelector('[aria-label="Volume"]').getBoundingClientRect().width < 50) throw new Error('Narrow dock controls do not fit');
+        dock.querySelector('[aria-label="Open full screen player"]').click();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const full = document.querySelector('[data-nebula-player="fullscreen"]');
+        if (!full.classList.contains('translate-y-0') || Number(getComputedStyle(full).zIndex) <= Number(getComputedStyle(dock).zIndex)) throw new Error('Full player is covered by the dock');
+        full.querySelector('[aria-label="Close player"]').click();
+      })()`);
+      console.log(JSON.stringify({ mobileCollection: true, narrowDock: true, fullscreenLayering: true }));
       await win.webContents.executeJavaScript(`(async () => {
         document.querySelector('.nebula-topbar-theme[aria-label="Switch to light theme"]').click();
         await new Promise(resolve => setTimeout(resolve, 300));

@@ -72,6 +72,21 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
   };
 
   return <footer className="nebula-transport" aria-label="Playback controls">
+    <div className="nebula-transport-progress">
+      <span>{isRadio ? 'LIVE' : formatTime(position)}</span>
+      {isRadio ? <span className="nebula-transport-live" /> : <PlaybackProgress
+        progress={resolvedDuration ? position / resolvedDuration * 100 : 0}
+        mode="waveform"
+        waveform={compactWaveform}
+        accentColor="var(--next-accent)"
+        baseColor="var(--next-line)"
+        markerColor="var(--next-text)"
+        onScrub={seek}
+        scrubbable={resolvedDuration > 0}
+        trackClassName="nebula-transport-waveform"
+      />}
+      <span>{isRadio ? currentRadioStation?.genre || 'RADIO' : formatTime(resolvedDuration)}</span>
+    </div>
     <div className="nebula-transport-track">
       {artwork ? <img src={artwork} alt="" className="nebula-transport-art" /> : <span className="nebula-transport-art nebula-transport-art-empty"><ListMusic size={20} /></span>}
       <div className="nebula-transport-track-copy">
@@ -88,21 +103,6 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
         {!isRadio && <button type="button" className="nebula-transport-icon" onClick={prevSong} aria-label="Previous track"><SkipBack size={18} fill="currentColor" /></button>}
         <button type="button" className="nebula-transport-play" onClick={onPlayPause} aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}</button>
         {!isRadio && <button type="button" className="nebula-transport-icon" onClick={nextSong} aria-label="Next track"><SkipForward size={18} fill="currentColor" /></button>}
-      </div>
-      <div className="nebula-transport-progress">
-        <span>{isRadio ? 'LIVE' : formatTime(position)}</span>
-        {isRadio ? <span className="nebula-transport-live" /> : <PlaybackProgress
-          progress={resolvedDuration ? position / resolvedDuration * 100 : 0}
-          mode="waveform"
-          waveform={compactWaveform}
-          accentColor="var(--next-accent)"
-          baseColor="var(--next-line)"
-          markerColor="var(--next-text)"
-          onScrub={seek}
-          scrubbable={resolvedDuration > 0}
-          trackClassName="nebula-transport-waveform"
-        />}
-        <span>{isRadio ? currentRadioStation?.genre || 'RADIO' : formatTime(resolvedDuration)}</span>
       </div>
     </div>
 
