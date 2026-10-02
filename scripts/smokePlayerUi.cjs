@@ -77,7 +77,7 @@ app.on('browser-window-created', (_event, win) => {
         await waitFor(() => document.querySelector('.nebula-transport-waveform span'), 'decoded stereo waveform');
         const waveform = document.querySelector('.nebula-transport-waveform');
         const slider = waveform?.querySelector('input[aria-label="Playback position"]');
-        if (!slider || waveform.querySelectorAll('span').length < 500 || slider.getBoundingClientRect().height < 95)
+        if (!slider || waveform.querySelectorAll('span').length < 500 || slider.getBoundingClientRect().height < 79)
           throw new Error('Bottom waveform is missing or its seek input is compressed');
         const dock = document.querySelector('.nebula-transport');
         const dockBounds = dock.getBoundingClientRect();
@@ -93,6 +93,13 @@ app.on('browser-window-created', (_event, win) => {
         if (marker.style.left === before) throw new Error('Playhead is not advancing with real audio');
         document.querySelector('[aria-label="Switch to progress bar"]').click();
         await waitFor(() => document.querySelector('.has-progress-bar'), 'progress bar toggle');
+        const bar = document.querySelector('.has-progress-bar');
+        const line = bar.querySelector('[data-nebula-playhead]');
+        const barBounds = bar.getBoundingClientRect();
+        const lineBounds = line.getBoundingClientRect();
+        if (getComputedStyle(bar).overflow !== 'visible' || lineBounds.height <= barBounds.height || lineBounds.top >= barBounds.top || lineBounds.bottom <= barBounds.bottom || lineBounds.width > 2.1 || parseFloat(getComputedStyle(line).borderRadius) !== 0) throw new Error('Progress playhead is not an unclipped vertical line outside the bar');
+        const playButton = document.querySelector('.nebula-transport-play');
+        if (getComputedStyle(playButton).backgroundColor !== 'rgb(255, 255, 255)' || parseFloat(getComputedStyle(playButton).borderRadius) !== 8 || playButton.getBoundingClientRect().width < 47) throw new Error('Dock transport does not match the full player');
         document.querySelector('[aria-label="Switch to waveform"]').click();
         await waitFor(() => document.querySelector('.has-waveform'), 'waveform toggle');
         document.querySelector('[aria-label="Speed and pitch controls"]').click();
@@ -101,6 +108,8 @@ app.on('browser-window-created', (_event, win) => {
         document.querySelector('[aria-label="Open now playing panel"]').click();
         await waitFor(() => document.querySelector('[data-nebula-panel="now-playing"]'), 'side player');
         if (document.querySelector('.nebula-transport')) throw new Error('Bottom and side players are visible together');
+        const sidePlay = document.querySelector('[data-nebula-sidebar-player-transport] .nebula-playback-toggle');
+        if (getComputedStyle(sidePlay).backgroundColor !== 'rgb(255, 255, 255)' || parseFloat(getComputedStyle(sidePlay).borderRadius) !== 8 || sidePlay.getBoundingClientRect().width < 63) throw new Error('Sidebar transport does not match the full player');
       })()`);
       win.setContentSize(1451, 1050);
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -175,7 +184,7 @@ app.on('browser-window-created', (_event, win) => {
         const bounds = nav.getBoundingClientRect();
         const overflow = [...nav.querySelectorAll('button')].some(button => button.getBoundingClientRect().right > bounds.right + 1);
         const slider = document.querySelector('.nebula-transport-waveform input');
-        if (overflow || !slider || slider.getBoundingClientRect().height < 95) throw new Error('Narrow layout overflow');
+        if (overflow || !slider || slider.getBoundingClientRect().height < 79) throw new Error('Narrow layout overflow');
         return { narrowLayout: true };
       })()`);
       console.log(JSON.stringify(narrow));

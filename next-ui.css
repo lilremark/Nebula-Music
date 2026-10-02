@@ -173,7 +173,7 @@ html.dark .nebula-next {
 .nebula-next [data-nebula-player="floating"] { background: var(--next-surface); border: 1px solid var(--next-line); box-shadow: 0 20px 45px -25px #0a0e23c4 !important; }
 .nebula-next [data-nebula-floating-dock] { left: calc(50% + 110px); }
 
-.nebula-content-with-dock { padding-bottom: 244px; }
+.nebula-content-with-dock { padding-bottom: 228px; }
 .nebula-transport { position: fixed; left: calc(50% + 117px); bottom: 16px; transform: translateX(-50%); z-index: 45; display: grid; grid-template-columns: minmax(0, 1fr) 160px minmax(0, 1fr); align-items: center; column-gap: 20px; row-gap: 10px; width: min(1040px, calc(100% - 274px)); padding: 12px 18px 14px; border: 1px solid var(--next-line); border-radius: 20px; box-shadow: 0 16px 48px rgb(0 0 0 / 35%); background: var(--next-surface); color: var(--next-text); }
 .nebula-transport-track { display: flex; align-items: center; min-width: 0; gap: 11px; }
 .nebula-transport-art { width: 55px; height: 55px; flex: none; border-radius: 8px; object-fit: cover; }
@@ -190,11 +190,22 @@ html.dark .nebula-next {
 .nebula-transport-icon:hover, .nebula-transport-icon[aria-pressed="true"] { color: var(--next-text); background: var(--next-raised); }
 .nebula-transport-play { display: grid; place-items: center; width: 33px; height: 33px; border-radius: 50%; color: var(--next-surface); background: var(--next-text); }
 .nebula-transport-play:hover { transform: scale(1.06); }
+/* Match the large player's square white play button and outlined skip controls. */
+.nebula-playback-controls { --transport-play-size: 64px; --transport-play-icon: 28px; --transport-skip-icon: 28px; }
+.nebula-transport-buttons { --transport-play-size: 48px; --transport-play-icon: 24px; --transport-skip-icon: 24px; gap: 12px; }
+.nebula-playback-controls .nebula-playback-toggle { width: var(--transport-play-size); height: var(--transport-play-size); padding: 0; display: grid; place-items: center; border-radius: 8px; background: #fff; color: #000; box-shadow: 0 6px 20px #0003; }
+.nebula-playback-controls .nebula-playback-toggle svg { width: var(--transport-play-icon); height: var(--transport-play-icon); fill: #000; stroke: #000; }
+.nebula-playback-controls .nebula-playback-toggle svg.lucide-play { margin-left: 2px; }
+.nebula-playback-controls .nebula-playback-skip { width: 36px; height: 44px; padding: 0; display: grid; place-items: center; color: var(--next-muted); }
+.nebula-playback-controls .nebula-playback-skip svg { width: var(--transport-skip-icon); height: var(--transport-skip-icon); stroke: var(--next-text); fill: var(--next-muted); stroke-opacity: .85; }
+.nebula-playback-controls .nebula-playback-skip:hover svg { fill: var(--next-text); }
+.nebula-playback-controls button:focus-visible { outline: 2px solid var(--next-accent); outline-offset: 3px; }
+
 .nebula-transport :is(button, input):focus-visible { outline: 2px solid var(--next-accent); outline-offset: 3px; }
 .nebula-transport-progress { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; padding-bottom: 8px; border-bottom: 1px solid var(--next-line); }
 .nebula-transport-progress > span { min-width: 30px; color: var(--next-muted); font-size: 11px; text-align: left; font-variant-numeric: tabular-nums; }
 .nebula-transport-progress > span:last-child { text-align: right; }
-.nebula-transport-waveform { grid-column: 1 / -1; min-width: 0; height: 96px; }
+.nebula-transport-waveform { grid-column: 1 / -1; min-width: 0; height: 80px; }
 .nebula-transport-waveform.has-progress-bar { height: 12px; margin-block: 8px; border-radius: 4px; }
 .nebula-transport { --next-waveform: #424242; --next-playhead: #e4ef65; }
 html:not(.dark) .nebula-transport { --next-waveform: #b8b8b8; --next-playhead: #677600; }
@@ -220,7 +231,7 @@ html:not(.dark) .nebula-transport { --next-waveform: #b8b8b8; --next-playhead: #
   .nebula-transport-tools > button[aria-label="Open now playing panel"] { display: none; }
 }
 @media (max-width: 1180px) {
-  .nebula-transport { grid-template-columns: minmax(0, 1fr) 140px minmax(0, 1fr); column-gap: 14px; width: min(920px, calc(100% - 266px)); }
+  .nebula-transport { grid-template-columns: minmax(0, 1fr) 152px minmax(0, 1fr); column-gap: 14px; width: min(920px, calc(100% - 266px)); }
   .nebula-transport-tools input { width: 80px; }
 }
 
@@ -238,10 +249,11 @@ html:not(.dark) .nebula-transport { --next-waveform: #b8b8b8; --next-playhead: #
   .nebula-transport-track { grid-column: 1; }
   .nebula-transport-center { grid-column: 2; }
   .nebula-transport-tools { grid-column: 1 / -1; justify-content: center; }
-  .nebula-transport-waveform { height: 72px; }
-  .nebula-transport-buttons { gap: 8px; }
+  .nebula-transport-waveform { height: 60px; }
+  .nebula-transport-buttons { --transport-play-size: 44px; --transport-play-icon: 22px; --transport-skip-icon: 22px; gap: 6px; }
+  .nebula-transport-buttons .nebula-playback-skip { width: 28px; }
   .nebula-speed-pitch-panel { right: -100px; }
-  .nebula-content-with-dock { padding-bottom: 270px; }
+  .nebula-content-with-dock { padding-bottom: 258px; }
   .nebula-next .nebula-topbar { height: 61px; min-height: 61px; }
   .nebula-next [data-nebula-topbar-title] { font-size: 18px; }
   .nebula-next [data-nebula-home-hero] { min-height: 440px; }

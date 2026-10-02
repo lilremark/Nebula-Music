@@ -91,9 +91,8 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     return (
         <div
             ref={trackRef}
-            className={`relative overflow-hidden ${trackClassName}`}
+            className={`relative ${effectiveMode === 'waveform' ? 'overflow-hidden' : 'overflow-visible'} ${trackClassName}`}
             style={{
-                ...(effectiveMode === 'bar' ? { backgroundColor: resolvedBaseColor } : undefined),
                 ...trackStyle,
             }}
         >
@@ -110,32 +109,24 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
                     </div>
                 </>
             ) : (
-                <div
-                    className="absolute inset-y-0 left-0"
-                    style={{ width: progressWidth, backgroundColor: accentColor }}
-                />
+                <div className="absolute inset-0 overflow-hidden" style={{ borderRadius: 'inherit', backgroundColor: resolvedBaseColor }}>
+                    <div className="absolute inset-y-0 left-0" style={{ width: progressWidth, backgroundColor: accentColor }} />
+                </div>
             )}
 
             {shouldShowMarker && (
-                effectiveMode === 'waveform' ? (
-                    <div
-                        className="absolute top-0 bottom-0 w-[2px] pointer-events-none"
-                        style={{
-                            left: `calc(${safeProgress}% - 1px)`,
-                            backgroundColor: resolvedMarkerColor,
-                            boxShadow: `0 0 10px ${withAlpha(resolvedMarkerColor, 0.45)}`,
-                        }}
-                    />
-                ) : (
-                    <div
-                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border border-white/80 shadow-lg pointer-events-none"
-                        style={{
-                            left: `calc(${safeProgress}% - 6px)`,
-                            backgroundColor: resolvedMarkerColor,
-                            boxShadow: `0 0 0 2px ${withAlpha(resolvedMarkerColor, 0.2)}`,
-                        }}
-                    />
-                )
+                <div
+                    data-nebula-playhead
+                    aria-hidden="true"
+                    className="absolute w-[2px] pointer-events-none"
+                    style={{
+                        top: effectiveMode === 'bar' ? -6 : 0,
+                        bottom: effectiveMode === 'bar' ? -6 : 0,
+                        left: `calc(${safeProgress}% - 1px)`,
+                        backgroundColor: resolvedMarkerColor,
+                        boxShadow: `0 0 10px ${withAlpha(resolvedMarkerColor, 0.45)}`,
+                    }}
+                />
             )}
 
             {scrubbable && onScrub && (

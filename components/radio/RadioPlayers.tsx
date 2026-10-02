@@ -141,7 +141,7 @@ export const RadioSidebarPanel: React.FC<{ onExpand: () => void; onCollapse: () 
             <h2 className="mt-4 max-w-full truncate text-center text-2xl font-black text-neutral-900 dark:text-white">{title}</h2>
             <p className="mt-1 max-w-full truncate text-sm text-neutral-600 dark:text-white/60">{artist}</p>
 
-            <div className="mt-8 flex items-center justify-center gap-4">
+            <div className="nebula-playback-controls mt-8 flex items-center justify-center gap-4">
                 <button
                     onClick={stopRadio}
                     className="rounded-lg p-4 text-neutral-600 transition hover:bg-neutral-200 hover:text-neutral-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white"
@@ -151,7 +151,7 @@ export const RadioSidebarPanel: React.FC<{ onExpand: () => void; onCollapse: () 
                 </button>
                 <button
                     onClick={toggleRadioPlay}
-                    className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary text-black shadow-xl transition hover:scale-105"
+                    className="nebula-playback-toggle shadow-xl transition hover:scale-105"
                     aria-label={isRadioPlaying ? 'Pause radio' : 'Play radio'}
                 >
                     {isRadioPlaying ? <Pause className="h-7 w-7 fill-current" /> : <Play className="ml-0.5 h-7 w-7 fill-current" />}

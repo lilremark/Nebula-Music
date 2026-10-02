@@ -104,10 +104,10 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     </div>
 
     <div className="nebula-transport-center">
-      <div className="nebula-transport-buttons">
-        {!isRadio && <button type="button" className="nebula-transport-icon" onClick={prevSong} aria-label="Previous track"><SkipBack size={18} fill="currentColor" /></button>}
-        <button type="button" className="nebula-transport-play" onClick={onPlayPause} aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}</button>
-        {!isRadio && <button type="button" className="nebula-transport-icon" onClick={nextSong} aria-label="Next track"><SkipForward size={18} fill="currentColor" /></button>}
+      <div className="nebula-transport-buttons nebula-playback-controls">
+        {!isRadio && <button type="button" className="nebula-transport-icon nebula-playback-skip" onClick={prevSong} aria-label="Previous track"><SkipBack size={18} fill="currentColor" /></button>}
+        <button type="button" className="nebula-transport-play nebula-playback-toggle" onClick={onPlayPause} aria-label={playing ? 'Pause' : 'Play'}>{playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}</button>
+        {!isRadio && <button type="button" className="nebula-transport-icon nebula-playback-skip" onClick={nextSong} aria-label="Next track"><SkipForward size={18} fill="currentColor" /></button>}
       </div>
     </div>
 

@@ -228,6 +228,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         markerColor={colors.secondary || colors.primary}
                         waveform={waveform}
                         onScrub={handleScrub}
+                        showHandle
                         trackStyle={{
                             boxShadow: progressMode === 'bar'
                                 ? `0 0 18px ${withAlpha(colors.primary, 0.16)}`
@@ -245,10 +246,10 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Main Controls */}
-                <div className="flex items-center justify-center gap-4 mb-2" data-nebula-sidebar-player-transport>
+                <div className="nebula-playback-controls flex items-center justify-center gap-4 mb-2" data-nebula-sidebar-player-transport>
                     <button
                         onClick={prevSong}
-                        className="p-2.5 text-neutral-700 dark:text-white/70 hover:text-neutral-900 dark:hover:text-white transition-all hover:scale-110 active:scale-95"
+                        className="nebula-playback-skip transition-all hover:scale-110 active:scale-95"
                         aria-label="Previous track"
                     >
                         <SkipBack className="w-5 h-5" fill="currentColor" />
@@ -256,8 +257,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
                     <button
                         onClick={togglePlay}
-                        className="w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl"
-                        style={{ backgroundColor: colors.primary }}
+                        className="nebula-playback-toggle transition-all hover:scale-105 active:scale-95 shadow-xl"
                         aria-label={isPlaying ? 'Pause' : 'Play'}
                     >
                         {isPlaying ? (
@@ -269,7 +269,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
                     <button
                         onClick={nextSong}
-                        className="p-2.5 text-neutral-700 dark:text-white/70 hover:text-neutral-900 dark:hover:text-white transition-all hover:scale-110 active:scale-95"
+                        className="nebula-playback-skip transition-all hover:scale-110 active:scale-95"
                         aria-label="Next track"
                     >
                         <SkipForward className="w-5 h-5" fill="currentColor" />
