@@ -10,6 +10,7 @@ import type { DjModelStatus } from './localProtocol';
 interface ModelFile { file: string; size: number; sha256: string }
 interface Download extends ModelFile { url: string; kind: string }
 const run = promisify(execFile);
+const archiveTool = process.platform === 'win32' ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
 export async function matchesModelFile(root: string, entry: ModelFile, signal?: AbortSignal) {
   const file = path.resolve(root, entry.file);
   if (!file.startsWith(path.resolve(root) + path.sep)) throw new Error('Invalid model path.');
@@ -97,14 +98,14 @@ export class DjModelManager {
         if (asset.kind === 'model') await fs.copyFile(cached, path.join(staging, asset.file));
         else {
           const options = { windowsHide: true, signal, timeout: 60000, maxBuffer: 4 * 1024 * 1024 };
-          const { stdout: listing } = await run('tar', ['-tf', cached], options);
+          const { stdout: listing } = await run(archiveTool, ['-tf', cached], options);
           const allowed = new Set(this.files.filter(file => file.file.startsWith('packages/')).map(file => file.file.slice(9)));
           for (const entry of listing.split(/\r?\n/).filter(Boolean)) {
             if (entry.startsWith('/') || entry.includes('\\') || entry.split('/').includes('..') || entry.includes(':') || (!entry.endsWith('/') && !allowed.has(entry))) throw new Error('Unsafe model archive path.');
           }
-          const { stdout: details } = await run('tar', ['-tvf', cached], options);
+          const { stdout: details } = await run(archiveTool, ['-tvf', cached], options);
           if (details.split(/\r?\n/).filter(Boolean).some(line => !['-', 'd'].includes(line[0]))) throw new Error('Model archives cannot contain links.');
-          await run('tar', ['-xf', cached, '-C', path.join(staging, 'packages')], options);
+          await run(archiveTool, ['-xf', cached, '-C', path.join(staging, 'packages')], options);
         }
       }
       this.publish({ phase: 'installing', file: 'Verifying local models' });

@@ -1,7 +1,7 @@
 # Local AI DJ on beta
 
 The user requested development and publication directly on `beta` for
-2.5.0-beta.22. This is the documented beta-first exception to the usual
+2.5.0-beta.23. This is the documented beta-first exception to the usual
 main-first workflow; see [beta releases](release/beta.md). Development used the
 isolated `codex/local-ai-dj-beta` worktree from beta.20 (`f2a955b`). The primary
 checkout's design changes are preserved.
@@ -112,7 +112,7 @@ npm run typecheck
 npm test
 npm audit --audit-level=high
 npm run dist:win
-node scripts/releaseArtifacts.mjs --platform windows --version 2.5.0-beta.22 --dir release
+node scripts/releaseArtifacts.mjs --platform windows --version 2.5.0-beta.23 --dir release
 ```
 
 Default asset preparation ships helper/notices only. `--models` is an optional
@@ -148,10 +148,10 @@ zero fallbacks on a Ryzen 7 9800X3D with 32 GB RAM: mean preparation 7.89 second
 maximum 13.35 seconds. Both voices produced valid WAV output with external
 model networking blocked and an empty voice cache.
 
-Beta.22 Windows review validation passed typecheck, all 448 tests in 65 files, clean
+Windows review validation passed typecheck, all 448 tests in 65 files, clean
 installation, Electron build, zero-vulnerability audit, player smoke checks and
-Windows packaging. The NSIS installer is 349,141,041 bytes and AppX is
-504,681,212 bytes. Packaged DJ resources total 68,324,854 bytes and contain no
+Windows packaging. The NSIS installer is 349,140,707 bytes and AppX is
+504,680,254 bytes. Packaged DJ resources total 68,324,854 bytes and contain no
 models or voice packages; updater metadata hashes match the installer. Windows
 artifacts remain unsigned. `scripts/smokeDjDownload.cjs` verified a real explicit
 download through packaged production IPC in an empty profile, then both voices
