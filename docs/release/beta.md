@@ -30,7 +30,7 @@ prerelease tags (`2.5.0-beta.1`). See
 ## Beta-first exception: local AI DJ
 
 The user explicitly requested local AI DJ development and publication on `beta`
-for v2.5.0-beta.21. This is an exception to the usual main-first rule;
+for v2.5.0-beta.22. This is an exception to the usual main-first rule;
 ADR 0004's prerelease delivery mechanism still applies. The isolated `codex/local-ai-dj-beta` worktree starts
 from beta.20; the primary checkout's design work and `main` remain untouched.
 Stable promotion requires a separate reviewed integration into `main`.
@@ -38,7 +38,7 @@ Stable promotion requires a separate reviewed integration into `main`.
 AI DJ model files are optional user downloads. Windows packaging prepares and
 ships only the pinned llama.cpp helper and redistribution notices using
 `npm run dj:assets`. It does not bundle GGUF, Kokoro or voice packages.
-`docs/release/v2.5.0-beta.21.md` supplies the feature and system requirement notes
+`docs/release/v2.5.0-beta.22.md` supplies the feature and system requirement notes
 appended to the published prerelease by the desktop workflow.
 
 ## Cutting a beta pre-release
