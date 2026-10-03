@@ -94,10 +94,32 @@ app.on('browser-window-created', (_event, win) => {
         djButton('DJ settings').click();
         await waitForDj(()=>document.querySelector('#settings-ai-dj-tab[aria-selected="true"]'),'settings link');
         if(djButton('Start AI DJ') || djButton('Stop DJ') || document.querySelector('.nebula-dj-transcript')) throw new Error('Session controls remained in settings');
-        const toggle=document.querySelector('.nebula-dj-transcript-setting input');
-        if(!toggle.checked) throw new Error('Transcript default');
+        const toggle=document.querySelector('.nebula-dj-transcript-setting [role="switch"]');
+        if(toggle?.getAttribute('aria-checked')!=='true') throw new Error('Transcript default');
+        document.querySelector('#settings-ai-dj [aria-label="Tracks between interludes"]').click();
+        await waitForDj(()=>djButton('4 tracks'),'cadence dropdown');
+        if(djButton('Clear')) throw new Error('Required DJ preference can be cleared');
+        djButton('4 tracks').click();
+        await waitForDj(()=>document.querySelector('#settings-ai-dj [aria-label="Tracks between interludes"]').textContent.trim()==='4 tracks','cadence setting');
       })()`);
+      win.setContentSize(1450, 1400);
       await capture('settings-model-download');
+      await js(`document.querySelector('.nebula-topbar-theme[aria-label="Switch to light theme"]').click()`);
+      await capture('settings-model-download-light');
+      await js(`(async () => {
+        djButton('Reset DJ learning').click();
+        await waitForDj(()=>djButton('Confirm reset'),'learning reset confirmation');
+        djButton('Cancel').click();
+        await waitForDj(()=>!djButton('Confirm reset'),'learning reset cancelled');
+      })()`);
+      win.setContentSize(940, 1000);
+      await capture('settings-model-download-compact');
+      await js(`(() => {
+        const panel=document.querySelector('#settings-ai-dj');
+        if(panel.scrollWidth > panel.clientWidth + 1) throw new Error('DJ settings overflow');
+        document.querySelector('.nebula-topbar-theme[aria-label="Switch to dark theme"]').click();
+      })()`);
+      win.setContentSize(1450, 1000);
       await js(`(async () => {
         djButton('Download DJ models').click();
         await waitForDj(()=>document.querySelector('progress[aria-label="AI DJ model download"]'),'download progress');
@@ -118,7 +140,8 @@ app.on('browser-window-created', (_event, win) => {
       if (shader.gpu && shader.visibility === 'visible' && shader.painted === 0) throw new Error('WebGPU orb did not paint');
       await js(`(async () => {
         djButton('DJ settings').click(); await waitForDj(()=>document.querySelector('.nebula-dj-transcript-setting'),'settings');
-        document.querySelector('.nebula-dj-transcript-setting input').click();
+        if(!document.querySelector('#settings-ai-dj [aria-label="Tracks between interludes"]').disabled) throw new Error('Cadence editable during session');
+        document.querySelector('.nebula-dj-transcript-setting [role="switch"]').click();
         document.querySelector('.nebula-rail [aria-label="AI DJ"]').click(); await waitForDj(()=>document.querySelector('[data-nebula-view="ai-dj"]'),'DJ');
         if(document.querySelector('.nebula-dj-caption')) throw new Error('Hidden transcription rendered');
         document.querySelector('.nebula-transport [aria-label="Pause"]').click();
