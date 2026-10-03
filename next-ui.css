@@ -82,7 +82,7 @@ html.dark .nebula-next {
 .nebula-rail-item:hover { color: var(--next-text); transform: translateX(2px); }
 .nebula-rail-item[data-active="true"] { color: var(--next-text); }
 .nebula-rail-item[data-active="true"] svg { color: var(--next-accent); }
-.nebula-rail-active { position: absolute; inset: 3px 4px; border-radius: 8px; background: var(--next-surface); box-shadow: 0 3px 9px rgb(0 0 0 / 25%), inset 0 1px 0 var(--next-line); }
+.nebula-rail-active { position: absolute; inset: 3px 4px; border-radius: 8px; background: var(--next-surface); }
 .nebula-rail-footer { padding: 12px; border-top: 1px solid var(--next-line); }
 .nebula-rail-current { display: flex; align-items: center; gap: 10px; margin: 0 2px 10px; padding: 9px; background: var(--next-surface); border-radius: 12px; }
 .nebula-rail-current img { width: 36px; height: 36px; border-radius: 7px; object-fit: cover; }
