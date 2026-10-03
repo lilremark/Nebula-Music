@@ -6,6 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { readSpeechEnergy } from '../hooks/useSpeechEnergy';
 import { useStore } from '../context/Store';
 import { usePlatform } from '../platform/PlatformContext';
 import { createSanitizedArtwork } from '../services/streamDeckArtwork';
@@ -52,6 +53,7 @@ const DesktopOwnerBridgeContext = createContext<DesktopOwnerBridgeContextValue>(
  */
 export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const {
+    dj,
     queue,
     currentSongIndex,
     isPlaying,
@@ -95,7 +97,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     setVolume,
     setPlaybackRate,
     setRepeatMode,
-    audioRef,
+    audioRef, dj,
   });
   stateRef.current = {
     queue,
@@ -111,7 +113,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     setVolume,
     setPlaybackRate,
     setRepeatMode,
-    audioRef,
+    audioRef, dj,
   };
 
   const bumpEpoch = () => {
@@ -143,7 +145,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
       v: DESKTOP_PROTOCOL_VERSION,
       ownerId: OWNER_ID,
       epoch: epochRef.current,
-      playing: state.isPlaying,
+      playing: state.dj.presentation.speech ? state.dj.presentation.playing : state.isPlaying,
       track: song
         ? toTrackSummary({
             id: song.id,
@@ -168,6 +170,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
       repeatMode: toRepeatMode(state.repeatMode),
       updatedAt: Date.now(),
       upcoming,
+      dj: state.dj.presentation,
     };
   };
 
@@ -187,7 +190,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     const state = stateRef.current;
     switch (envelope.command.name) {
       case 'setPlayback':
-        if (state.isPlaying !== envelope.command.playing) state.togglePlay();
+        if ((state.dj.presentation.speech ? state.dj.presentation.playing : state.isPlaying) !== envelope.command.playing) state.togglePlay();
         break;
       case 'togglePlayback':
         state.togglePlay();
@@ -205,6 +208,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
         state.setPlaybackRate(clamp(envelope.command.playbackRate, 0.5, 2));
         break;
       case 'seekRelative': {
+        if (state.dj.presentation.speech) break;
         const audio = state.audioRef.current;
         if (!audio) break;
         const duration = Number.isFinite(audio.duration) ? audio.duration : Number.MAX_SAFE_INTEGER;
@@ -212,6 +216,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
         break;
       }
       case 'seekAbsolute': {
+        if (state.dj.presentation.speech) break;
         const audio = state.audioRef.current;
         const song = state.queue[state.currentSongIndex];
         if (!audio || !song || song.id !== envelope.command.trackId) break;
@@ -220,7 +225,7 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
         break;
       }
       case 'setRepeatMode':
-        state.setRepeatMode(envelope.command.repeatMode);
+        if (!state.dj.state.active) state.setRepeatMode(envelope.command.repeatMode);
         break;
       case 'playQueueIndex':
         state.playQueueIndex(envelope.command.index);
@@ -237,6 +242,15 @@ export const DesktopOwnerBridgeProvider: React.FC<React.PropsWithChildren> = ({ 
     return platform.playback.onCommand((envelope) => handleCommandRef.current(envelope));
   }, [platform]);
 
+  const [miniVisible, setMiniVisible] = useState(false);
+  useEffect(() => platform?.miniPlayer.onVisibility?.(setMiniVisible), [platform]);
+  useEffect(() => {
+    platform?.playback.publishDjEnergy?.(0);
+    if (!miniVisible || !dj.presentation.playing || !dj.voiceAnalyser) return;
+    const samples = new Uint8Array(dj.voiceAnalyser.fftSize);
+    const timer = setInterval(() => platform?.playback.publishDjEnergy?.(readSpeechEnergy(dj.voiceAnalyser!, samples)), 100);
+    return () => { clearInterval(timer); platform?.playback.publishDjEnergy?.(0); };
+  }, [platform, miniVisible, dj.presentation.playing, dj.voiceAnalyser]);
   // Re-publish a fresh snapshot after the machine wakes from sleep so the tray,
   // media keys, and mini-player re-sync to the real audio position.
   useEffect(() => {

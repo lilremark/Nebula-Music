@@ -4,7 +4,7 @@ import type { Platform } from '../platform/types';
 import type { SubsonicService } from '../services/subsonicService';
 import type { DjPreparedAudio } from '../electron/aiDj/localProtocol';
 import { db } from '../services/db';
-import { DEFAULT_LOCAL_DJ, EMPTY_DJ, type DjLocalSettings, type DjSessionState } from '../playback/djTypes';
+import { DEFAULT_LOCAL_DJ, EMPTY_DJ, type DjLocalSettings, type DjSessionState, type DjPresentation } from '../playback/djTypes';
 import { selectDjBlock, summarizeTaste } from '../playback/djSelection';
 
 interface Inputs {
@@ -27,6 +27,9 @@ export function useDjSession(inputs: Inputs) {
   const holding = useRef(false);
   const setHoldMusic = (value: boolean) => { holding.current = value; setHoldMusicState(value); };
   const [voicePlaying, setVoicePlaying] = useState(false);
+  const [speechPreview, setSpeechPreview] = useState(false);
+  const [speechProgress, setSpeechProgress] = useState({ position: 0, duration: 0 });
+  const previewPaused = useRef(false);
   const [voiceAnalyser, setVoiceAnalyser] = useState<AnalyserNode | null>(null);
   const speechRef = useRef<HTMLAudioElement>(null);
   const voiceSource = useRef<MediaElementAudioSourceNode | null>(null);
@@ -54,7 +57,7 @@ export function useDjSession(inputs: Inputs) {
   const clearSpeech = () => {
     const audio = speechRef.current;
     if (audio) { audio.onended = null; audio.onerror = null; audio.pause(); audio.removeAttribute('src'); }
-    setVoicePlaying(false);
+    setVoicePlaying(false); setSpeechPreview(false); previewPaused.current = false; setSpeechProgress({ position: 0, duration: 0 });
     if (speechUrl.current) URL.revokeObjectURL(speechUrl.current);
     speechPending.current = false; speechUrl.current = null; setHoldMusic(false); restoreGain();
   };
@@ -90,7 +93,7 @@ export function useDjSession(inputs: Inputs) {
     const stored = await platform.settings.get('aiDj') as Record<string, unknown>;
     await platform.settings.set('aiDj', { ...stored, local: next });
     configRef.current = next; setConfig(next);
-    pendingKey.current = ''; prepared.current = null;
+    if (Object.keys(patch).some(key => key !== 'showTranscript' && key !== 'voiceLevel')) { pendingKey.current = ''; prepared.current = null; }
   };
 
   async function candidates() {
@@ -141,6 +144,7 @@ export function useDjSession(inputs: Inputs) {
       setHoldMusic(standalone);
       if (!standalone) latest.current.musicGain()?.gain.setTargetAtTime(10 ** (-12 / 20), ctx.currentTime, 0.08);
       voiceGain.current!.gain.value = latest.current.volume * configRef.current.voiceLevel;
+      setSpeechPreview(preview);
       publish({ phase: 'speaking', transcript: audio.text, error: audio.error });
       element.onended = finishSpeech;
       element.onerror = () => { publish({ error: 'DJ audio could not play; continuing music.' }); finishSpeech(); };
@@ -188,7 +192,7 @@ export function useDjSession(inputs: Inputs) {
     const boundary = input.index + configRef.current.interval - stateRef.current.completed;
     const tracks = input.queue.slice(boundary, boundary + configRef.current.interval);
     if (!tracks.length) return;
-    const key = id + ':' + boundary + ':' + tracks.map(song => song.id).join(',') + ':' + JSON.stringify(configRef.current);
+    const key = id + ':' + boundary + ':' + tracks.map(song => song.id).join(',') + ':' + JSON.stringify({ interval: configRef.current.interval, voice: configRef.current.voice, style: configRef.current.style, discovery: configRef.current.discovery });
     if (pendingKey.current === key) return;
     pendingKey.current = key; prepared.current = null;
     publish({ upcoming: tracks, preparingNext: true });
@@ -235,14 +239,31 @@ export function useDjSession(inputs: Inputs) {
   useEffect(() => {
     const element = speechRef.current;
     if (element && speechUrl.current) {
-      if (inputs.playing || !stateRef.current.active) void element.play().then(() => setVoicePlaying(true)).catch(() => finishSpeech());
+      const playSpeech = stateRef.current.active ? inputs.playing : !previewPaused.current;
+      if (playSpeech) void element.play().then(() => setVoicePlaying(true)).catch(() => finishSpeech());
       else { element.pause(); setVoicePlaying(false); restoreGain(); }
-      if (inputs.playing && configRef.current.style === 'over-music') { const ctx = latest.current.context(); if (ctx) latest.current.musicGain()?.gain.setTargetAtTime(10 ** (-12 / 20), ctx.currentTime, 0.08); }
+      if (playSpeech && (!stateRef.current.active || configRef.current.style === 'over-music')) { const ctx = latest.current.context(); if (ctx) latest.current.musicGain()?.gain.setTargetAtTime(10 ** (-12 / 20), ctx.currentTime, 0.08); }
     }
     if (voiceGain.current) voiceGain.current.gain.value = inputs.volume * config.voiceLevel;
   }, [inputs.playing, inputs.volume, config.voiceLevel]);
   useEffect(() => () => { epoch.current++; resumeAfterSpeech.current = null; clearSpeech(); void latest.current.platform?.aiDj?.cancel().catch(() => {}); }, []);
 
+  useEffect(() => {
+    const audio = speechRef.current;
+    if (!audio || state.phase !== 'speaking') return;
+    const sync = () => setSpeechProgress({ position: Number.isFinite(audio.currentTime) ? audio.currentTime : 0, duration: Number.isFinite(audio.duration) ? audio.duration : 0 });
+    audio.addEventListener('timeupdate', sync); audio.addEventListener('loadedmetadata', sync); sync();
+    return () => { audio.removeEventListener('timeupdate', sync); audio.removeEventListener('loadedmetadata', sync); };
+  }, [state.phase]);
+  const togglePreview = () => {
+    if (!speechPreview || !speechUrl.current || !speechRef.current) return false;
+    const audio = speechRef.current;
+    previewPaused.current = !audio.paused;
+    if (previewPaused.current) { audio.pause(); setVoicePlaying(false); restoreGain(); }
+    else { const ctx = latest.current.context(); if (ctx) latest.current.musicGain()?.gain.setTargetAtTime(10 ** (-12 / 20), ctx.currentTime, 0.08); void audio.play().then(() => setVoicePlaying(true)).catch(finishSpeech); }
+    return true;
+  };
+  const presentation: DjPresentation = { sessionId: session.current, active: state.active, speech: state.phase === 'speaking', preview: speechPreview, playing: voicePlaying, ...speechProgress };
   const restore = () => {
     const saved = restoring.current; stop(false); if (!saved) return;
     latest.current.finishListening?.(); latest.current.stopRadio(); latest.current.cancelCrossfade();
@@ -260,5 +281,5 @@ export function useDjSession(inputs: Inputs) {
     } catch (error) { if (epoch.current === token) publish({ phase: 'idle', error: String(error) }); }
   };
   const resetLearning = async () => { stop(); if (latest.current.profile) await db.resetDjLearning(latest.current.profile); publish({ taste: 'DJ listening history reset. Your likes and play counts are preserved.' }); };
-  return { state, config, holdMusic, isHolding: () => holding.current, voicePlaying, voiceAnalyser, speechRef, canRestore, start, stop, boundary, skipInterlude, restore, preview, saveConfig, resetLearning, musicPosition };
+  return { state, config, presentation, togglePreview, holdMusic, isHolding: () => holding.current, voicePlaying, voiceAnalyser, speechRef, canRestore, start, stop, boundary, skipInterlude, restore, preview, saveConfig, resetLearning, musicPosition };
 }

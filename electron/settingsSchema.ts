@@ -28,7 +28,7 @@ export type DjVoiceId = (typeof AVAILABLE_DJ_VOICES)[number] | (string & {});
  * `voice` selects the local Piper/VITS voice used for spoken lines.
  */
 export const aiDjSettingsSchema = z.object({
-  local: z.object({ interval: z.union([z.literal(4), z.literal(5)]).default(5), voice: z.enum(['Michael', 'Heart']).default('Michael'), style: z.enum(['standalone', 'over-music']).default('standalone'), discovery: z.enum(['familiar', 'balanced', 'discover']).default('balanced'), voiceLevel: z.number().min(0).max(1).default(0.85) }).default(DEFAULT_LOCAL_DJ),
+  local: z.object({ interval: z.union([z.literal(4), z.literal(5)]).default(5), voice: z.enum(['Michael', 'Heart']).default('Michael'), style: z.enum(['standalone', 'over-music']).default('standalone'), discovery: z.enum(['familiar', 'balanced', 'discover']).default('balanced'), voiceLevel: z.number().min(0).max(1).default(0.85), showTranscript: z.boolean().default(true) }).default(DEFAULT_LOCAL_DJ),
   enabled: z.boolean().default(false),
   provider: z.string().min(1).default('groq'),
   model: z.string().default('openai/gpt-oss-20b'),

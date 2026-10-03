@@ -316,6 +316,7 @@ const createWindow = (): BrowserWindow => {
 
   win.webContents.on('did-finish-load', () => {
     console.log('[nebula] renderer loaded');
+    win.webContents.send(IPC.miniPlayer.visibility, miniPlayerWindow?.isVisible() ?? false);
   });
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
     console.error(
@@ -379,6 +380,9 @@ const createMiniPlayerWindow = (): BrowserWindow => {
     }
   });
 
+  win.on('show', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, true));
+  win.on('hide', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
+  win.on('closed', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
   win.once('ready-to-show', () => win.show());
 
   win.webContents.on('did-finish-load', () => {
@@ -556,6 +560,12 @@ const registerIpc = (): void => {
     }
   });
 
+  onTrusted(IPC.playback.djEnergy, (event, energy: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !miniPlayerWindow?.isVisible()) return;
+    if (energy !== 0 && !lastSnapshot?.dj?.playing) return;
+    if (typeof energy !== 'number' || !Number.isFinite(energy) || energy < 0 || energy > 1) return;
+    miniPlayerWindow.webContents.send(IPC.playback.djEnergyToClient, energy);
+  });
   onTrusted(IPC.playback.snapshot, (event, snapshot: unknown) => {
     if (!mainWindow || event.sender !== mainWindow.webContents) return;
     const parsed = desktopSnapshotSchema.safeParse(snapshot);

@@ -1,3 +1,4 @@
+import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './player/DjPresentation';
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, SkipForward, ChevronUp } from 'lucide-react';
 import { useStore } from '../context/Store';
@@ -14,6 +15,7 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
         queue, currentSongIndex, isPlaying, togglePlay, nextSong, service, audioRef, settings
     } = useStore();
 
+    const voice = useDjPlayback();
     const [progress, setProgress] = useState(0);
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.coverArt || currentSong.id, 200) : '';
@@ -38,10 +40,11 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
 
     return (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40">
+            <DjHaze speech={voice.speech} />
             {/* Progress bar */}
             <PlaybackProgress
-                progress={progress}
-                mode={settings.progressVisualization}
+                progress={voice.speech ? voice.progress : progress}
+                mode={voice.speech ? 'bar' : settings.progressVisualization}
                 accentColor={colors.primary}
                 secondaryColor={colors.secondary}
                 baseColor={colors.primaryMuted}
@@ -59,13 +62,13 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
             >
                 {/* Album Art */}
                 <div className="w-12 h-12 rounded-lg overflow-hidden shadow-lg shrink-0">
-                    <img src={coverArt} alt="" className="w-full h-full object-cover" />
+                    <PlayerCover src={coverArt} alt="" className="w-full h-full object-cover" />
                 </div>
 
                 {/* Song Info */}
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{currentSong.title}</p>
-                    <p className="text-xs text-neutral-600 dark:text-white/50 truncate">{currentSong.artist}</p>
+                    <DjBadge /><p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">{voice.speech ? 'AI DJ' : currentSong.title}</p>
+                    <p className="text-xs text-neutral-600 dark:text-white/50 truncate">{voice.speech ? voice.subtitle : currentSong.artist}</p>
                 </div>
 
                 {/* Controls */}
@@ -74,9 +77,9 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
                         onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                         className="w-10 h-10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
                         style={{ backgroundColor: colors.primary, color: colors.text }}
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                        aria-label={voice.playing ? 'Pause' : 'Play'}
                     >
-                        {isPlaying ? (
+                        {voice.playing ? (
                             <Pause className="w-5 h-5 fill-current" />
                         ) : (
                             <Play className="w-5 h-5 fill-current ml-0.5" />

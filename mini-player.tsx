@@ -1,3 +1,4 @@
+import { DjCover } from './components/player/DjCover';
 import type { CSSProperties } from 'react';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -51,6 +52,7 @@ const Art = ({ url, size }: { url?: string; size: string }) =>
  */
 const MiniPlayerContent: React.FC = () => {
   const platform = usePlatform();
+  const [energy, setEnergy] = useState(0);
   const [snapshot, setSnapshot] = useState<DesktopSnapshot | null>(null);
 
   const snapshotRef = useRef(snapshot);
@@ -65,6 +67,9 @@ const MiniPlayerContent: React.FC = () => {
     return platform.playback.onSnapshot(setSnapshot);
   }, [platform]);
 
+  useEffect(() => platform?.playback.onDjEnergy?.(setEnergy), [platform]);
+  useEffect(() => { if (!snapshot?.dj?.playing) setEnergy(0); }, [snapshot?.dj?.playing]);
+  const speech = !!snapshot?.dj?.speech;
   const [displayProgress, setDisplayProgress] = useState(0);
   const { colors } = useAdaptiveColors(snapshot?.track?.coverArtUrl);
 
@@ -80,7 +85,8 @@ const MiniPlayerContent: React.FC = () => {
       last = now;
       const snap = snapshotRef.current;
       const target =
-        snap && snap.durationSeconds > 0
+        snap?.dj?.speech && snap.dj.duration > 0 ? Math.min(100, snap.dj.position / snap.dj.duration * 100)
+          : snap && snap.durationSeconds > 0
           ? Math.min(100, (snap.positionSeconds / snap.durationSeconds) * 100)
           : 0;
       setDisplayProgress((prev) => {
@@ -112,17 +118,19 @@ const MiniPlayerContent: React.FC = () => {
   const upcoming: DesktopUpcomingTrack[] = snapshot?.upcoming ?? [];
 
   return (
-    <div className="flex h-full w-full flex-col select-none overflow-hidden bg-neutral-900/95">
+    <div className="relative flex h-full w-full flex-col select-none overflow-hidden bg-neutral-900/95">
+      <div className="nebula-dj-haze" data-speaking={speech} aria-hidden="true" />
       {/* Compact now-playing bar */}
       <div className="flex items-center gap-3 px-3 py-2.5" style={appRegion('drag')}>
-        <Art url={track?.coverArtUrl} size="h-12 w-12" />
+        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg">{speech ? <DjCover playing={!!snapshot?.dj?.playing} energy={energy} /> : <Art url={track?.coverArtUrl} size="h-12 w-12" />}</div>
 
         <div className="min-w-0 flex-1">
+          {snapshot?.dj?.active && <span className="nebula-dj-badge">AI DJ</span>}
           <p className="truncate text-sm font-semibold text-white">
-            {track ? track.title : snapshot?.playing ? 'Playing…' : 'Not playing'}
+            {speech ? 'AI DJ' : track ? track.title : snapshot?.playing ? 'Playing…' : 'Not playing'}
           </p>
           <p className="truncate text-xs text-white/50">
-            {track ? `${track.artist}${track.album ? ` — ${track.album}` : ''}` : 'Nebula Music'}
+            {speech ? snapshot?.dj?.preview ? 'Voice preview' : snapshot?.dj?.playing ? 'Introducing your next set' : 'DJ paused' : track ? `${track.artist}${track.album ? ` — ${track.album}` : ''}` : 'Nebula Music'}
           </p>
           <PlaybackProgress progress={displayProgress} mode="bar" accentColor={colors.primary}
             secondaryColor={colors.secondary} markerColor={colors.secondary} baseColor="rgba(255,255,255,.1)"

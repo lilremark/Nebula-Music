@@ -336,7 +336,9 @@ export const SettingsView: React.FC = () => {
     const [autoEqLastFetchedAt, setAutoEqLastFetchedAt] = useState<number | null>(() => settings.eq.autoEqIndexFetchedAt || getCachedAutoEqIndexInfo()?.fetchedAt || null);
     const [pairingCode, setPairingCode] = useState('');
     const [pairingError, setPairingError] = useState('');
-    const [activeSettingsJump, setActiveSettingsJump] = useState<string>(SETTINGS_JUMPS[0][0]);
+    const { viewData } = useStore();
+    const [activeSettingsJump, setActiveSettingsJump] = useState<string>(viewData === 'settings-ai-dj' ? 'settings-ai-dj' : SETTINGS_JUMPS[0][0]);
+    useEffect(() => { if (viewData === 'settings-ai-dj') setActiveSettingsJump('settings-ai-dj'); }, [viewData]);
 
     useEffect(() => {
         setIsInsecure(isInsecureHttpUrl(url));

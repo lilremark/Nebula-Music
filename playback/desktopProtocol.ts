@@ -101,6 +101,10 @@ export const desktopSnapshotSchema = z.object({
   playbackRate: z.number().min(0.5).max(2),
   repeatMode: z.enum(REPEAT_MODES),
   updatedAt: z.number().int().min(0),
+  dj: z.object({
+    sessionId: z.string().max(64).nullable(), active: z.boolean(), speech: z.boolean(), preview: z.boolean(), playing: z.boolean(),
+    position: z.number().min(0).max(86400), duration: z.number().min(0).max(86400),
+  }).optional(),
   /** Upcoming queue entries (mini-player "Up Next" list). Empty when nothing is queued. */
   upcoming: z.array(desktopUpcomingTrackSchema).default([]),
 });

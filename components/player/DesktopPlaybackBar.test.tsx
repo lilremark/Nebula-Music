@@ -21,6 +21,7 @@ describe('bottom player waveform', () => {
     Object.defineProperty(audio, 'duration', { value: 200 });
     audio.currentTime = 40;
     Object.assign(store, {
+      dj: { state: { active: false }, presentation: { speech: false, playing: false, position: 0, duration: 0 }, voiceAnalyser: null },
       queue: [{ id: 'song', title: 'Track', artist: 'Artist', duration: 200, suffix: 'mp3' }],
       currentSongIndex: 0, currentRadioStation: null, radioMetadata: null,
       isRadioPlaying: false, isPlaying: true, audioRef: { current: audio },
@@ -54,6 +55,25 @@ describe('bottom player waveform', () => {
     expect(audio.currentTime).toBe(150);
     expect(container.textContent).toContain('2:30');
     expect(store.setVolume).not.toHaveBeenCalled();
+  });
+
+  it('shows voice progress and restores track art without changing the music queue', async () => {
+    store.dj.state.active = true;
+    store.dj.presentation = { speech: true, playing: false, position: 3, duration: 12 };
+    await render();
+    expect(container.querySelector('[aria-label="AI DJ cover"]')).not.toBeNull();
+    expect(container.querySelector('.nebula-dj-haze')?.getAttribute('data-speaking')).toBe('true');
+    expect(container.querySelector('input[aria-label="Playback position"]')).toBeNull();
+    expect(container.querySelector('.nebula-transport-like')?.hasAttribute('disabled')).toBe(true);
+    expect(container.textContent).toContain('0:03');
+    expect(store.queue[0].id).toBe('song');
+    expect(container.querySelector('[aria-label="Open AI DJ"]')).toBeNull();
+    store.dj.presentation.speech = false;
+    await render();
+    expect(container.querySelector('[aria-label="AI DJ cover"]')).toBeNull();
+    expect(container.querySelector('img.nebula-transport-art')?.getAttribute('src')).toBe('https://music.test/art');
+    expect(container.querySelector('input[aria-label="Playback position"]')).not.toBeNull();
+    expect(container.querySelector('.nebula-dj-badge')?.textContent).toBe('AI DJ');
   });
 
   it('updates the waveform marker when playback time changes', async () => {

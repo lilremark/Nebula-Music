@@ -1,4 +1,4 @@
-import { DjStatusButton } from './DjPanel';
+import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './DjPresentation';
 import React, { useEffect, useState } from 'react';
 import { AudioLines, Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/Store';
@@ -25,10 +25,11 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     prevSong, nextSong, toggleLike, volume, setVolume, setView,
     settings, updateSettings,
   } = useStore();
+  const voice = useDjPlayback();
   const song = queue[currentSongIndex];
   const isRadio = !!currentRadioStation;
   const streamUrl = !isRadio && song ? service.getStreamUrl(song.id, song.suffix) : null;
-  const progressMode = settings.progressVisualization;
+  const progressMode = voice.speech ? 'bar' : settings.progressVisualization;
   const waveform = useTrackWaveform(isRadio ? undefined : song?.id, progressMode === 'waveform' ? streamUrl : null);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -67,23 +68,24 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
 
   if (!song && !currentRadioStation) return null;
 
-  const title = isRadio ? radioMetadata?.title || currentRadioStation?.name : song.title;
-  const subtitle = isRadio ? radioMetadata?.artist || currentRadioStation?.name : song.artist;
-  const playing = isRadio ? isRadioPlaying : isPlaying;
+  const title = voice.speech ? 'AI DJ' : isRadio ? radioMetadata?.title || currentRadioStation?.name : song.title;
+  const subtitle = voice.speech ? voice.subtitle : isRadio ? radioMetadata?.artist || currentRadioStation?.name : song.artist;
+  const playing = voice.speech ? voice.playing : isRadio ? isRadioPlaying : isPlaying;
   const onPlayPause = isRadio ? toggleRadioPlay : togglePlay;
   const resolvedDuration = duration || song?.duration || 0;
   const seek = (event: React.ChangeEvent<HTMLInputElement>) => {
     const audio = audioRef.current;
-    if (!audio || !resolvedDuration) return;
+    if (voice.speech || !audio || !resolvedDuration) return;
     const nextPosition = Number(event.target.value) / 100 * resolvedDuration;
     audio.currentTime = nextPosition;
     setPosition(nextPosition);
   };
 
   return <footer className="nebula-transport" aria-label="Playback controls">
+    <DjHaze speech={voice.speech} />
     <div className="nebula-transport-progress">
       {isRadio ? <span className="nebula-transport-live" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }} /> : <PlaybackProgress
-        progress={resolvedDuration ? position / resolvedDuration * 100 : 0}
+        progress={voice.speech ? voice.progress : resolvedDuration ? position / resolvedDuration * 100 : 0}
         mode={progressMode}
         waveform={waveform}
         accentColor={colors.primary}
@@ -91,22 +93,23 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
         baseColor="var(--next-waveform)"
         markerColor={colors.secondary}
         onScrub={seek}
-        scrubbable={resolvedDuration > 0}
+        scrubbable={!voice.speech && resolvedDuration > 0}
         showHandle
         trackClassName={`nebula-transport-waveform ${progressMode === 'waveform' && waveform ? 'has-waveform' : 'has-progress-bar'}`}
       />}
-      <span>{isRadio ? 'LIVE' : formatTime(position)}</span>
-      <span>{isRadio ? currentRadioStation?.genre || 'RADIO' : formatTime(resolvedDuration)}</span>
+      <span>{isRadio ? 'LIVE' : formatTime(voice.speech ? voice.position : position)}</span>
+      <span>{isRadio ? currentRadioStation?.genre || 'RADIO' : formatTime(voice.speech ? voice.duration : resolvedDuration)}</span>
     </div>
     <div className="nebula-transport-track">
-      {artwork ? <img src={artwork} alt="" className="nebula-transport-art" /> : <span className="nebula-transport-art nebula-transport-art-empty"><ListMusic size={20} /></span>}
+      {artwork || voice.speech ? <PlayerCover src={artwork} alt="" className="nebula-transport-art" /> : <span className="nebula-transport-art nebula-transport-art-empty"><ListMusic size={20} /></span>}
       <div className="nebula-transport-track-copy">
-        <button type="button" onClick={() => song?.albumId && setView('ALBUM_DETAIL', song.albumId)} disabled={!song?.albumId} title={title}>
+        <DjBadge />
+        <button type="button" onClick={() => song?.albumId && setView('ALBUM_DETAIL', song.albumId)} disabled={voice.speech || !song?.albumId} title={title}>
           {title}
         </button>
         <span title={subtitle}>{subtitle}</span>
       </div>
-      {!isRadio && song && <button type="button" className={`nebula-transport-icon nebula-transport-like ${song.starred ? 'is-liked' : ''}`} onClick={() => toggleLike(song)} aria-label={song.starred ? 'Unlike song' : 'Like song'}><Heart size={18} fill={song.starred ? 'currentColor' : 'none'} /></button>}
+      {!isRadio && song && <button disabled={voice.speech} type="button" className={`nebula-transport-icon nebula-transport-like ${song.starred ? 'is-liked' : ''}`} onClick={() => toggleLike(song)} aria-label={song.starred ? 'Unlike song' : 'Like song'}><Heart size={18} fill={song.starred ? 'currentColor' : 'none'} /></button>}
     </div>
 
     <div className="nebula-transport-center">
@@ -118,7 +121,6 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     </div>
 
     <div className="nebula-transport-tools">
-      <DjStatusButton onOpen={onExpand} />
       {!isRadio && <>
         <button type="button" className="nebula-transport-icon" onClick={() => updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' })} aria-label={progressMode === 'waveform' ? 'Switch to progress bar' : 'Switch to waveform'} aria-pressed={progressMode === 'waveform'} title={progressMode === 'waveform' ? 'Progress bar' : 'Waveform'}><AudioLines size={18} /></button>
         <SpeedPitchControls />

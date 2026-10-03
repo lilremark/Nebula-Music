@@ -180,7 +180,7 @@ export type PlaybackMode = 'normal' | 'shuffle';
 export type RepeatMode = 'OFF' | 'ALL' | 'ONE';
 export const VISUALIZER_MODES = ['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM'] as const;
 export type VisualizerMode = typeof VISUALIZER_MODES[number];
-export type View = 'HOME' | 'BROWSE' | 'RADIO' | 'ARTISTS' | 'ALBUMS' | 'SONGS' | 'PLAYLISTS' | 'SETTINGS' | 'PLAYLIST_DETAIL' | 'ARTIST_DETAIL' | 'ALBUM_DETAIL' | 'SEARCH' | 'LIKED_SONGS' | 'LIKED_ALBUMS';
+export type View = 'HOME' | 'AI_DJ' | 'BROWSE' | 'RADIO' | 'ARTISTS' | 'ALBUMS' | 'SONGS' | 'PLAYLISTS' | 'SETTINGS' | 'PLAYLIST_DETAIL' | 'ARTIST_DETAIL' | 'ALBUM_DETAIL' | 'SEARCH' | 'LIKED_SONGS' | 'LIKED_ALBUMS';
 export interface NavigationTarget {
   view: View;
   data?: any;

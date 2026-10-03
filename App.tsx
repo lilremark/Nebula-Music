@@ -26,6 +26,7 @@ import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 // being visited. Library and settings code need not delay first paint.
 const HomeView = lazy(() => import('./views/Home').then(module => ({ default: module.HomeView })));
 const LibraryView = lazy(() => import('./views/Library').then(module => ({ default: module.LibraryView })));
+const AiDjView = lazy(() => import('./views/AiDj').then(module => ({ default: module.AiDjView })));
 const BrowseView = lazy(() => import('./views/Browse').then(module => ({ default: module.BrowseView })));
 const InternetRadioView = lazy(() => import('./views/InternetRadio').then(module => ({ default: module.InternetRadioView })));
 const SettingsView = lazy(() => import('./views/Settings').then(module => ({ default: module.SettingsView })));
@@ -148,6 +149,7 @@ export const AppContent: React.FC<{
   switch (currentView) {
     case 'HOME': ViewComponent = HomeView; break;
     case 'BROWSE': ViewComponent = BrowseView; break;
+    case 'AI_DJ': ViewComponent = AiDjView; break;
     case 'RADIO': ViewComponent = InternetRadioView; break;
     case 'SETTINGS': ViewComponent = SettingsView; break;
     case 'ARTISTS':

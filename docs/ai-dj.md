@@ -8,7 +8,7 @@ a beta release remains a separate action; this branch produces review builds.
 
 ## Behavior
 
-Start a session from AI DJ in Settings or a player. DJ saves the previous queue
+Start a session from AI DJ under Discover. Settings contains preferences, voice preview, readiness, and learning reset. DJ saves the previous queue
 and position, greets once, then introduces sets after four or five natural track
 completions. Explicit skips influence recommendations without advancing that
 counter. Stop DJ leaves its music queue playing; Return to previous queue restores
@@ -34,8 +34,7 @@ Standalone voice suppresses crossfade at the set boundary. Over-music voice lowe
 the music input by 12 dB and restores its gain smoothly. The voice branch has its
 own analyser and gain, follows master volume/mute, and bypasses music speed/pitch
 and EQ. Pause and Next operate on the active voice/session through the Store,
-including tray, media-key and mini-player commands. The waveform samples actual
-speech audio and stops updates when hidden, paused or reduced motion is enabled.
+including tray, media-key and mini-player commands. The ORB-21 cover samples actual speech audio and stops rendering when hidden, offscreen, paused, or reduced motion is enabled.
 
 Only prepared audio plays at a boundary. Late work is skipped; music continues.
 Session/profile/request revisions discard obsolete results. Model errors use a
@@ -116,3 +115,58 @@ music fixtures; `scripts/verifyAiDjRuntime.ts` blocks external fetch, uses an em
 voice cache, and accepts `NEBULA_DJ_RESOURCES` / `NEBULA_DJ_WORKER` for packaged
 resource verification. Set `NEBULA_DJ_CASES=100` to repeat the commentary run.
 Reports, voice samples and screenshots are written to ignored `release-review/`.
+
+## Discover and player integration
+
+Discover → AI DJ is the session home. Navigating there never starts a session.
+The view shows a playlist-style queue, taste explanation, completion progress,
+preparation/errors, and Start/Stop/Skip/Return controls. DJ settings links directly
+to its settings section. `showTranscript` migrates to true and can be changed
+while listening without invalidating a prepared interlude. Transcripts appear
+only in Discover, never in a player or desktop snapshot.
+
+All music players use a shared presentation independent of the real track and
+queue identity. During voice, their main cover becomes the purple cloud orb,
+metadata identifies AI DJ, progress follows speech, and seeking/track actions are
+disabled. Next skips speech, including from the native mini-player. Paused speech
+keeps static cover/haze; finish, skip, stop, error, and profile changes clear it.
+Voice previews reuse presentation but do not start sessions or create queues.
+The expanded player retains Now Playing and Queue during DJ; its queue includes
+a compact standard transport. Lyrics return for ordinary music playback.
+
+Shadercn ORB-21 is vendored at revision
+`7569572e3c5b7e76f630868d27b9f3fc3a5328ad`, with vgpu 0.4.0,
+TypeGPU 0.12.6 and unplugin-typegpu 0.12.4. The runtime is MIT; **the shader
+itself is non-commercial only, with attribution to XorDev**, as documented in
+its source. Both notices ship in `electron/assets/shadercn-NOTICE.txt`.
+GPU rendering is optional: a bundled static SVG handles reduced motion,
+unavailable WebGPU, initialization failure and device loss. The source frame
+loop is capped at 30 fps and DPR 1.5; renderer resources are disposed when hidden,
+paused, offscreen or unmounted. Frontend shader packages are build dependencies;
+the compiled shader is included in the offline application.
+
+Desktop snapshots carry validated presentation/progress only. A separate bounded
+10 Hz energy channel operates only while the mini-player is visible. Main-process
+sender validation restricts publication to the playback owner. Mini-player
+rendering remains a remote client with no audio owner or inference process.
+
+Run `node_modules/electron/dist/electron.exe scripts/smokeDjUi.cjs` after building
+for an offline fixture check of Discover, settings, transcription, native energy,
+voice preview, all player covers, actual WebGPU painting, and artwork restoration.
+The fixture supplies prepared voice audio rather than evaluating local models;
+real-server and reference-hardware checks remain the separate acceptance tests above.
+
+### Updated integration review
+
+- Typecheck, all 436 tests in 64 files, Electron build and dependency audit pass
+  (zero reported vulnerabilities).
+- Offline UI smoke checks pass for Discover navigation, settings separation,
+  live transcription opt-out, actual WebGPU frames, paused/static covers, all
+  player layouts, native energy synchronization and track restoration after Next.
+  The existing player smoke and real local-model preview/session smoke also pass.
+- Packaged ASAR UI and both bundled voices pass with external model fetch blocked
+  and an empty voice cache. The two packaged commentary/TTS runs completed in
+  9.63 and 7.91 seconds on the review machine.
+- The beta.20 review installer and AppX remain below the 2 GiB release limit;
+  Authenticode reports NotSigned. This build has not been published or installed
+  over the user's current profile. The manual acceptance items above remain open.

@@ -3,7 +3,6 @@ import { Headphones } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { usePlatform } from '../platform/PlatformContext';
 import { SettingPanel } from './ui';
-import { DjPanel } from './player/DjPanel';
 import type { DjReadiness } from '../electron/aiDj/localProtocol';
 import type { DjLocalSettings } from '../playback/djTypes';
 
@@ -13,10 +12,10 @@ export function AiDjSettings() {
   const [error, setError] = useState(''); const [confirmReset, setConfirmReset] = useState(false);
   useEffect(() => { let live = true; void platform?.aiDj?.readiness().then(result => { if (live) setReadiness(result); }).catch(error => { if (live) setReadiness({ ready: false, error: String(error) }); }); return () => { live = false; }; }, [platform]);
   const save = (patch: Partial<DjLocalSettings>) => { setError(''); void dj.saveConfig(patch).catch(error => setError(String(error))); };
-  return <SettingPanel icon={Headphones} title="AI DJ" description="Personalized sets and a local voice. Start a session when you want a DJ.">
+  return <SettingPanel icon={Headphones} title="AI DJ" description="Personalize your DJ’s voice and listening preferences.">
     <div className="nebula-dj-settings-status" role="status">{!platform?.aiDj ? 'AI DJ requires the Windows desktop app.' : !readiness ? 'Checking local models…' : readiness.ready ? 'Local models ready · no model downloads or API keys needed' : readiness.error}</div>
-    <DjPanel />
     <fieldset disabled={!platform?.aiDj} className="nebula-dj-settings">
+      <label className="nebula-dj-transcript-setting"><span>Show DJ transcription<small>Display commentary in the AI DJ Discover view.</small></span><input type="checkbox" checked={dj.config.showTranscript} onChange={event => save({ showTranscript: event.target.checked })} /></label>
       <label>Tracks between interludes<select disabled={dj.state.active} value={dj.config.interval} onChange={event => save({ interval: Number(event.target.value) as 4 | 5 })}><option value={4}>4 tracks</option><option value={5}>5 tracks</option></select></label>
       <label>Interlude style<select disabled={dj.state.active} value={dj.config.style} onChange={event => save({ style: event.target.value as DjLocalSettings['style'] })}><option value="standalone">Between sets</option><option value="over-music">Over lowered music</option></select></label>
       <label>Discovery<select disabled={dj.state.active} value={dj.config.discovery} onChange={event => save({ discovery: event.target.value as DjLocalSettings['discovery'] })}><option value="familiar">Familiar</option><option value="balanced">Balanced</option><option value="discover">Discover</option></select></label>

@@ -34,11 +34,14 @@ export const IPC = {
   playback: {
     command: 'nebula:playback:command',
     snapshot: 'nebula:playback:snapshot',
+    djEnergy: 'nebula:playback:dj-energy',
+    djEnergyToClient: 'nebula:playback:dj-energy-to-client',
     snapshotToClient: 'nebula:playback:snapshot-to-client',
     clientCommand: 'nebula:playback:client-command',
   },
   miniPlayer: {
     toggle: 'nebula:mini-player:toggle',
+    visibility: 'nebula:mini-player:visibility',
     showMain: 'nebula:mini-player:show-main',
   },
   power: {

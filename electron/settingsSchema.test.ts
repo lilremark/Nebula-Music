@@ -57,3 +57,9 @@ describe('desktopSettingsSchema aiDj settings', () => {
     expect(partial.aiDj.model).toBe('');
   });
 });
+
+it('migrates old local DJ settings to visible transcription and persists opt-out', () => {
+  const { showTranscript, ...legacy } = DEFAULT_LOCAL_DJ;
+  expect(desktopSettingsSchema.parse({ aiDj: { local: legacy } }).aiDj.local.showTranscript).toBe(true);
+  expect(desktopSettingsSchema.parse({ aiDj: { local: { ...legacy, showTranscript: false } } }).aiDj.local.showTranscript).toBe(false);
+});

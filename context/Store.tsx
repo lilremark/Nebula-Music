@@ -17,8 +17,6 @@ import { applyEqPreamp, getEqPreampGain } from '../services/eqPreamp';
 
 interface StoreContextType extends AppState {
   dj: ReturnType<typeof useDjSession>;
-  djPanelOpen: boolean;
-  setDjPanelOpen: (open: boolean) => void;
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
   goBack: (fallbackView?: View, fallbackData?: any) => void;
   canGoBack: boolean;
@@ -391,7 +389,6 @@ export const StoreProvider: React.FC<{
 
   const djRef = useRef<ReturnType<typeof useDjSession> | null>(null);
   const listeningRef = useRef<ReturnType<typeof useListeningEvents> | null>(null);
-  const [djPanelOpen, setDjPanelOpen] = useState(false);
   const restorePositionRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const radioAudioRef = useRef<HTMLAudioElement>(null);
@@ -1911,6 +1908,7 @@ export const StoreProvider: React.FC<{
   };
 
   const togglePlay = () => {
+    if (djRef.current?.togglePreview()) return;
     if (currentRadioStation) {
       setIsRadioPlaying(!isRadioPlaying);
       return;
@@ -2326,7 +2324,7 @@ export const StoreProvider: React.FC<{
 
   return (
     <StoreContext.Provider value={{
-      dj, djPanelOpen, setDjPanelOpen,
+      dj,
       currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, radioPitch, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
       credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
       playSong, playRadioStation, toggleRadioPlay, stopRadio, setRadioPitch, togglePlay, nextSong, prevSong, playQueueIndex, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,

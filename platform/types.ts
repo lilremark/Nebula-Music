@@ -50,6 +50,8 @@ export interface CredentialVault {
 export interface PlaybackTransport {
   onCommand(handler: (envelope: DesktopCommandEnvelope) => void): () => void;
   publishSnapshot(snapshot: DesktopSnapshot): void;
+  publishDjEnergy?(energy: number): void;
+  onDjEnergy?(handler: (energy: number) => void): () => void;
   onSnapshot(handler: (snapshot: DesktopSnapshot) => void): () => void;
   sendCommand(envelope: DesktopCommandEnvelope): void;
 }
@@ -66,6 +68,7 @@ export interface MiniPlayerControl {
   toggle(): Promise<void>;
   /** Shows and focuses the main Nebula window (mini-player window only). */
   showMain(): Promise<void>;
+  onVisibility?(handler: (visible: boolean) => void): () => void;
 }
 
 /** System power notifications (desktop only; inert on the web). */

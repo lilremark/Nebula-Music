@@ -58,6 +58,50 @@ describe('AI DJ shared playback session', () => {
   });
   afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
+  it('retains speech identity and progress through pause and clears presentation after skip', async () => {
+    await act(async () => dj.start());
+    const identity = dj.presentation.sessionId;
+    expect(identity).toBeTruthy();
+    const audio = container.querySelector('audio')!;
+    Object.defineProperty(audio, 'duration', { configurable: true, value: 12 });
+    await act(async () => { audio.currentTime = 3; audio.dispatchEvent(new Event('timeupdate')); updatePlaying(false); });
+    expect(dj.presentation).toMatchObject({ sessionId: identity, speech: true, playing: false, position: 3, duration: 12 });
+    await act(async () => dj.skipInterlude());
+    expect(dj.presentation).toMatchObject({ sessionId: identity, speech: false, position: 0, duration: 0 });
+  });
+
+  it('changes transcript visibility without cancelling an already prepared interlude', async () => {
+    await act(async () => dj.start()); await endVoice(); await flush();
+    const count = prepare.mock.calls.length;
+    await act(async () => dj.saveConfig({ showTranscript: false })); await flush();
+    expect(dj.config.showTranscript).toBe(false);
+    expect(prepare.mock.calls).toHaveLength(count);
+    expect(api.settings.set).toHaveBeenLastCalledWith('aiDj', expect.objectContaining({ local: expect.objectContaining({ showTranscript: false }) }));
+    await complete(5);
+    expect(dj.presentation.speech).toBe(true);
+  });
+
+  it('keeps voice previews separate from DJ sessions and releases their presentation', async () => {
+    vi.mocked(api.aiDj!.preview).mockResolvedValue({ requestId: 'preview', sessionId: 'preview', text: 'Voice preview.', wavBase64: btoa('RIFF audio'), fallback: false });
+    await act(async () => dj.preview());
+    expect(dj.presentation).toMatchObject({ active: false, sessionId: null, speech: true, preview: true });
+    expect(index).toBe(0);
+    await endVoice();
+    expect(dj.presentation).toMatchObject({ active: false, speech: false, preview: false, position: 0, duration: 0 });
+  });
+
+  it('keeps paused preview gain restored when voice level changes during music playback', async () => {
+    await act(async () => dj.saveConfig({ style: 'over-music' }));
+    await act(async () => updatePlaying(true));
+    vi.mocked(api.aiDj!.preview).mockResolvedValue({ requestId: 'preview', sessionId: 'preview', text: 'Voice preview.', wavBase64: btoa('RIFF audio'), fallback: false });
+    await act(async () => dj.preview());
+    Object.defineProperty(container.querySelector('audio')!, 'paused', { configurable: true, value: false });
+    await act(async () => dj.togglePreview());
+    await act(async () => dj.saveConfig({ voiceLevel: 0.5 }));
+    expect(dj.presentation).toMatchObject({ speech: true, preview: true, playing: false });
+    expect(gain.setTargetAtTime).toHaveBeenLastCalledWith(1, 1, 0.08);
+  });
+
   it('greets once and plays exactly after five completions, excluding skips', async () => {
     await act(async () => dj.start()); await endVoice(); await flush();
     expect(prepare.mock.calls.filter(([request]) => request.welcome)).toHaveLength(1);
