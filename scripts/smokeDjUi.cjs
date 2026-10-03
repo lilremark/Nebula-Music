@@ -48,7 +48,7 @@ app.on('browser-window-created', (_event, win) => {
   win.webContents.once('did-finish-load', async () => {
     try {
       // Hidden windows do not advance CSS transitions reliably. Capture settled layouts.
-      await win.webContents.insertCSS('* { transition-duration: 0s !important; animation-duration: 0s !important; }');
+      await win.webContents.insertCSS('* { transition-duration: 0s !important; animation-duration: 0s !important; } [data-nebula-main-scroll] > div > div { filter: none !important; opacity: 1 !important; transform: none !important; }');
       const wav = Buffer.alloc(44 + 16000 * 90 * 2);
       wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8);
       wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
@@ -128,6 +128,24 @@ app.on('browser-window-created', (_event, win) => {
         if(document.querySelector('.nebula-dj-tabs')) throw new Error('Sidebar DJ tab remained');
       })()`);
       await capture('sidebar-speaking-dark');
+      for (const width of [940, 1100, 1280]) {
+        win.setContentSize(width, 900);
+        await new Promise(resolve => setTimeout(resolve, 150));
+        for (const [label, selector] of [['Home', '[data-nebula-view="home"]'], ['Browse', '[data-nebula-view="browse"]'], ['Songs', '[data-nebula-library]'], ['Settings', '[data-nebula-view="settings"]'], ['AI DJ', '[data-nebula-view="ai-dj"]']]) {
+          await js(`(async () => {
+            document.querySelector('.nebula-rail [aria-label="${label}"]').click();
+            await waitForDj(()=>document.querySelector('${selector}'),'${label} view');
+            const content=document.querySelector('[data-nebula-content-shell]').getBoundingClientRect();
+            const panel=document.querySelector('[data-nebula-panel="now-playing"]').getBoundingClientRect();
+            const actions=document.querySelector('[data-nebula-topbar-actions]').getBoundingClientRect();
+            const main=document.querySelector('[data-nebula-main-scroll]');
+            if(content.right > panel.left + 1 || actions.right > content.right + 1 || main.scrollWidth > main.clientWidth + 1) throw new Error('${label} overlaps sidebar at ${width}px');
+            if(document.querySelector('[data-nebula-topbar-settings]')) throw new Error('Topbar settings remained');
+          })()`);
+        }
+        await capture('sidebar-' + width);
+      }
+      win.setContentSize(1450, 1000);
       await js(`(async () => {
         document.querySelector('[aria-label="Collapse now playing panel"]').click();
         djButton('DJ settings').click(); await waitForDj(()=>document.querySelector('#settings-ai-dj-tab'),'settings');
@@ -154,6 +172,19 @@ app.on('browser-window-created', (_event, win) => {
       await mini.webContents.executeJavaScript(`document.querySelector('[aria-label="Next track"]').click()`);
       await js(`waitForDj(()=>!document.querySelector('[data-nebula-player="floating"] [aria-label="AI DJ cover"]'),'restore track')`);
       await js(`(async () => {
+        document.querySelector('.nebula-rail [aria-label="Settings"]').click();
+        await waitForDj(()=>document.querySelector('#settings-appearance-tab'),'appearance');
+        document.querySelector('#settings-appearance-tab').click(); await waitForDj(()=>djButton('Bottom Bar'),'sidebar option'); djButton('Bottom Bar').click();
+        await waitForDj(()=>document.querySelector('.nebula-transport'),'music dock');
+        if(!document.querySelector('.nebula-transport .nebula-dj-haze[data-session="true"][data-speaking="false"]')) throw new Error('Music dock lost session gradient');
+        document.querySelector('.nebula-transport [aria-label="Open now playing panel"]').click();
+        await waitForDj(()=>document.querySelector('[data-nebula-player="sidebar"]'),'music sidebar');
+        if(!document.querySelector('[data-nebula-player="sidebar"] .nebula-dj-haze[data-session="true"][data-speaking="false"]')) throw new Error('Music sidebar lost session gradient');
+      })()`);
+      await capture('sidebar-session-music-light');
+      await js(`(async () => {
+        document.querySelector('[aria-label="Collapse now playing panel"]').click();
+        document.querySelector('#settings-appearance-tab').click(); await waitForDj(()=>djButton('Floating Bar'),'floating option'); djButton('Floating Bar').click();
         document.querySelector('.nebula-rail [aria-label="AI DJ"]').click(); await waitForDj(()=>djButton('Stop DJ'),'stop');
         if(!document.querySelector('.nebula-dj-badge')) throw new Error('Music lost DJ identity');
         djButton('Stop DJ').click(); await waitForDj(()=>djButton('Start AI DJ'),'stopped');

@@ -170,3 +170,16 @@ real-server and reference-hardware checks remain the separate acceptance tests a
 - The beta.20 review installer and AppX remain below the 2 GiB release limit;
   Authenticode reports NotSigned. This build has not been published or installed
   over the user's current profile. The manual acceptance items above remain open.
+
+### Review refinements
+
+The Discover header now uses one short description. Detailed taste evidence stays
+in local curation and commentary preparation. The sidebar and bottom player keep
+a purple gradient while the DJ session is active, with stronger haze during voice.
+The top bar contains search and the theme toggle; Settings remains in navigation.
+
+Player sidebars stay in the shared flex layout at smaller widths and remain open
+across resize. Content-width queries adapt the header, DJ view, Home and library
+controls. UI checks cover Home, Browse, Songs, Settings and AI DJ with an open
+sidebar at 940, 1100 and 1280 px, plus persistent music-session gradients. The full
+436-test suite, typecheck, both player smoke checks and dependency audit pass.

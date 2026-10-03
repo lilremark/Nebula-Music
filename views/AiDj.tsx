@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, SkipForward, RotateCcw, Settings2, Headphones } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, RotateCcw, Settings2 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { usePlatform } from '../platform/PlatformContext';
 import { DjCover } from '../components/player/DjCover';
@@ -12,14 +12,13 @@ export function AiDjView() {
   const status = state.phase === 'preparing' ? 'Preparing your session…'
     : presentation.speech ? presentation.playing ? 'Your DJ is speaking' : 'DJ paused'
     : state.active ? `${state.completed} of ${dj.config.interval} tracks · ${isPlaying ? 'Listening' : 'Paused'}`
-    : 'Your music, with a personal introduction between sets.';
+    : 'Ready to play';
   return <div className="nebula-dj-view" data-nebula-view="ai-dj">
     <header className="nebula-dj-view-header">
       <div className="nebula-dj-view-art"><DjCover playing={presentation.playing} analyser={dj.voiceAnalyser} /></div>
       <div className="nebula-dj-view-copy">
-        <span className="nebula-dj-eyebrow"><Headphones size={15} aria-hidden /> Discover · On your device</span>
         <h1>AI DJ</h1>
-        <p>{state.taste || 'A mix shaped by your listening history and likes. Familiar favorites, new discoveries, and a voice between sets.'}</p>
+        <p>A mix based on your listening and likes.</p>
         <div className="nebula-dj-actions">
           {state.active ? <><button type="button" className="nebula-dj-primary" onClick={togglePlay}>{isPlaying ? <Pause size={16} /> : <Play size={16} />}{isPlaying ? 'Pause' : 'Resume'}</button><button type="button" onClick={() => dj.stop()}><Square size={15} />Stop DJ</button></>
             : <button type="button" className="nebula-dj-primary" disabled={!platform?.aiDj || state.phase === 'preparing' || presentation.speech} onClick={() => void dj.start()}><Play size={16} />Start AI DJ</button>}
@@ -42,7 +41,6 @@ export function AiDjView() {
         <span className="nebula-dj-track-album">{song.album}</span>
         <span className="nebula-dj-track-duration">{Math.floor(song.duration / 60)}:{String(Math.floor(song.duration % 60)).padStart(2, '0')}</span>
       </button>)}
-    </section> : <p className="nebula-dj-empty">Start listening to build a mix. Your DJ learns from the music you enjoy and skip.</p>}
-    {state.active && state.upcoming.length > 0 && <p className="nebula-dj-next-summary">Next set · {state.upcoming.map(song => song.artist).filter((artist, index, artists) => artists.indexOf(artist) === index).join(', ')}</p>}
+    </section> : <p className="nebula-dj-empty">Your mix will appear here.</p>}
   </div>;
 }

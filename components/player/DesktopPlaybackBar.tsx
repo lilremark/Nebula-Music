@@ -82,7 +82,7 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
   };
 
   return <footer className="nebula-transport" aria-label="Playback controls">
-    <DjHaze speech={voice.speech} />
+    <DjHaze speech={voice.speech} active={voice.dj.state.active} />
     <div className="nebula-transport-progress">
       {isRadio ? <span className="nebula-transport-live" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }} /> : <PlaybackProgress
         progress={voice.speech ? voice.progress : resolvedDuration ? position / resolvedDuration * 100 : 0}

@@ -140,7 +140,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
             data-nebula-player="sidebar"
             style={{ background: `linear-gradient(180deg, ${colors.primary}15 0%, transparent 50%)` }}
         >
-            <DjHaze speech={voice.speech} />
+            <DjHaze speech={voice.speech} active={dj.state.active} />
             {/* Top Section: Media Controls (Scrollable if needed on small screens, but usually fixed) */}
             <div className="flex-none flex flex-col items-center w-full pb-4 pt-4" data-nebula-sidebar-player-main>
                 {/* Header with collapse button */}

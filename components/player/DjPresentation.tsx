@@ -14,8 +14,8 @@ export function PlayerCover({ src, alt = '', className = '' }: { src?: string; a
     : <img src={src} alt={alt} className={className} />;
 }
 
-export function DjHaze({ speech }: { speech: boolean }) {
-  return <div className="nebula-dj-haze" data-speaking={speech} aria-hidden="true" />;
+export function DjHaze({ speech, active = false }: { speech: boolean; active?: boolean }) {
+  return <div className="nebula-dj-haze" data-speaking={speech} data-session={active} aria-hidden="true" />;
 }
 
 export function useDjPlayback() {
