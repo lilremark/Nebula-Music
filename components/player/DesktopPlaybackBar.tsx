@@ -1,3 +1,4 @@
+import { DjStatusButton } from './DjPanel';
 import React, { useEffect, useState } from 'react';
 import { AudioLines, Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/Store';
@@ -117,6 +118,7 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     </div>
 
     <div className="nebula-transport-tools">
+      <DjStatusButton onOpen={onExpand} />
       {!isRadio && <>
         <button type="button" className="nebula-transport-icon" onClick={() => updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' })} aria-label={progressMode === 'waveform' ? 'Switch to progress bar' : 'Switch to waveform'} aria-pressed={progressMode === 'waveform'} title={progressMode === 'waveform' ? 'Progress bar' : 'Waveform'}><AudioLines size={18} /></button>
         <SpeedPitchControls />

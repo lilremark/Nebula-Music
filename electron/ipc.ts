@@ -52,10 +52,10 @@ export const IPC = {
     status: 'nebula:updater:status',
   },
   aiDj: {
-    speak: 'nebula:aiDj:speak',
+    readiness: 'nebula:aiDj:readiness',
+    prepare: 'nebula:aiDj:prepare',
+    preview: 'nebula:aiDj:preview',
     cancel: 'nebula:aiDj:cancel',
-    voices: 'nebula:aiDj:voices',
-    audio: 'nebula:aiDj:speech-audio',
   },
 } as const;
 

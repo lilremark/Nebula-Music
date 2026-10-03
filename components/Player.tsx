@@ -1,3 +1,4 @@
+import { DjPanel } from './player/DjPanel';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import {
@@ -60,7 +61,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         settings, updateSettings
     } = useStore();
 
-    const [activeTab, setActiveTab] = useState<'playing' | 'queue' | 'lyrics'>('playing');
+    const { djPanelOpen, dj } = useStore();
+    useEffect(() => { if (djPanelOpen) setActiveTab('dj'); }, [djPanelOpen, isExpanded]);
+    const [activeTab, setActiveTab] = useState<'playing' | 'queue' | 'lyrics' | 'dj'>('playing');
     const [lyrics, setLyrics] = useState('');
     const [syncedLyrics, setSyncedLyrics] = useState<SyncedLine[]>([]);
     const [loadingLyrics, setLoadingLyrics] = useState(false);
@@ -279,7 +282,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         data-nebula-fullscreen-tabs
                         style={appRegion('no-drag')}
                     >
-                        {(['playing', 'lyrics', 'queue'] as const).map(tab => (
+                        {(['playing', 'lyrics', 'queue', 'dj'] as const).map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -288,7 +291,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     : 'text-neutral-600 dark:text-white/50 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5'
                                     }`}
                             >
-                                {tab === 'playing' ? 'Now Playing' : tab}
+                                {tab === 'playing' ? 'Now Playing' : tab === 'dj' ? 'AI DJ' : tab}
                             </button>
                         ))}
                     </div>
@@ -400,6 +403,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <div className="flex items-center justify-center gap-6 mb-8 w-full" data-nebula-fullscreen-transport>
                                 <button
                                     onClick={toggleRepeat}
+                                    disabled={dj.state.active}
+                                    title={dj.state.active ? "Repeat is unavailable during AI DJ" : undefined}
                                     className={`p-3 rounded-lg transition-all ${repeatMode === 'OFF' ? 'text-neutral-500 dark:text-white/50 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-white/5' : 'text-neutral-900 dark:text-white bg-neutral-200 dark:bg-white/10'}`}
                                     aria-label={`Repeat mode: ${repeatMode}`}
                                 >
@@ -521,6 +526,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                     </div>
                 )}
 
+                {activeTab === 'dj' && !isZenMode && <div className="nebula-dj-expanded"><DjPanel /></div>}
                 {/* Queue Tab */}
                 {activeTab === 'queue' && !isZenMode && (
                     <div className="flex-1 overflow-hidden px-4 md:px-8 pb-8" data-nebula-fullscreen-queue>

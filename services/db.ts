@@ -1,6 +1,7 @@
+import type { ListeningEvent } from '../playback/djTypes';
 
 const DB_NAME = 'nebula_music_db';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE_SETTINGS = 'settings';
 const STORE_CACHE = 'api_cache';
 const STORE_STATS = 'stats';
@@ -39,6 +40,10 @@ export class LocalDB {
         if (!db.objectStoreNames.contains(STORE_STATS)) {
           console.warn("Creating 'stats' object store");
           db.createObjectStore(STORE_STATS, { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('listeningEvents')) {
+          const events = db.createObjectStore('listeningEvents', { keyPath: 'id' });
+          events.createIndex('profile', 'profile');
         }
         const stats = request.transaction!.objectStore(STORE_STATS);
         if (!stats.indexNames.contains('serverId')) stats.createIndex('serverId', 'serverId');
@@ -120,6 +125,27 @@ export class LocalDB {
     const age = (Date.now() - res.timestamp) / 1000 / 60;
     if (age > ttlMinutes) return null;
     return res.data;
+  }
+
+  async addListeningEvent(event: ListeningEvent): Promise<void> {
+    await this.put('listeningEvents', event);
+    const events = await this.getListeningEvents(event.profile);
+    const expired = events.filter((entry, index) => index < events.length - 5000 || Date.now() - entry.at > 90 * 86400000);
+    for (const entry of expired) await this.remove('listeningEvents', entry.id);
+  }
+
+  async getListeningEvents(profile: string): Promise<ListeningEvent[]> {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      const req = this.db!.transaction('listeningEvents', 'readonly').objectStore('listeningEvents').index('profile').getAll(profile);
+      req.onsuccess = () => resolve((req.result as ListeningEvent[]).sort((a, b) => a.at - b.at));
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async resetDjLearning(profile: string): Promise<void> {
+    const events = await this.getListeningEvents(profile);
+    for (const event of events) await this.remove('listeningEvents', event.id);
   }
 
   // Stats Methods

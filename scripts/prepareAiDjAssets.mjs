@@ -1,0 +1,75 @@
+import fs from 'node:fs/promises';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+
+const root = path.resolve('electron/aiDj/resources');
+const lock = JSON.parse(await fs.readFile('electron/aiDj/assets.lock.json', 'utf8'));
+const verifyOnly = process.argv.includes('--verify');
+await fs.mkdir(path.join(root, 'downloads'), { recursive: true });
+const digest = async file => {
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(file)) hash.update(chunk);
+  return hash.digest('hex');
+};
+for (const asset of lock.assets) {
+  const target = path.join(root, 'downloads', asset.file);
+  const valid = await digest(target).then(hash => hash === asset.sha256).catch(() => false);
+  if (!valid) {
+    if (verifyOnly) throw new Error('Missing or corrupt AI DJ asset: ' + asset.file);
+    console.log('Downloading ' + asset.file);
+    const response = await fetch(asset.url);
+    if (!response.ok || !response.body) throw new Error('Asset download failed: ' + response.status);
+    await pipeline(Readable.fromWeb(response.body), createWriteStream(target + '.partial'));
+    if (await digest(target + '.partial') !== asset.sha256) throw new Error('Asset checksum mismatch: ' + asset.file);
+    await fs.rename(target + '.partial', target);
+  }
+  if (verifyOnly) continue;
+  if (asset.kind === 'notice' || asset.kind === 'source') { await fs.mkdir(path.join(root, 'notices'), { recursive: true }); await fs.copyFile(target, path.join(root, 'notices', asset.file)); }
+  if (asset.kind === 'model') await fs.copyFile(target, path.join(root, asset.file));
+  if (asset.kind === 'tts') {
+    await fs.mkdir(path.join(root, 'packages'), { recursive: true });
+    execFileSync('tar', ['-xf', target, '-C', path.join(root, 'packages')]);
+  }
+  if (asset.kind === 'runtime') {
+    const runtime = path.join(root, 'llama');
+    await fs.mkdir(runtime, { recursive: true });
+    if (process.platform !== 'win32') throw new Error('Prepare the Windows runtime on Windows.');
+    execFileSync('tar', ['-xf', target, '-C', runtime], { windowsHide: true });
+  }
+}
+if (!verifyOnly && lock.derivedModel) {
+  const target = path.join(root, lock.derivedModel.file);
+  const source = path.join(root, 'downloads', lock.assets.find(asset => asset.kind === 'quantization-source').file);
+  for (const name of await fs.readdir(root)) {
+    if (name.endsWith('.gguf') && name !== lock.derivedModel.file) await fs.unlink(path.join(root, name));
+  }
+  const exists = await fs.stat(target).then(() => true).catch(() => false);
+  if (!exists) execFileSync(path.join(root, 'llama', 'llama-quantize.exe'), [source, target, lock.derivedModel.type, '4'], { windowsHide: true, stdio: 'inherit' });
+  if (lock.derivedModel.sha256 && await digest(target) !== lock.derivedModel.sha256) throw new Error('Derived model checksum mismatch.');
+}
+if (!verifyOnly) await fs.copyFile('electron/aiDj/NOTICE.md', path.join(root, 'NOTICE.md'));
+// A separate manifest checks the installed resources, not merely the downloads.
+async function walk(dir) {
+  const files = [];
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    if (entry.name === 'downloads' || entry.name === 'manifest.json') continue;
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...await walk(file));
+    else files.push({ file: path.relative(root, file).replaceAll('\\', '/'), sha256: await digest(file), size: (await fs.stat(file)).size });
+  }
+  return files;
+}
+if (verifyOnly) {
+  if (!lock.derivedModel?.sha256 || await digest(path.join(root, lock.derivedModel.file)) !== lock.derivedModel.sha256) throw new Error('Derived model is unpinned or corrupt.');
+  const manifest = JSON.parse(await fs.readFile(path.join(root, 'manifest.json'), 'utf8'));
+  for (const entry of manifest.files) {
+    const file = path.resolve(root, entry.file);
+    if (!file.startsWith(root + path.sep) || (await fs.stat(file)).size !== entry.size || await digest(file) !== entry.sha256) throw new Error('Corrupt extracted DJ resource: ' + entry.file);
+  }
+}
+if (!verifyOnly) await fs.writeFile(path.join(root, 'manifest.json'), JSON.stringify({ files: await walk(root) }, null, 2));
+console.log('AI DJ assets verified.');

@@ -78,6 +78,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run dj:assets
       - run: npm run dist:win
       - run: node scripts/releaseVersion.mjs --tag "v${RELEASE_VERSION}"
       - run: node scripts/releaseArtifacts.mjs --platform windows --version "${RELEASE_VERSION}" --dir release

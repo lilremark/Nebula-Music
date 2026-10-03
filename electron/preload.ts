@@ -108,20 +108,10 @@ const bridge: DesktopBridge = {
     },
   },
   aiDj: {
-    speak: (text: string, voiceId?: string) =>
-      ipcRenderer.invoke(IPC.aiDj.speak, text, voiceId) as Promise<{ ok: boolean; error?: string }>,
-    cancel: () => ipcRenderer.invoke(IPC.aiDj.cancel) as Promise<void>,
-    voices: () =>
-      ipcRenderer.invoke(IPC.aiDj.voices) as Promise<{ voices: string[]; defaultVoice: string }>,
-    onAudio: (handler: (payload: { wavBase64: string; mimeType: string }) => void) => {
-      const listener = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-        handler(payload as { wavBase64: string; mimeType: string });
-      };
-      ipcRenderer.on(IPC.aiDj.audio, listener);
-      return () => {
-        ipcRenderer.removeListener(IPC.aiDj.audio, listener);
-      };
-    },
+    readiness: () => ipcRenderer.invoke(IPC.aiDj.readiness),
+    prepare: (request) => ipcRenderer.invoke(IPC.aiDj.prepare, request),
+    preview: (voice) => ipcRenderer.invoke(IPC.aiDj.preview, voice),
+    cancel: () => ipcRenderer.invoke(IPC.aiDj.cancel),
   },
 };
 

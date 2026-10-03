@@ -298,7 +298,7 @@ app.on('browser-window-created', (_event, win) => {
         const bounds = buttons.map(button => button.getBoundingClientRect());
         if (bounds.some(bound => bound.height < 39) || bounds.slice(1).some((bound, i) => bound.top === bounds[i].top && bound.left - bounds[i].right < 7))
           throw new Error('Settings section buttons are cramped');
-        const expected = { Connection: ['Server Connection'], Sound: ['Equalizer', 'Playback'], Interface: ['Appearance', 'Player Display', 'Visualizer Style', 'Navigation Items', 'Keyboard Shortcuts'], Integrations: ['Stream Deck'], Desktop: ['Desktop Integration', 'Updates'] };
+        const expected = { Connection: ['Server Connection'], Sound: ['Equalizer', 'Playback'], Interface: ['Appearance', 'Player Display', 'Visualizer Style', 'Navigation Items', 'Keyboard Shortcuts'], Integrations: ['Stream Deck'], 'AI DJ': ['AI DJ'], Desktop: ['Desktop Integration', 'Updates'] };
         for (const button of buttons) {
           button.click();
           await new Promise(resolve => setTimeout(resolve, 50));

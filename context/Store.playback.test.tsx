@@ -7,10 +7,15 @@ import type { ISong } from '../types';
 import { PlatformProvider } from '../platform/PlatformContext';
 import { StoreProvider, useStore } from './Store';
 import { db } from '../services/db';
+const djApi = vi.hoisted(() => ({ readiness: vi.fn(async () => ({ ready: true })), prepare: vi.fn(async (request: any) => ({ ...request, text: 'A local introduction.', wavBase64: '', fallback: true })), cancel: vi.fn(async () => {}), preview: vi.fn() }));
+vi.mock('../platform/desktop', async () => { const { createWebPlatform } = await import('../platform/web'); return { createDesktopPlatform: () => ({ ...createWebPlatform(), aiDj: djApi }) }; });
 
 vi.mock('../services/db', () => ({
   db: {
     init: vi.fn(async () => undefined),
+    addListeningEvent: vi.fn(async () => undefined),
+    getListeningEvents: vi.fn(async () => []),
+    getMostPlayed: vi.fn(async () => []),
     get: vi.fn(async () => null),
     getCredentials: vi.fn(async () => null),
     saveCredentials: vi.fn(async () => undefined),
@@ -120,6 +125,7 @@ describe('StoreProvider playback transitions', () => {
     container.remove();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    delete window.desktop;
     latestStore = undefined;
     delete (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT;
   });
@@ -141,6 +147,21 @@ describe('StoreProvider playback transitions', () => {
       bands: { ...latestStore!.settings.eq.bands, '2k': 6 },
     } }));
   };
+
+  it('starts a fresh DJ playback instance and restores position when the saved song has the same URL', async () => {
+    window.desktop = {} as any; mockAudioGraph();
+    await mountStore(); await act(async () => latestStore!.enableDemoMode());
+    vi.spyOn(latestStore!.service, 'getStarred').mockResolvedValue({ songs: queue, albums: [], artists: [] });
+    vi.spyOn(latestStore!.service, 'getRandomSongs').mockResolvedValue(queue);
+    vi.spyOn(latestStore!.service, 'getSimilarSongs').mockResolvedValue(queue);
+    await act(async () => latestStore!.playSong(queue[0], queue));
+    const audio = document.querySelector('audio')!; audio.currentTime = 42;
+    await act(async () => latestStore!.dj.start());
+    expect(latestStore!.queue[0].id).toBe(queue[0].id); expect(audio.currentTime).toBe(0);
+    audio.currentTime = 15; await act(async () => latestStore!.dj.restore());
+    expect(latestStore!.dj.state.active).toBe(false); expect(audio.currentTime).toBe(42);
+    expect(latestStore!.queue).toEqual(queue);
+  });
 
   it('routes music, crossfade, and radio through one preamp before the filters', async () => {
     const graph = mockAudioGraph();

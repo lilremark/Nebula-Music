@@ -26,3 +26,5 @@ await build({
 });
 
 console.log('esbuild: main.cjs and preload.cjs written to electron/dist');
+
+await build({ ...shared, entryPoints: ['electron/aiDj/voiceWorker.ts'], format: 'cjs' });

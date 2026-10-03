@@ -1,3 +1,4 @@
+import { DjPanel } from './DjPanel';
 import React, { useState, useEffect } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
@@ -45,6 +46,7 @@ const withAlpha = (color: string, alpha: number) => {
 export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCollapse }) => {
     const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, repeatMode, toggleRepeat, toggleLike, settings, updateSettings } = useStore();
 
+    const { dj, djPanelOpen, setDjPanelOpen, playQueueIndex } = useStore();
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isHoveringVolume, setIsHoveringVolume] = useState(false);
@@ -274,8 +276,9 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                     </button>
                     <button
                         onClick={toggleRepeat}
+                        disabled={dj.state.active}
+                        title={dj.state.active ? "Repeat is unavailable during AI DJ" : undefined}
                         className={`p-2 transition-colors active:scale-95 ${repeatMode === 'OFF' ? 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white' : 'text-neutral-900 dark:text-white'}`}
-                        title={`Repeat: ${repeatMode}`}
                         aria-label={`Repeat mode: ${repeatMode}`}
                     >
                         {repeatMode === 'ONE' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
@@ -331,8 +334,10 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
             </div>
 
+            <div className="nebula-dj-tabs"><button type="button" aria-pressed={!djPanelOpen} onClick={() => setDjPanelOpen(false)}>Queue</button><button type="button" aria-pressed={djPanelOpen} onClick={() => setDjPanelOpen(true)}>AI DJ</button></div>
+            {djPanelOpen && <div className="nebula-dj-sidebar"><DjPanel /></div>}
             {/* Bottom Section: Queue Card */}
-            <div className={`flex flex-col px-4 pb-4 transition-all duration-300 ${isQueueCollapsed ? 'flex-none' : 'flex-1 min-h-0'}`} data-nebula-sidebar-player-queue>
+            <div className={`${djPanelOpen ? 'hidden' : 'flex'} flex-col px-4 pb-4 transition-all duration-300 ${isQueueCollapsed ? 'flex-none' : 'flex-1 min-h-0'}`} data-nebula-sidebar-player-queue>
                 <div className="flex-1 bg-neutral-100 dark:bg-white/5 rounded-xl border border-neutral-200 dark:border-white/5 overflow-hidden flex flex-col shadow-inner" data-nebula-sidebar-player-queue-card>
                     <div
                         className="px-4 py-3 border-b border-neutral-200 dark:border-white/5 flex items-center justify-between bg-neutral-200/50 dark:bg-white/5 cursor-pointer hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors"
@@ -357,7 +362,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                                     className="group flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-white/5 cursor-pointer transition-colors"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        playSong(song, queue);
+                                        playQueueIndex(currentSongIndex + i + 1);
                                     }}
                                 >
                                     <div className="relative w-8 h-8 rounded overflow-hidden shrink-0 bg-neutral-300 dark:bg-white/10">

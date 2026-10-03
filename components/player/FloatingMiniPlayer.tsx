@@ -1,3 +1,4 @@
+import { DjStatusButton } from './DjPanel';
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Maximize2, PanelRight, Heart, Volume2, Volume1, VolumeX, AudioWaveform } from 'lucide-react';
 import { useStore } from '../../context/Store';
@@ -231,6 +232,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 </div>
 
                 {/* Like button */}
+      <DjStatusButton onOpen={onExpand} />
                 <button
                     onClick={() => toggleLike(currentSong)}
                     className={`p-2 transition-colors active:scale-95 ${currentSong.starred ? 'text-red-500' : 'text-neutral-600 hover:text-neutral-900 dark:text-white/60 dark:hover:text-white'}`}

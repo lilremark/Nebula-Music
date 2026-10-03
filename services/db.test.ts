@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import { LocalDB } from './db';
+import type { ListeningEvent } from '../playback/djTypes';
 
 describe('LocalDB transactions', () => {
   beforeEach(() => vi.stubGlobal('indexedDB', new IDBFactory()));
@@ -70,5 +71,27 @@ describe('LocalDB transactions', () => {
     await expect(database.init()).rejects.toThrow('Temporary failure');
     await database.set('settings', 'volume', 0.4);
     expect(await database.get('settings', 'volume')).toBe(0.4);
+  });
+
+  it('isolates DJ learning by account and resets it without removing play counts', async () => {
+    const database = new LocalDB();
+    const event = { id: 'a', profile: 'server:alice', song: { id: 'song' }, at: Date.now(), listened: 50, qualified: true, completed: true, skipped: false } as ListeningEvent;
+    await database.addListeningEvent(event);
+    await database.addListeningEvent({ ...event, id: 'b', profile: 'server:bob' });
+    await database.incrementPlayCount(event.song, 'server:alice');
+    expect(await database.getListeningEvents('server:alice')).toEqual([event]);
+    await database.resetDjLearning('server:alice');
+    expect(await database.getListeningEvents('server:alice')).toEqual([]);
+    expect(await database.getListeningEvents('server:bob')).toHaveLength(1);
+    expect(await database.getMostPlayed('server:alice')).toEqual([event.song]);
+  });
+
+  it('leaves unscoped legacy history unassigned and expires old DJ events', async () => {
+    const database = new LocalDB();
+    await database.set('settings', 'history', [{ id: 'legacy' }]);
+    const event = { id: 'old', profile: 'server:alice', song: { id: 'song' }, at: Date.now() - 91 * 86400000, listened: 3, qualified: false, completed: false, skipped: true } as ListeningEvent;
+    await database.addListeningEvent(event);
+    expect(await database.getListeningEvents('server:alice')).toEqual([]);
+    expect(await database.get('settings', 'history')).toEqual([{ id: 'legacy' }]);
   });
 });
