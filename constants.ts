@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.19';
+export const APP_VERSION = '2.5.0-beta.20';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,16 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.20',
+    date: '2026-10-02',
+    title: 'Windows Taskbar Transport Controls',
+    changes: [
+      'Show Previous, Play/Pause, and Next in the Windows taskbar thumbnail preview when Nebula opens.',
+      'Retry toolbar registration when Windows is not ready and restore the controls when returning from the tray.',
+      'Keep the Play/Pause button synchronized with playback without rebuilding the toolbar on every progress update.',
+    ],
+  },
   {
     version: '2.5.0-beta.19',
     date: '2026-10-02',

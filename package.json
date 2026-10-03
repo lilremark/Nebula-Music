@@ -1,7 +1,7 @@
 {
   "name": "nebula-music",
   "private": true,
-  "version": "2.5.0-beta.19",
+  "version": "2.5.0-beta.20",
   "description": "Subsonic music player for the desktop.",
   "author": "Nebula",
   "main": "electron/dist/main.cjs",
@@ -19,6 +19,7 @@
     "build": "vite build",
     "build:main": "node esbuild.config.mjs",
     "test:desktop": "electron scripts/smokeDesktop.cjs",
+    "test:taskbar": "electron scripts/smokeTaskbar.cjs",
     "test:player-ui": "electron scripts/smokePlayerUi.cjs",
     "test:audio": "electron scripts/testEqAudio.cjs",
     "build:electron": "node esbuild.config.mjs && vite build",
