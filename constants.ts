@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.17';
+export const APP_VERSION = '2.5.0-beta.18';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,18 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.18',
+    date: '2026-10-02',
+    title: 'Subtle Sidebar Highlight',
+    changes: [
+      'Removed the shadow from selected sidebar items while keeping a subtle background highlight.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.18'
+    }
+  },
   {
     version: '2.5.0-beta.17',
     date: '2026-10-02',
