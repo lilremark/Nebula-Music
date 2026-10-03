@@ -170,6 +170,10 @@ jobs:
           Windows updates download and install automatically. Unsigned macOS builds check for updates but open this GitHub release for manual DMG installation.
           EOF
           fi
+          if [[ -f "docs/release/v${RELEASE_VERSION}.md" ]]; then
+            printf "\n" >> release-notes.md
+            cat "docs/release/v${RELEASE_VERSION}.md" >> release-notes.md
+          fi
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           draft: true

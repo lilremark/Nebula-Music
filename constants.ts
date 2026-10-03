@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.20';
+export const APP_VERSION = '2.5.0-beta.21';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,19 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.21',
+    date: '2026-10-03',
+    title: 'Local AI DJ',
+    changes: [
+      'Start personalized AI DJ sessions from Discover, with local commentary and Michael or Heart voices after four or five completed tracks.',
+      'Download verified SmolLM3 and Kokoro models in AI DJ Settings; the models are optional and excluded from the installer.',
+      'Choose familiar, balanced or discovery listening, interludes between sets or over lowered music, and optional Discover transcription.',
+      'Show a speech-reactive purple orb in every player, with a subtle purple background during DJ sessions.',
+      'Keep the main view visible with both sidebars open, separate Home slideshow controls from album actions, and simplify the top bar.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.21' },
+  },
   {
     version: '2.5.0-beta.20',
     date: '2026-10-02',
