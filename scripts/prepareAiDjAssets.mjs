@@ -7,6 +7,8 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 const root = path.resolve('electron/aiDj/resources');
+// Git Bash's GNU tar treats Windows drive letters as remote archive hosts.
+const archiveTool = process.platform === 'win32' ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
 const lock = JSON.parse(await fs.readFile('electron/aiDj/assets.lock.json', 'utf8'));
 const verifyOnly = process.argv.includes('--verify');
 const includeModels = process.argv.includes('--models');
@@ -37,13 +39,13 @@ for (const asset of lock.assets.filter(asset => includeModels || !['tts', 'model
   if (asset.kind === 'model') await fs.copyFile(target, path.join(root, asset.file));
   if (asset.kind === 'tts') {
     await fs.mkdir(path.join(root, 'packages'), { recursive: true });
-    execFileSync('tar', ['-xf', target, '-C', path.join(root, 'packages')]);
+    execFileSync(archiveTool, ['-xf', target, '-C', path.join(root, 'packages')], { windowsHide: true });
   }
   if (asset.kind === 'runtime') {
     const runtime = path.join(root, 'llama');
     await fs.mkdir(runtime, { recursive: true });
     if (process.platform !== 'win32') throw new Error('Prepare the Windows runtime on Windows.');
-    execFileSync('tar', ['-xf', target, '-C', runtime], { windowsHide: true });
+    execFileSync(archiveTool, ['-xf', target, '-C', runtime], { windowsHide: true });
   }
 }
 if (!verifyOnly) await fs.copyFile('electron/aiDj/NOTICE.md', path.join(root, 'NOTICE.md'));

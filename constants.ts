@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.22';
+export const APP_VERSION = '2.5.0-beta.23';
 
 export interface ChangelogEntry {
   version: string;
@@ -16,7 +16,7 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '2.5.0-beta.22',
+    version: '2.5.0-beta.23',
     date: '2026-10-03',
     title: 'Local AI DJ',
     changes: [
@@ -26,7 +26,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Show a speech-reactive purple orb in every player, with a subtle purple background during DJ sessions.',
       'Keep the main view visible with both sidebars open, separate Home slideshow controls from album actions, and simplify the top bar.',
     ],
-    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.22' },
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.23' },
   },
   {
     version: '2.5.0-beta.20',

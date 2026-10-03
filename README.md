@@ -8,11 +8,11 @@
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
   a responsive interface built for desktop, mobile, and Windows.
 
-  [![Version](https://img.shields.io/badge/version-2.5.0--beta.22-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.22)
+  [![Version](https://img.shields.io/badge/version-2.5.0--beta.23-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.23)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
-  [![Windows](https://img.shields.io/badge/Windows-Desktop-0078d6?style=flat-square&logo=windows&logoColor=white)](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.22)
+  [![Windows](https://img.shields.io/badge/Windows-Desktop-0078d6?style=flat-square&logo=windows&logoColor=white)](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.23)
   [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](./docker/README.md)
   [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](./LICENSE.txt)
 
@@ -69,8 +69,8 @@ Windows and macOS. It includes everything in the web player plus:
 
 ### Windows
 
-Download **[v2.5.0-beta.22](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.22)**
-(`Nebula-2.5.0-beta.22-setup.exe`) or sideload its unsigned `.appx` with
+Download **[v2.5.0-beta.23](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.23)**
+(`Nebula-2.5.0-beta.23-setup.exe`) or sideload its unsigned `.appx` with
 Windows Developer Mode enabled. Windows beta builds are unsigned and may show
 SmartScreen warnings. Select **Beta** in Settings → Updates to receive future
 beta updates. Stable users are not offered prereleases; the
@@ -216,7 +216,7 @@ correct CORS configuration are strongly recommended.
 
 ### Desktop (Windows & macOS)
 
-Download and run the [Windows beta installer](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.22),
+Download and run the [Windows beta installer](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.23),
 or choose the [stable Windows/macOS release](https://github.com/lilremark/Nebula-Music/releases/latest).
 Nebula checks GitHub Releases for app updates. AI DJ is optional and needs the
 model download described above. To run the desktop app from source:
@@ -428,7 +428,7 @@ permitted by the music server's CORS policy.
 
 ## Changelog
 
-### v2.5.0-beta.22 — October 3, 2026
+### v2.5.0-beta.23 — October 3, 2026
 
 - Added local AI DJ in Discover with personalized sets, two English voices,
   4/5-track cadence, two interlude styles and optional transcription.
