@@ -33,6 +33,7 @@ import {
   type DesktopCommandEnvelope,
   type DesktopSnapshot,
 } from '../playback/desktopProtocol';
+import { DjModelManager } from './aiDj/modelManager';
 import { LocalDjRuntime } from './aiDj/localRuntime';
 import { djPrepareSchema } from './aiDj/localProtocol';
 import { randomUUID } from 'node:crypto';
@@ -80,7 +81,9 @@ const broadcastSnapshotToMiniPlayer = (snapshot: DesktopSnapshot): void => {
 };
 
 let localDj: LocalDjRuntime | null = null;
-const getLocalDj = () => localDj ??= new LocalDjRuntime(app.isPackaged ? path.join(process.resourcesPath, 'aiDj') : path.join(app.getAppPath(), 'electron/aiDj/resources'), path.join(__dirname, 'voiceWorker.cjs'));
+let djModels: DjModelManager | null = null;
+const getDjModels = () => djModels ??= new DjModelManager(path.join(app.getPath('userData'), 'aiDj', 'smollm3-q4-kokoro-v1'), state => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(IPC.aiDj.modelsChanged, state); }, net.fetch as typeof fetch);
+const getLocalDj = () => localDj ??= new LocalDjRuntime(getDjModels().resources, path.join(__dirname, 'voiceWorker.cjs'), app.isPackaged ? path.join(process.resourcesPath, 'aiDj') : path.join(app.getAppPath(), 'electron/aiDj/resources'));
 
 // Snapshots arrive up to ~4x/sec (on `timeupdate`). Re-creating native images
 // from disk and poking the Windows taskbar on every snapshot is measurable
@@ -620,9 +623,23 @@ const registerIpc = (): void => {
     return url ? openExternalSafely(url) : false;
   });
 
+  handleTrusted(IPC.aiDj.modelsStatus, async event => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
+    return getDjModels().status();
+  });
+  handleTrusted(IPC.aiDj.downloadModels, async event => {
+    if (event.sender !== mainWindow?.webContents || lastSnapshot?.dj?.active) throw new Error('Stop DJ before downloading models.');
+    localDj?.cancel(); localDj = null;
+    return getDjModels().download();
+  });
+  handleTrusted(IPC.aiDj.cancelDownload, async event => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
+    getDjModels().cancel();
+  });
   handleTrusted(IPC.aiDj.readiness, async (event) => {
     if (event.sender !== mainWindow?.webContents) return { ready: false, error: 'Unauthorized.' };
-    return getLocalDj().readiness();
+    const models = await getDjModels().status();
+    return models.ready ? getLocalDj().readiness() : { ready: false, error: models.error || 'Download AI DJ models in Settings first.' };
   });
   handleTrusted(IPC.aiDj.prepare, async (event, request: unknown) => {
     if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
@@ -813,4 +830,4 @@ if (!gotLock) {
   });
 }
 
-app.on('before-quit', () => localDj?.cancel());
+app.on('before-quit', () => { localDj?.cancel(); djModels?.cancel(); });

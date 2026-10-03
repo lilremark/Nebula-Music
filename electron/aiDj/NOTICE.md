@@ -1,4 +1,4 @@
-# Bundled AI DJ resources
+# AI DJ resources and redistribution notices
 
 Nebula's local DJ uses SmolLM3-3B (HuggingFaceTB), Kokoro-82M v1.0
 (hexgrad), llama.cpp (ggml-org), Echogarden, ONNX Runtime and eSpeak NG.
@@ -6,14 +6,15 @@ Nebula's local DJ uses SmolLM3-3B (HuggingFaceTB), Kokoro-82M v1.0
 SmolLM3 and Kokoro are distributed under Apache License 2.0. The license
 text is in notices/Apache-2.0.txt. Model attribution and pinned revisions
 are recorded in the application's source, electron/aiDj/assets.lock.json.
-The shipped Q3_K_S model is generated from the pinned original FP16 GGUF
-using the pinned llama.cpp b11366 quantizer, not from an already quantized model.
+The optional SmolLM3 Q4_K_M model is downloaded directly from ggml-org
+at the pinned Hugging Face revision; Nebula does not requantize it.
 
 llama.cpp is MIT licensed; see notices/llama-LICENSE. Its CPU helper includes
 LLVM OpenMP; see llama/LICENSE-LLVM-OpenMP. Echogarden and ONNX Runtime
 license files and Echogarden source are included in the application's
 node_modules resources. Nebula modifies Echogarden's PackageManager to
-resolve bundled resources and prohibit model downloads; the modification
+resolve the explicitly installed resource directory and prohibit implicit
+package downloads; the modification
 is recorded in scripts/patchEchogarden.mjs in Nebula's source.
 
 The eSpeak NG Emscripten phonemizer is GPL-3.0 licensed. Its full COPYING
@@ -34,4 +35,9 @@ Upstream sources:
 - https://github.com/microsoft/onnxruntime
 - https://github.com/lilremark/Nebula-Music
 
-Inference is local. No bundled model or voice may be downloaded at runtime.
+Inference is local. The installer includes the CPU helper and these notices.
+Models, voices and the phonemizer are downloaded only when the user selects
+Download DJ models in Settings. The application downloads pinned upstream
+assets, verifies their sizes and SHA-256 hashes, validates archive entries, and
+verifies extracted files before activating them. No API key or external
+inference service is used. Echogarden cannot perform automatic downloads.

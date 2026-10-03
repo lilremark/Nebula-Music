@@ -21,14 +21,14 @@ export function AiDjView() {
         <p>A mix based on your listening and likes.</p>
         <div className="nebula-dj-actions">
           {state.active ? <><button type="button" className="nebula-dj-primary" onClick={togglePlay}>{isPlaying ? <Pause size={16} /> : <Play size={16} />}{isPlaying ? 'Pause' : 'Resume'}</button><button type="button" onClick={() => dj.stop()}><Square size={15} />Stop DJ</button></>
-            : <button type="button" className="nebula-dj-primary" disabled={!platform?.aiDj || state.phase === 'preparing' || presentation.speech} onClick={() => void dj.start()}><Play size={16} />Start AI DJ</button>}
+            : <button type="button" className="nebula-dj-primary" disabled={!platform?.aiDj || !dj.readiness?.ready || state.phase === 'preparing' || presentation.speech} onClick={() => void dj.start()}><Play size={16} />Start AI DJ</button>}
           {state.active && presentation.speech && <button type="button" onClick={dj.skipInterlude}><SkipForward size={15} />Skip interlude</button>}
           {dj.canRestore && <button type="button" onClick={dj.restore}><RotateCcw size={15} />Return to previous queue</button>}
           <button type="button" onClick={() => setView('SETTINGS', 'settings-ai-dj')}><Settings2 size={15} />DJ settings</button>
         </div>
       </div>
     </header>
-    <div className="nebula-dj-view-status" role="status">{platform?.aiDj ? status : 'AI DJ is available in the Windows desktop app.'}</div>
+    <div className="nebula-dj-view-status" role="status">{platform?.aiDj ? !state.active && !dj.readiness?.ready ? dj.readiness?.error || 'Checking local models…' : status : 'AI DJ is available in the Windows desktop app.'}</div>
     {state.active && state.preparingNext && <p className="nebula-dj-status">Preparing the next interlude…</p>}
     {state.error && <p className="nebula-dj-error" role="status">{state.error}</p>}
     {dj.config.showTranscript && state.transcript && <section className="nebula-dj-caption" aria-label="DJ transcription"><h2>Your DJ</h2><blockquote>{state.transcript}</blockquote></section>}

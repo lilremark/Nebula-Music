@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ISong, RepeatMode } from '../types';
 import type { Platform } from '../platform/types';
 import type { SubsonicService } from '../services/subsonicService';
-import type { DjPreparedAudio } from '../electron/aiDj/localProtocol';
+import type { DjPreparedAudio, DjReadiness, DjModelStatus } from '../electron/aiDj/localProtocol';
 import { db } from '../services/db';
 import { DEFAULT_LOCAL_DJ, EMPTY_DJ, type DjLocalSettings, type DjSessionState, type DjPresentation } from '../playback/djTypes';
 import { selectDjBlock, summarizeTaste } from '../playback/djSelection';
@@ -22,6 +22,22 @@ export function useDjSession(inputs: Inputs) {
   const [state, setState] = useState<DjSessionState>(EMPTY_DJ);
   const stateRef = useRef(state);
   const [config, setConfig] = useState<DjLocalSettings>(DEFAULT_LOCAL_DJ);
+  const [readiness, setReadiness] = useState<DjReadiness | null>(null);
+  const [modelStatus, setModelStatus] = useState<DjModelStatus | null>(null);
+  useEffect(() => {
+    const api = inputs.platform?.aiDj; if (!api) return;
+    let live = true;
+    const refresh = async (status?: DjModelStatus) => {
+      if (!live) return;
+      if (status) { setModelStatus(status); if (!status.ready) { setReadiness({ ready: false, error: status.error || 'Download models in DJ settings to start.' }); return; } }
+      try { const result = await api.readiness(); if (live) setReadiness(result); }
+      catch (error) { if (live) setReadiness({ ready: false, error: String(error) }); }
+    };
+    const unsubscribe = api.onModelsStatus?.(status => void refresh(status));
+    if (api.modelsStatus) void api.modelsStatus().then(refresh).catch(error => { if (live) setReadiness({ ready: false, error: String(error) }); });
+    else void refresh();
+    return () => { live = false; unsubscribe?.(); };
+  }, [inputs.platform]);
   const configRef = useRef(config); configRef.current = config;
   const [holdMusic, setHoldMusicState] = useState(false);
   const holding = useRef(false);
@@ -281,5 +297,5 @@ export function useDjSession(inputs: Inputs) {
     } catch (error) { if (epoch.current === token) publish({ phase: 'idle', error: String(error) }); }
   };
   const resetLearning = async () => { stop(); if (latest.current.profile) await db.resetDjLearning(latest.current.profile); publish({ taste: 'DJ listening history reset. Your likes and play counts are preserved.' }); };
-  return { state, config, presentation, togglePreview, holdMusic, isHolding: () => holding.current, voicePlaying, voiceAnalyser, speechRef, canRestore, start, stop, boundary, skipInterlude, restore, preview, saveConfig, resetLearning, musicPosition };
+  return { state, config, readiness, modelStatus, presentation, togglePreview, holdMusic, isHolding: () => holding.current, voicePlaying, voiceAnalyser, speechRef, canRestore, start, stop, boundary, skipInterlude, restore, preview, saveConfig, resetLearning, musicPosition };
 }

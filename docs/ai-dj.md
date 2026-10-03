@@ -1,73 +1,109 @@
-# Local AI DJ beta review
+# Local AI DJ on beta
 
-This feature is intentionally developed directly from `origin/beta`, at the
-user's request, as an exception to the repository's usual main-first workflow.
-The starting commit is `f2a955b` (2.5.0-beta.20), which includes beta.19 and the
-subsequent taskbar fix. The primary design checkout is untouched. Publishing
-a beta release remains a separate action; this branch produces review builds.
+The user requested development and publication directly on `beta` for
+2.5.0-beta.21. This is the documented beta-first exception to the usual
+main-first workflow; see [beta releases](release/beta.md). Development used the
+isolated `codex/local-ai-dj-beta` worktree from beta.20 (`f2a955b`). The primary
+checkout's design changes are preserved.
 
-## Behavior
+## Sessions and personalization
 
-Start a session from AI DJ under Discover. Settings contains preferences, voice preview, readiness, and learning reset. DJ saves the previous queue
-and position, greets once, then introduces sets after four or five natural track
-completions. Explicit skips influence recommendations without advancing that
-counter. Stop DJ leaves its music queue playing; Return to previous queue restores
-the saved queue and position. Manual music selection, Instant Mix, or radio
-takeover ends DJ. Repeat overrides are unavailable until the session ends.
+Start explicitly from Discover → AI DJ. Opening the view never starts playback.
+Settings contains preferences, model installation, voice preview and learning
+reset. The session saves the previous queue and position, greets once, then
+introduces sets after four or five natural track completions. Skips influence
+recommendations without advancing that counter. Stop DJ leaves music playing;
+Return to previous queue restores the saved queue and position. Manual queue
+replacement, Instant Mix and radio takeover end the session.
 
-Balanced selects approximately three familiar and two less-played related songs
-per five-track block. Familiar and Discover change that ratio. Related candidates
-come from server similarity and genre endpoints, with library variety as fallback.
-Historical statistics contribute candidates only when the track is found in
-current library results. Short libraries relax repeat exclusions instead of inventing unavailable songs.
-Likes and existing account-scoped play counts seed a new profile. Legacy unscoped
-track-start history is deliberately not assigned to an account. Reset DJ learning
-clears that account's DJ events; likes and play counts stay saved.
+Balanced targets three familiar and two less-played related songs per five-track
+block. Familiar and Discover change the ratio. Candidates come from current
+library, server similarity and genre endpoints, with library variety as fallback.
+Short libraries relax repeat exclusions rather than inventing unavailable songs.
+Likes and account-scoped play counts seed a new profile. Legacy unscoped history
+is not assigned to another account. Reset clears that account's DJ events while
+retaining likes and existing play counts.
 
-Listening events are scoped to normalized server URL and username. A single clock
-tracks actual heard time, excluding seeks, stalls and pauses, and drives qualified
-scrobbling/statistics once per playback instance. Natural completion is distinct
-from qualification. During a Store handoff, the incoming media owner becomes the
-clock source; ended audio waiting for voice cannot create a duplicate completion.
+Listening events are scoped to normalized server URL and username. One clock
+tracks actual heard time, excluding seeks, stalls and pauses, and drives
+qualified scrobbling/statistics once per playback instance. Natural completion
+is distinct from qualification. Crossfade handoffs transfer the clock owner;
+ended audio waiting for voice cannot create duplicate completion events.
 
-Standalone voice suppresses crossfade at the set boundary. Over-music voice lowers
-the music input by 12 dB and restores its gain smoothly. The voice branch has its
-own analyser and gain, follows master volume/mute, and bypasses music speed/pitch
-and EQ. Pause and Next operate on the active voice/session through the Store,
-including tray, media-key and mini-player commands. The ORB-21 cover samples actual speech audio and stops rendering when hidden, offscreen, paused, or reduced motion is enabled.
+## Playback and presentation
 
-Only prepared audio plays at a boundary. Late work is skipped; music continues.
-Session/profile/request revisions discard obsolete results. Model errors use a
-grounded introduction; missing voice output produces a recoverable error and
-continues playback. Helpers launch lazily and release on stop or preview end.
+Store owns music and speech. Standalone interludes suppress crossfade at the set
+boundary. Over-music interludes lower the music branch by 12 dB and smoothly
+restore gain. Speech has its own analyser and gain, follows master volume/mute,
+and bypasses music speed, pitch and EQ. Pause and Next control the active speech
+through normal transports, tray, media keys and mini-player commands.
 
-## Models, grounding and packaging
+Only prepared audio plays at a boundary. Late speech is skipped and music
+continues; it never appears halfway through a track. Session/profile/request
+revisions discard obsolete work. Model errors use grounded deterministic
+commentary. TTS failures produce a recoverable error and continue music. Helpers
+start lazily and are released when DJ or voice preview ends.
 
-The shipped text model is SmolLM3-3B Q3_K_S, generated from the pinned upstream
-FP16 GGUF with llama.cpp b11366. Q4_K_M was tried first: its NSIS archive exceeded
-the embedded installer limit and AppX reached 2.32 GiB. Q3 uses the same 3B model
-and fits a single offline installer and normal updater.
+Discover shows the queue, completion progress, preparation/errors and session
+actions. Transcription defaults on, can be changed immediately, and appears only
+there. Players retain the real queue/track identity and normal controls. Voice
+replaces their main cover/metadata/progress temporarily and disables seeking and
+song actions. Pause keeps a static cover and haze; finish, Next, stop, error and
+profile changes clear it. Preview uses speech presentation without starting a
+session or creating a queue. Sidebar and bottom player show a subtle purple
+background throughout active DJ sessions.
 
-The CPU-only helper is hidden, bound to authenticated 127.0.0.1, and runs in
-offline mode. Kokoro-82M v1.0 quantized ONNX runs in an Electron utility process,
-using Michael or Heart and the bundled eSpeak NG phonemizer. No model service,
-API key, Python, GPU, or runtime model download is required. Old cloud settings
-and vault secrets are preserved and inactive.
+Shadercn ORB-21 is vendored at revision
+`7569572e3c5b7e76f630868d27b9f3fc3a5328ad`, with vgpu 0.4.0,
+TypeGPU 0.12.6 and unplugin-typegpu 0.12.4. The renderer is MIT; **the shader is
+non-commercial only, with XorDev attribution**. Both notices ship in
+`electron/assets/shadercn-NOTICE.txt`. A static SVG covers reduced motion,
+unavailable WebGPU, initialization failure and device loss. GPU rendering is
+capped at 30 fps and DPR 1.5, stops when paused/hidden/offscreen, and releases
+resources after use. Audio remains usable if visualization fails.
 
-Free-form Q3 evaluation invented artists despite a grounding prompt. The final
-JSON response schema constrains the model to complete introductions composed
-from verified track metadata and taste evidence. The model selects suitable
-phrasing; unrecognized output falls back locally. This intentionally limits v1's
-spoken variety to keep every introduction grounded and bounded to two sentences.
-It does not generate artist trivia or infer personal emotions.
+Desktop snapshots contain validated presentation/progress, never transcripts
+or audio. A bounded 10 Hz energy channel runs only while the native mini-player
+is visible. Sender validation restricts publication to Store's window; the
+mini-player remains a remote client without audio or inference ownership.
 
-Asset revisions, source weights, quantization hash, package hashes and helper
-revision are pinned in `electron/aiDj/assets.lock.json`. Packaging verifies both
-downloads and installed resource files. eSpeak NG source/build materials and
-redistribution notices accompany the assets. Echogarden's narrow version-pinned
-package-manager patch resolves the bundled directory and prohibits downloads.
+## Optional models and resource security
 
-Build on Windows x64 with Node 24:
+Models are **not in the installer**. Settings → AI DJ → Download DJ models
+explicitly downloads the official SmolLM3-3B **Q4_K_M** GGUF and Kokoro-82M v1.0
+quantized ONNX, English voice assets and eSpeak NG phonemizer. AI DJ starts only
+after verification. Downloads total **2,012,743,576 bytes** (2.01 GB / 1.87 GiB).
+Allow 5 GB free for installation or 7 GB for repair. Resources persist under
+the app's `userData/aiDj/smollm3-q4-kokoro-v1/installed` folder across updates.
+There is no first-use automatic download. Cancel/retry/repair are explicit.
+
+Pinned revisions, URLs, sizes and SHA-256 hashes are in
+`electron/aiDj/assets.lock.json`; compiled download and extracted-file checksums
+are in `downloadCatalog.ts`. Asset preparation checks catalog agreement.
+The manager streams downloads to partial files, rejects oversized/truncated or
+corrupt responses, validates archive paths and rejects links, verifies every
+extracted file, then atomically activates the installation. Completed verified
+archives can be reused after failed/cancelled attempts; partial files are removed.
+Failed repair preserves the prior installation. Main-process IPC restricts
+installation to the trusted playback owner, with no renderer-supplied URLs.
+
+The Windows installer includes only llama.cpp CPU helper b11366 and notices,
+including the eSpeak NG corresponding source/build materials. The hidden text
+helper uses authenticated loopback and offline inference. Kokoro runs in an
+Electron utility process, using Michael or Heart. No API key, Python, Ollama,
+GPU or external inference service is required. Echogarden's version-pinned patch
+resolves explicitly installed packages and prevents automatic package downloads.
+Old cloud settings/vault secrets are preserved and inactive.
+
+Free-form evaluation invented artists. V1 constrains structured model output
+to short introductions composed from verified track metadata and taste evidence.
+The model selects phrasing; invalid output falls back locally. This intentionally
+limits variety to keep commentary grounded and bounded to two sentences. It does
+not generate artist trivia or infer personal emotions.
+
+## Build and validation
+
+Windows x64 with Node 24:
 
 ```powershell
 npm ci
@@ -76,110 +112,56 @@ npm run typecheck
 npm test
 npm audit --audit-level=high
 npm run dist:win
-node scripts/releaseArtifacts.mjs --platform windows --version 2.5.0-beta.20 --dir release
+node scripts/releaseArtifacts.mjs --platform windows --version 2.5.0-beta.21 --dir release
 ```
 
-Asset preparation needs roughly 10 GB temporary disk space, including source
-weights; the installer includes only the quantized model and inference resources.
-The Windows release workflow prepares these assets before packaging. Release
-validation rejects any file at or above 2 GiB. Keep the existing app ID and updater
-feed unchanged. macOS/browser builds show local DJ as Windows desktop-only.
+Default asset preparation ships helper/notices only. `--models` is an optional
+developer resource preparation mode; rerun default preparation before packaging.
+Installer filters exclude GGUF and packages even when developer files exist.
+The existing app ID/updater stay unchanged. Every release asset must be below
+2 GiB. Browser/macOS builds display the Windows requirement.
 
-## Review evidence and remaining acceptance
+Checks cover profile isolation, qualified plays, seeking/skips, selection,
+short libraries, both cadences over eleven simulated blocks, ducking, crossfade,
+cancellation, stale work, takeover, gain restoration and previous-queue behavior.
+Model-manager tests cover explicit download, checksums/size bounds, stalled-request
+cancellation, shared requests, cached retries, failed repair, installation markers,
+archive traversal/links and verified extraction.
 
-- Typecheck and the full 425-test suite passed, including runtime corruption,
-  synthesis failure/crash, cancellation, account isolation, seek/qualification,
-  natural completion, skip handling, late work, ducking, and saved-queue restoration.
-- Both cadence choices passed eleven-block session simulations. These are not
-  a substitute for a long real-audio session with a connected server.
-- 100 local commentary-and-TTS inputs passed with no fallback. On a Ryzen 7
-  9800X3D with 32 GB RAM, mean preparation was 7.58 seconds, maximum 12.95 seconds.
-  Both voices produced PCM WAV output. This does not certify a 16 GB machine.
-- Desktop smoke checks passed for the current players and DJ preview/session,
-  dark/light and narrow layouts, accessibility tree, and previous-queue action.
-  Audio was muted during automated UI checks.
-- Packaged ASAR workers and model resources synthesized both voices with an
-  empty voice cache and external model fetch blocked. This validates packaged
-  resources without running the NSIS installer on the installed user profile.
-- NSIS and AppX build successfully below 2 GiB. Windows installers are unsigned.
+`scripts/smokeDjUi.cjs` uses offline fixtures for navigation, model readiness,
+Settings download progress, transcription, all player covers, actual WebGPU
+painting, native energy and artwork restoration. It checks Home, Browse, Songs,
+Settings and AI DJ at 940/1100/1280 px with an open player sidebar, including at
+least 15 px between Home slideshow controls and View Album. README screenshots
+come from these actual app captures with demo music/artwork, not a visual mockup.
+`scripts/smokeAiDj.cjs` exercises real local preview and session playback in a
+disposable profile with verified downloaded resources.
 
-Before publishing, manually verify a 16 GB CPU-only machine, real server access,
-more than ten real blocks, sleep/resume and hidden-window playback, audible
-transition/gain quality, both voices' pronunciation, reduced motion with assistive
-technology, and a real beta.19 installer upgrade. The review environment does not
-provide that hardware/server listening acceptance. Use a disposable profile for
-package verification; do not overwrite the user's installed profile.
+`scripts/verifyAiDjRuntime.ts` blocks external model networking and uses an empty
+voice cache. Set `NEBULA_DJ_RESOURCES` to downloaded resources,
+`NEBULA_DJ_HELPER_RESOURCES` to packaged helper resources, and `NEBULA_DJ_WORKER`
+to the packaged voice worker. `NEBULA_DJ_CASES=100` evaluates bounded commentary
+and both voices. Reports/screenshots are in ignored `release-review/`.
 
-Reproducible checks: `scripts/smokeAiDj.cjs` exercises desktop UI with offline
-music fixtures; `scripts/verifyAiDjRuntime.ts` blocks external fetch, uses an empty
-voice cache, and accepts `NEBULA_DJ_RESOURCES` / `NEBULA_DJ_WORKER` for packaged
-resource verification. Set `NEBULA_DJ_CASES=100` to repeat the commentary run.
-Reports, voice samples and screenshots are written to ignored `release-review/`.
+A real pinned upstream download and 100 Q4 commentary/voice inputs passed with
+zero fallbacks on a Ryzen 7 9800X3D with 32 GB RAM: mean preparation 7.89 seconds,
+maximum 13.35 seconds. Both voices produced valid WAV output with external
+model networking blocked and an empty voice cache.
 
-## Discover and player integration
+Beta.21 review validation passed typecheck, all 448 tests in 65 files, clean
+installation, Electron build, zero-vulnerability audit, player smoke checks and
+Windows packaging. The NSIS installer is 349,140,773 bytes and AppX is
+504,680,256 bytes. Packaged DJ resources total 68,324,854 bytes and contain no
+models or voice packages; updater metadata hashes match the installer. Windows
+artifacts remain unsigned. `scripts/smokeDjDownload.cjs` verified a real explicit
+download through packaged production IPC in an empty profile, then both voices
+with source networking blocked. Packaged local commentary/TTS completed in
+11.49 and 8.14 seconds without fallback. Packaged UI checks passed all player
+layouts, WebGPU, settings and sidebar spacing.
 
-Discover → AI DJ is the session home. Navigating there never starts a session.
-The view shows a playlist-style queue, taste explanation, completion progress,
-preparation/errors, and Start/Stop/Skip/Return controls. DJ settings links directly
-to its settings section. `showTranscript` migrates to true and can be changed
-while listening without invalidating a prepared interlude. Transcripts appear
-only in Discover, never in a player or desktop snapshot.
-
-All music players use a shared presentation independent of the real track and
-queue identity. During voice, their main cover becomes the purple cloud orb,
-metadata identifies AI DJ, progress follows speech, and seeking/track actions are
-disabled. Next skips speech, including from the native mini-player. Paused speech
-keeps static cover/haze; finish, skip, stop, error, and profile changes clear it.
-Voice previews reuse presentation but do not start sessions or create queues.
-The expanded player retains Now Playing and Queue during DJ; its queue includes
-a compact standard transport. Lyrics return for ordinary music playback.
-
-Shadercn ORB-21 is vendored at revision
-`7569572e3c5b7e76f630868d27b9f3fc3a5328ad`, with vgpu 0.4.0,
-TypeGPU 0.12.6 and unplugin-typegpu 0.12.4. The runtime is MIT; **the shader
-itself is non-commercial only, with attribution to XorDev**, as documented in
-its source. Both notices ship in `electron/assets/shadercn-NOTICE.txt`.
-GPU rendering is optional: a bundled static SVG handles reduced motion,
-unavailable WebGPU, initialization failure and device loss. The source frame
-loop is capped at 30 fps and DPR 1.5; renderer resources are disposed when hidden,
-paused, offscreen or unmounted. Frontend shader packages are build dependencies;
-the compiled shader is included in the offline application.
-
-Desktop snapshots carry validated presentation/progress only. A separate bounded
-10 Hz energy channel operates only while the mini-player is visible. Main-process
-sender validation restricts publication to the playback owner. Mini-player
-rendering remains a remote client with no audio owner or inference process.
-
-Run `node_modules/electron/dist/electron.exe scripts/smokeDjUi.cjs` after building
-for an offline fixture check of Discover, settings, transcription, native energy,
-voice preview, all player covers, actual WebGPU painting, and artwork restoration.
-The fixture supplies prepared voice audio rather than evaluating local models;
-real-server and reference-hardware checks remain the separate acceptance tests above.
-
-### Updated integration review
-
-- Typecheck, all 436 tests in 64 files, Electron build and dependency audit pass
-  (zero reported vulnerabilities).
-- Offline UI smoke checks pass for Discover navigation, settings separation,
-  live transcription opt-out, actual WebGPU frames, paused/static covers, all
-  player layouts, native energy synchronization and track restoration after Next.
-  The existing player smoke and real local-model preview/session smoke also pass.
-- Packaged ASAR UI and both bundled voices pass with external model fetch blocked
-  and an empty voice cache. The two packaged commentary/TTS runs completed in
-  9.63 and 7.91 seconds on the review machine.
-- The beta.20 review installer and AppX remain below the 2 GiB release limit;
-  Authenticode reports NotSigned. This build has not been published or installed
-  over the user's current profile. The manual acceptance items above remain open.
-
-### Review refinements
-
-The Discover header now uses one short description. Detailed taste evidence stays
-in local curation and commentary preparation. The sidebar and bottom player keep
-a purple gradient while the DJ session is active, with stronger haze during voice.
-The top bar contains search and the theme toggle; Settings remains in navigation.
-
-Player sidebars stay in the shared flex layout at smaller widths and remain open
-across resize. Content-width queries adapt the header, DJ view, Home and library
-controls. UI checks cover Home, Browse, Songs, Settings and AI DJ with an open
-sidebar at 940, 1100 and 1280 px, plus persistent music-session gradients. The full
-436-test suite, typecheck, both player smoke checks and dependency audit pass.
+Automated playback checks use muted audio. This does not
+certify a 16 GB machine, audible pronunciation or server access. Manual beta
+acceptance still includes a 16 GB CPU-only reference machine, more than ten
+real-server blocks, sleep/resume/hidden playback, audible transition quality,
+assistive technology and a beta.19 installer upgrade. Package smoke checks use
+a disposable profile and never overwrite the user's installed profile.

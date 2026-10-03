@@ -55,6 +55,10 @@ export const IPC = {
     status: 'nebula:updater:status',
   },
   aiDj: {
+    modelsStatus: 'nebula:aiDj:modelsStatus',
+    downloadModels: 'nebula:aiDj:downloadModels',
+    cancelDownload: 'nebula:aiDj:cancelDownload',
+    modelsChanged: 'nebula:aiDj:modelsChanged',
     readiness: 'nebula:aiDj:readiness',
     prepare: 'nebula:aiDj:prepare',
     preview: 'nebula:aiDj:preview',

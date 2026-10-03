@@ -9,7 +9,7 @@ const originalFetch = globalThis.fetch;
 globalThis.fetch = (input, init) => { if (new URL(String(input)).hostname !== '127.0.0.1') throw new Error('External model networking blocked by verification'); return originalFetch(input, init); };
 process.env.NEBULA_DJ_VOICE_CACHE ||= path.join(os.tmpdir(), 'nebula-dj-empty-cache-' + randomUUID());
 app.whenReady().then(async () => {
-  const runtime = new LocalDjRuntime(process.env.NEBULA_DJ_RESOURCES || path.resolve('electron/aiDj/resources'), process.env.NEBULA_DJ_WORKER || path.resolve('electron/dist/voiceWorker.cjs'));
+  const runtime = new LocalDjRuntime(process.env.NEBULA_DJ_RESOURCES || path.resolve('electron/aiDj/resources'), process.env.NEBULA_DJ_WORKER || path.resolve('electron/dist/voiceWorker.cjs'), process.env.NEBULA_DJ_HELPER_RESOURCES || path.resolve('electron/aiDj/resources'));
   const count = Number(process.env.NEBULA_DJ_CASES || 1);
   const report: { index: number; seconds: number; text: string; fallback: boolean; error?: string }[] = [];
   try {

@@ -16,14 +16,22 @@ export class LocalDjRuntime {
   private controller: AbortController | null = null;
   private startup: Promise<void> | null = null;
   private verified = false;
-  constructor(private readonly resources: string, private readonly workerPath: string) {}
+  constructor(private readonly resources: string, private readonly workerPath: string, private readonly helperResources = resources) {}
 
   async readiness() {
     try {
       if (process.platform !== 'win32') throw new Error('Local AI DJ currently requires Windows.');
       if (!this.verified) {
         const manifest = JSON.parse(await fs.readFile(path.join(this.resources, 'manifest.json'), 'utf8')) as { files: { file: string; sha256: string; size: number }[] };
-        if (!manifest.files.some(entry => entry.file.endsWith('.gguf')) || !manifest.files.some(entry => entry.file.endsWith('llama-server.exe'))) throw new Error('AI DJ model resources are incomplete.');
+        if (!manifest.files.some(entry => entry.file.endsWith('.gguf'))) throw new Error('Download AI DJ models in Settings first.');
+        const helper: typeof manifest = this.helperResources === this.resources ? manifest : JSON.parse(await fs.readFile(path.join(this.helperResources, 'manifest.json'), 'utf8'));
+        if (!helper.files.some(entry => entry.file.endsWith('llama-server.exe'))) throw new Error('AI DJ helper is missing.');
+        for (const entry of this.helperResources === this.resources ? [] : helper.files) {
+          const target = path.resolve(this.helperResources, entry.file);
+          if (!target.startsWith(path.resolve(this.helperResources) + path.sep) || (await fs.stat(target)).size !== entry.size) throw new Error('Invalid DJ helper resource.');
+          const hash = createHash('sha256'); for await (const chunk of createReadStream(target)) hash.update(chunk);
+          if (hash.digest('hex') !== entry.sha256) throw new Error('DJ helper checksum failed.');
+        }
         for (const entry of manifest.files) {
           const target = path.resolve(this.resources, entry.file);
           if (!target.startsWith(path.resolve(this.resources) + path.sep)) throw new Error('Invalid DJ resource path.');
@@ -45,7 +53,7 @@ export class LocalDjRuntime {
       const status = await this.readiness();
       if (!status.ready) throw new Error(status.error);
       signal.throwIfAborted();
-      const files = await fs.readdir(path.join(this.resources, 'llama'), { recursive: true });
+      const files = await fs.readdir(path.join(this.helperResources, 'llama'), { recursive: true });
       const executable = files.find(file => file.endsWith('llama-server.exe'));
       if (!executable) throw new Error('Bundled local inference helper is missing.');
       const models = await fs.readdir(this.resources);
@@ -58,7 +66,7 @@ export class LocalDjRuntime {
       signal.throwIfAborted();
       this.token = randomBytes(32).toString('hex');
       this.baseUrl = 'http://127.0.0.1:' + port;
-      const child = spawn(path.join(this.resources, 'llama', executable), ['-m', path.join(this.resources, model), '--host', '127.0.0.1', '--port', String(port), '--ctx-size', '2048', '--threads', '4', '--n-gpu-layers', '0', '--api-key', this.token, '--offline', '--no-webui', '--no-slots', '--jinja'], { windowsHide: true, shell: false, stdio: 'ignore' });
+      const child = spawn(path.join(this.helperResources, 'llama', executable), ['-m', path.join(this.resources, model), '--host', '127.0.0.1', '--port', String(port), '--ctx-size', '2048', '--threads', '4', '--n-gpu-layers', '0', '--api-key', this.token, '--offline', '--no-webui', '--no-slots', '--jinja'], { windowsHide: true, shell: false, stdio: 'ignore' });
       this.child = child;
       let failure: Error | null = null;
       child.on('error', error => { failure = error; });

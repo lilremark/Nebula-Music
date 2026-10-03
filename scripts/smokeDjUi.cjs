@@ -56,10 +56,18 @@ app.on('browser-window-created', (_event, win) => {
       wav.write('data', 36); wav.writeUInt32LE(wav.length - 44, 40);
       for (let i = 0; i < (wav.length - 44) / 2; i++) wav.writeInt16LE(Math.round(Math.sin(i * .17) * (Math.sin(i / 1200) * .3 + .4) * 25000), 44 + i * 2);
       const audio = { text: 'A few familiar favorites, with something new in the mix.', wavBase64: wav.toString('base64'), fallback: false };
-      for (const name of ['prepare', 'preview', 'readiness']) ipcMain.removeHandler('nebula:aiDj:' + name);
+      for (const name of ['prepare', 'preview', 'readiness', 'modelsStatus', 'downloadModels', 'cancelDownload']) ipcMain.removeHandler('nebula:aiDj:' + name);
       ipcMain.handle('nebula:aiDj:prepare', (_event, request) => ({ ...audio, sessionId: request.sessionId, requestId: request.requestId }));
       ipcMain.handle('nebula:aiDj:preview', () => ({ ...audio, sessionId: 'preview', requestId: 'preview' }));
       ipcMain.handle('nebula:aiDj:readiness', () => ({ ready: true }));
+      ipcMain.handle('nebula:aiDj:modelsStatus', () => ({ phase: 'missing', ready: false, received: 0, total: 100 }));
+      ipcMain.handle('nebula:aiDj:cancelDownload', () => {});
+      ipcMain.handle('nebula:aiDj:downloadModels', async () => {
+        win.webContents.send('nebula:aiDj:modelsChanged', { phase: 'downloading', ready: false, received: 40, total: 100, file: 'model.gguf' });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const status = { phase: 'ready', ready: true, received: 100, total: 100 };
+        win.webContents.send('nebula:aiDj:modelsChanged', status); return status;
+      });
       const js = source => win.webContents.executeJavaScript(source);
       const capture = async name => {
         const [width, height] = win.getContentSize();
@@ -82,11 +90,18 @@ app.on('browser-window-created', (_event, win) => {
         document.querySelector('.nebula-rail [aria-label="AI DJ"]').click();
         await waitForDj(()=>document.querySelector('[data-nebula-view="ai-dj"]'),'DJ view');
         if(document.querySelector('.nebula-dj-badge')) throw new Error('Navigation started a session');
+        if(!djButton('Start AI DJ').disabled) throw new Error('DJ enabled without models');
         djButton('DJ settings').click();
         await waitForDj(()=>document.querySelector('#settings-ai-dj-tab[aria-selected="true"]'),'settings link');
         if(djButton('Start AI DJ') || djButton('Stop DJ') || document.querySelector('.nebula-dj-transcript')) throw new Error('Session controls remained in settings');
         const toggle=document.querySelector('.nebula-dj-transcript-setting input');
         if(!toggle.checked) throw new Error('Transcript default');
+      })()`);
+      await capture('settings-model-download');
+      await js(`(async () => {
+        djButton('Download DJ models').click();
+        await waitForDj(()=>document.querySelector('progress[aria-label="AI DJ model download"]'),'download progress');
+        await waitForDj(()=>djButton('Repair models'),'models activated');
         document.querySelector('.nebula-rail [aria-label="AI DJ"]').click();
         await waitForDj(()=>djButton('Start AI DJ'),'DJ start'); djButton('Start AI DJ').click();
         await waitForDj(()=>document.querySelector('.nebula-transport [aria-label="AI DJ cover"]'),'speaking cover');
@@ -139,9 +154,17 @@ app.on('browser-window-created', (_event, win) => {
             const panel=document.querySelector('[data-nebula-panel="now-playing"]').getBoundingClientRect();
             const actions=document.querySelector('[data-nebula-topbar-actions]').getBoundingClientRect();
             const main=document.querySelector('[data-nebula-main-scroll]');
+            const hero=document.querySelector('[data-nebula-home-hero]');
+            if(hero) {
+              const album=[...hero.querySelectorAll('button')].find(button=>button.textContent.trim()==='View Album');
+              const steps=hero.querySelector('.nebula-featured-steps');
+              const gap=steps.getBoundingClientRect().top-album.getBoundingClientRect().bottom;
+              if(gap<15) throw new Error('Slideshow controls overlap album action: '+gap);
+            }
             if(content.right > panel.left + 1 || actions.right > content.right + 1 || main.scrollWidth > main.clientWidth + 1) throw new Error('${label} overlaps sidebar at ${width}px');
             if(document.querySelector('[data-nebula-topbar-settings]')) throw new Error('Topbar settings remained');
           })()`);
+          if (label === 'Home' && width === 1280) await capture('home-both-sidebars');
         }
         await capture('sidebar-' + width);
       }
@@ -182,6 +205,11 @@ app.on('browser-window-created', (_event, win) => {
         if(!document.querySelector('[data-nebula-player="sidebar"] .nebula-dj-haze[data-session="true"][data-speaking="false"]')) throw new Error('Music sidebar lost session gradient');
       })()`);
       await capture('sidebar-session-music-light');
+      await js(`document.querySelector('.nebula-topbar-theme[aria-label="Switch to dark theme"]')?.click(); document.querySelector('.nebula-rail [aria-label="Home"]').click(); void 0;`);
+      await js(`waitForDj(()=>document.querySelector('[data-nebula-view="home"]'),'home screenshot')`);
+      await capture('home-beta-dark');
+      await js(`document.querySelector('.nebula-rail [aria-label="Settings"]').click(); void 0;`);
+      await js(`waitForDj(()=>document.querySelector('#settings-appearance-tab'),'settings screenshot')`);
       await js(`(async () => {
         document.querySelector('[aria-label="Collapse now playing panel"]').click();
         document.querySelector('#settings-appearance-tab').click(); await waitForDj(()=>djButton('Floating Bar'),'floating option'); djButton('Floating Bar').click();

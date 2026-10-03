@@ -2,10 +2,11 @@
   "version": 1,
   "assets": [
     {
-      "url": "https://huggingface.co/ggml-org/SmolLM3-3B-GGUF/resolve/4965cb60b150737b68a0408c36aeefb65078f894/SmolLM3-f16.gguf",
-      "sha256": "8e6ad54cf7426bd8318df06597357deef1bd758e27fbed2ed87ef39ed96e6f74",
-      "file": "SmolLM3-f16.gguf",
-      "kind": "quantization-source"
+      "url": "https://huggingface.co/ggml-org/SmolLM3-3B-GGUF/resolve/4965cb60b150737b68a0408c36aeefb65078f894/SmolLM3-Q4_K_M.gguf",
+      "sha256": "8334b850b7bd46238c16b0c550df2138f0889bf433809008cc17a8b05761863e",
+      "file": "SmolLM3-Q4_K_M.gguf",
+      "kind": "model",
+      "size": 1915305312
     },
     {
       "url": "https://github.com/ggml-org/llama.cpp/releases/download/b11366/llama-b11366-bin-win-cpu-x64.zip",
@@ -17,19 +18,22 @@
       "url": "https://huggingface.co/echogarden/echogarden-packages/resolve/556a19e0572ecde3eb5dc062b8731625a6f6351e/kokoro-82m-v1.0-quantized-20250209.tar.gz",
       "sha256": "891018d4ca451560a4ce3e53a6d2813a50004c602d8df8776594659a29fae329",
       "file": "kokoro-82m-v1.0-quantized-20250209.tar.gz",
-      "kind": "tts"
+      "kind": "tts",
+      "size": 61534972
     },
     {
       "url": "https://huggingface.co/echogarden/echogarden-packages/resolve/556a19e0572ecde3eb5dc062b8731625a6f6351e/kokoro-82m-v1.0-voices-20250209.tar.gz",
       "sha256": "f9df3840a97592e054271d2667698334f4ed7ad4cbf8d8c6fd190cd7dba3c958",
       "file": "kokoro-82m-v1.0-voices-20250209.tar.gz",
-      "kind": "tts"
+      "kind": "tts",
+      "size": 25982190
     },
     {
       "url": "https://huggingface.co/echogarden/echogarden-packages/resolve/556a19e0572ecde3eb5dc062b8731625a6f6351e/espeak-ng-emscripten-20260722.tar.gz",
       "sha256": "7ed410082ce795097fc64ad46946fa26747fc1966fd5ba43117ba5b533a3a4ec",
       "file": "espeak-ng-emscripten-20260722.tar.gz",
-      "kind": "tts"
+      "kind": "tts",
+      "size": 9921102
     },
     {
       "kind": "source",
@@ -49,10 +53,5 @@
       "kind": "notice",
       "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
     }
-  ],
-  "derivedModel": {
-    "file": "SmolLM3-Q3_K_S.gguf",
-    "type": "Q3_K_S",
-    "sha256": "022aca23aa1f8bf8eca05c32615f3d0773bfe371fe929e97ae3b7e3cba0fc9ec"
-  }
+  ]
 }

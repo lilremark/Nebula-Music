@@ -6,6 +6,12 @@ const os = require('node:os');
 const path = require('node:path');
 
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'nebula-dj-ui-'));
+
+// Link verified fixture downloads into the disposable app profile for real local inference.
+const downloaded = path.resolve('release-review/downloaded-models/installed');
+const destination = path.join(profile, 'aiDj', 'smollm3-q4-kokoro-v1', 'installed');
+const linkModels = (source, target) => { fs.mkdirSync(target, { recursive: true }); for (const entry of fs.readdirSync(source, { withFileTypes: true })) { const from = path.join(source, entry.name), to = path.join(target, entry.name); if (entry.isDirectory()) linkModels(from, to); else fs.linkSync(from, to); } };
+if (fs.existsSync(downloaded)) linkModels(downloaded, destination);
 app.setPath('userData', profile);
 app.commandLine.appendSwitch('mute-audio');
 app.getAppPath = () => path.resolve(__dirname, '..');

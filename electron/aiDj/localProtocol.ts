@@ -10,11 +10,16 @@ export const djPrepareSchema = z.object({
 export type DjPrepareRequest = z.infer<typeof djPrepareSchema>;
 export interface DjPreparedAudio { requestId: string; sessionId: string; text: string; wavBase64: string; fallback: boolean; error?: string }
 export interface DjReadiness { ready: boolean; error?: string }
+export interface DjModelStatus { phase: 'missing' | 'downloading' | 'installing' | 'ready' | 'error'; ready: boolean; received: number; total: number; file?: string; error?: string }
 export interface LocalDjApi {
   readiness(): Promise<DjReadiness>;
   prepare(request: DjPrepareRequest): Promise<DjPreparedAudio>;
   preview(voice: 'Michael' | 'Heart'): Promise<DjPreparedAudio>;
   cancel(): Promise<void>;
+  modelsStatus(): Promise<DjModelStatus>;
+  downloadModels(): Promise<DjModelStatus>;
+  cancelDownload(): Promise<void>;
+  onModelsStatus(handler: (state: DjModelStatus) => void): () => void;
 }
 
 export function fallbackCommentary(request: DjPrepareRequest): string {

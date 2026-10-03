@@ -29,8 +29,10 @@ win:
     - from: electron/aiDj/resources
       to: aiDj
       filter:
-        - "**/*"
-        - "!downloads/**"
+        - "llama/**/*"
+        - "notices/**/*"
+        - "NOTICE.md"
+        - "manifest.json"
 
 nsis:
   oneClick: true
