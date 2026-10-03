@@ -119,7 +119,7 @@ const getDjSpeechController = (): ReturnType<typeof createDjSpeechController> =>
 // from disk and poking the Windows taskbar on every snapshot is measurable
 // overhead and a known taskbar-freeze trigger, so the progress bar is only
 // updated when it moves meaningfully and the thumbar buttons are re-applied
-// only when the play/pause button actually changes.
+// only when their state changes or the window returns to the taskbar.
 let lastTaskbarProgress = -1;
 
 const updateTaskbarProgress = (snapshot: DesktopSnapshot): void => {
@@ -142,7 +142,7 @@ let thumbarImages: {
   play: Electron.NativeImage;
   pause: Electron.NativeImage;
 } | null = null;
-let thumbarState: { playing: boolean } | null = null;
+let thumbarState: { playing: boolean; ready: boolean } | null = null;
 
 const getThumbarImages = (): NonNullable<typeof thumbarImages> => {
   if (thumbarImages) return thumbarImages;
@@ -156,35 +156,36 @@ const getThumbarImages = (): NonNullable<typeof thumbarImages> => {
 };
 
 const updateThumbarButtons = (snapshot: DesktopSnapshot | null): void => {
-  if (!mainWindow || process.platform !== 'win32') return;
-  if (!snapshot) {
-    if (thumbarState !== null) {
-      thumbarState = null;
-      mainWindow.setThumbarButtons([]);
-    }
-    return;
-  }
-  if (thumbarState && thumbarState.playing === snapshot.playing) return;
-  thumbarState = { playing: snapshot.playing };
+  if (!mainWindow || mainWindow.isDestroyed() || process.platform !== 'win32' || !mainWindow.isVisible()) return;
+  const playing = snapshot?.playing ?? false;
+  const ready = snapshot !== null;
+  if (thumbarState?.playing === playing && thumbarState.ready === ready) return;
   const images = getThumbarImages();
   const send = (command: DesktopCommand): void => forwardCommand(thumbarClient.send(command));
-  mainWindow.setThumbarButtons([
+  const flags: Electron.ThumbarButton['flags'] = ready ? [] : ['disabled'];
+  const added = mainWindow.setThumbarButtons([
     {
       icon: images.prev,
       tooltip: 'Previous',
+      flags,
       click: () => send({ name: 'previous' }),
     },
     {
-      icon: snapshot.playing ? images.pause : images.play,
-      tooltip: snapshot.playing ? 'Pause' : 'Play',
+      icon: playing ? images.pause : images.play,
+      tooltip: playing ? 'Pause' : 'Play',
+      flags,
       click: () => send({ name: 'togglePlayback' }),
     },
     {
       icon: images.next,
       tooltip: 'Next',
+      flags,
       click: () => send({ name: 'next' }),
     },
   ]);
+  // Windows can reject registration before its taskbar button exists. Cache
+  // only a successful registration so the next snapshot retries failures.
+  thumbarState = added ? { playing, ready } : null;
 };
 
 const MIME: Record<string, string> = {
@@ -267,6 +268,7 @@ const openExternalSafely = async (rawUrl: string): Promise<boolean> => {
 };
 
 const createWindow = (): BrowserWindow => {
+  thumbarState = null;
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -316,9 +318,6 @@ const createWindow = (): BrowserWindow => {
       }
       event.preventDefault();
       win.hide();
-    } else {
-      thumbarState = null;
-      mainWindow?.setThumbarButtons([]);
     }
   });
 
@@ -336,6 +335,17 @@ const createWindow = (): BrowserWindow => {
   });
 
   win.once('ready-to-show', () => win.show());
+
+  const refreshThumbar = (): void => {
+    if (process.platform !== 'win32') return;
+    thumbarState = null;
+    // Let Windows create/recreate the taskbar button before registration.
+    setImmediate(() => {
+      if (!isQuitting && mainWindow === win) updateThumbarButtons(lastSnapshot);
+    });
+  };
+  win.on('show', refreshThumbar);
+  win.on('restore', refreshThumbar);
 
   win.webContents.on('did-finish-load', () => {
     console.log('[nebula] renderer loaded');
