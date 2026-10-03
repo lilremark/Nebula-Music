@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.23';
+export const APP_VERSION = '2.5.0-beta.24';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,17 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.24',
+    date: '2026-10-03',
+    title: 'AI DJ Settings Refinement',
+    changes: [
+      'Match AI DJ preferences to the shared Settings switches, dropdowns, buttons, typography and row spacing.',
+      'Group model downloads and system requirements in a padded section, with consistent progress and action controls.',
+      'Show the DJ voice level as a percentage and keep preferences usable in compact windows and both themes.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.24' },
+  },
   {
     version: '2.5.0-beta.23',
     date: '2026-10-03',
