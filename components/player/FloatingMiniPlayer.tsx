@@ -1,3 +1,4 @@
+import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './DjPresentation';
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Maximize2, PanelRight, Heart, Volume2, Volume1, VolumeX, AudioWaveform } from 'lucide-react';
 import { useStore } from '../../context/Store';
@@ -41,6 +42,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
         queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, service, audioRef, toggleLike, volume, setVolume, settings, updateSettings
     } = useStore();
 
+    const voice = useDjPlayback();
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isHoverProgress, setIsHoverProgress] = useState(false);
@@ -88,13 +90,14 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
 
     const coverArt = service.getCoverArtUrl(currentSong.coverArt || currentSong.id, 200);
     const streamUrl = service.getStreamUrl(currentSong.id, currentSong.suffix);
-    const progressMode = settings.progressVisualization;
+    const progressMode = voice.speech ? 'bar' : settings.progressVisualization;
     const waveform = useTrackWaveform(currentSong.id, progressMode === 'waveform' ? streamUrl : null);
     const { colors } = useAdaptiveColors(coverArt);
     const progress = duration ? (currentTime / duration) * 100 : 0;
-    const displayProgress = visualProgress || progress;
+    const displayProgress = voice.speech ? voice.progress : visualProgress || progress;
 
     const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (voice.speech) return;
         const newProgress = parseFloat(e.target.value);
         setVisualProgress(newProgress);
         const newTime = (newProgress / 100) * duration;
@@ -116,7 +119,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
 
     return (
         <div
-            className="flex flex-col rounded-xl bg-neutral-100 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-300 dark:border-white/10 shadow-2xl animate-scale-in overflow-hidden"
+            className="relative flex flex-col rounded-xl bg-neutral-100 dark:bg-neutral-900/95 backdrop-blur-xl border border-neutral-300 dark:border-white/10 shadow-2xl animate-scale-in overflow-hidden"
             data-nebula-player="floating"
             style={{
                 boxShadow: `0 25px 60px -15px rgba(0,0,0,0.6), 0 0 0 1px ${colors.primary}15`,
@@ -124,6 +127,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 maxWidth: 'calc(100vw - 24px)'
             }}
         >
+            <DjHaze speech={voice.speech} />
             {/* Progress bar at top - clickable with hover expand */}
             <div className="px-3 pt-2" onMouseEnter={() => setIsHoverProgress(true)} onMouseLeave={() => setIsHoverProgress(false)}>
                 <PlaybackProgress
@@ -135,6 +139,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                     markerColor={colors.secondary || colors.primary}
                     waveform={waveform}
                     onScrub={handleScrub}
+                    scrubbable={!voice.speech}
                     trackStyle={{
                         boxShadow: progressMode === 'bar'
                             ? `0 0 18px ${withAlpha(colors.primary, 0.16)}`
@@ -151,33 +156,33 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
             <div className="flex items-center gap-3 px-3 pr-5 py-3" data-nebula-floating-content>
                 {/* Album Art */}
                 <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 shadow-lg cursor-pointer" onClick={onExpand} data-nebula-floating-art>
-                    <img
-                        src={coverArt}
-                        alt={currentSong.title}
+                    <PlayerCover src={coverArt}
+                        alt={voice.speech ? 'AI DJ' : currentSong.title}
                         className="w-full h-full object-cover"
                     />
                 </div>
 
                 {/* Song Info */}
                 <div className="min-w-0 w-32 shrink-0" data-nebula-floating-info>
+                    <DjBadge />
                     <div className="relative overflow-hidden">
-                        {currentSong.title.length > 22 ? (
+                        {!voice.speech && currentSong.title.length > 22 ? (
                             <div className="mini-title-marquee font-semibold text-neutral-900 dark:text-white text-sm whitespace-nowrap">
-                                <span>{currentSong.title}</span>
-                                <span aria-hidden="true">{currentSong.title}</span>
+                                <span>{voice.speech ? 'AI DJ' : currentSong.title}</span>
+                                <span aria-hidden="true">{voice.speech ? 'AI DJ' : currentSong.title}</span>
                             </div>
                         ) : (
-                            <p className="font-semibold text-neutral-900 dark:text-white text-sm truncate">{currentSong.title}</p>
+                            <p className="font-semibold text-neutral-900 dark:text-white text-sm truncate">{voice.speech ? 'AI DJ' : currentSong.title}</p>
                         )}
                     </div>
-                    <p className="text-xs text-neutral-700 dark:text-white/50 truncate">{currentSong.artist}</p>
+                    <p className="text-xs text-neutral-700 dark:text-white/50 truncate">{voice.speech ? voice.subtitle : currentSong.artist}</p>
                 </div>
 
                 {/* Time display */}
                 <div className="flex items-center justify-center gap-2 text-xs font-mono text-neutral-700 dark:text-white/70 shrink-0 min-w-[86px]" data-nebula-floating-time>
-                    <span className="tabular-nums">{formatTime(currentTime)}</span>
+                    <span className="tabular-nums">{formatTime(voice.speech ? voice.position : currentTime)}</span>
                     <span className="text-neutral-400 dark:text-white/50">/</span>
-                    <span className="tabular-nums">{formatTime(duration)}</span>
+                    <span className="tabular-nums">{formatTime(voice.speech ? voice.duration : duration)}</span>
                 </div>
 
                 {/* Progress style toggle */}
@@ -231,7 +236,9 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 </div>
 
                 {/* Like button */}
+
                 <button
+                    disabled={voice.speech}
                     onClick={() => toggleLike(currentSong)}
                     className={`p-2 transition-colors active:scale-95 ${currentSong.starred ? 'text-red-500' : 'text-neutral-600 hover:text-neutral-900 dark:text-white/60 dark:hover:text-white'}`}
                     aria-label={currentSong.starred ? 'Unlike' : 'Like'}
@@ -252,9 +259,9 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                         onClick={togglePlay}
                         className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
                         style={{ backgroundColor: colors.primary }}
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                        aria-label={voice.playing ? 'Pause' : 'Play'}
                     >
-                        {isPlaying ? (
+                        {voice.playing ? (
                             <Pause className="w-4 h-4 text-black" fill="black" />
                         ) : (
                             <Play className="w-4 h-4 ml-0.5 text-black" fill="black" />

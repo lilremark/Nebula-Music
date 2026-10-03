@@ -143,12 +143,15 @@ app.on('browser-window-created', (_event, win) => {
       win.setContentSize(1450, 1050);
       await new Promise(resolve => setTimeout(resolve, 1000));
       fs.writeFileSync(path.join(profile, 'home-side-player.png'), (await win.webContents.capturePage()).toPNG());
-      // An open sidebar must give way to the bottom player below its breakpoint.
+      // An open sidebar stays beside the content when the window gets smaller.
       win.setContentSize(1100, 850);
       await new Promise(resolve => setTimeout(resolve, 1000));
       await win.webContents.executeJavaScript(`(() => {
-        if (!document.querySelector('.nebula-transport') || document.querySelector('[data-nebula-panel="now-playing"]'))
-          throw new Error('Responsive layout did not replace the side player');
+        const panel = document.querySelector('[data-nebula-panel="now-playing"]');
+        const content = document.querySelector('[data-nebula-content-shell]');
+        if (!panel || document.querySelector('.nebula-transport') || content.getBoundingClientRect().right > panel.getBoundingClientRect().left + 1)
+          throw new Error('Responsive sidebar overlaps the content');
+        panel.querySelector('[aria-label="Collapse now playing panel"]').click();
       })()`);
       await win.webContents.executeJavaScript(`(async () => {
         document.querySelector('[aria-label="Open now playing panel"]').click();
@@ -298,7 +301,7 @@ app.on('browser-window-created', (_event, win) => {
         const bounds = buttons.map(button => button.getBoundingClientRect());
         if (bounds.some(bound => bound.height < 39) || bounds.slice(1).some((bound, i) => bound.top === bounds[i].top && bound.left - bounds[i].right < 7))
           throw new Error('Settings section buttons are cramped');
-        const expected = { Connection: ['Server Connection'], Sound: ['Equalizer', 'Playback'], Interface: ['Appearance', 'Player Display', 'Visualizer Style', 'Navigation Items', 'Keyboard Shortcuts'], Integrations: ['Stream Deck'], Desktop: ['Desktop Integration', 'Updates'] };
+        const expected = { Connection: ['Server Connection'], Sound: ['Equalizer', 'Playback'], Interface: ['Appearance', 'Player Display', 'Visualizer Style', 'Navigation Items', 'Keyboard Shortcuts'], Integrations: ['Stream Deck'], 'AI DJ': ['AI DJ'], Desktop: ['Desktop Integration', 'Updates'] };
         for (const button of buttons) {
           button.click();
           await new Promise(resolve => setTimeout(resolve, 50));
@@ -475,7 +478,7 @@ app.on('browser-window-created', (_event, win) => {
           const cover = header.querySelector('[data-nebula-detail-cover]').getBoundingClientRect();
           const compact = header.getBoundingClientRect();
           if (header.dataset.compact !== 'true' || compact.height >= fullHeight || cover.width > 49 || Math.abs(compact.top - scroller.getBoundingClientRect().top) > 1)
-            throw new Error('${kind} header does not shrink and stick above the tracks');
+            throw new Error('${kind} header does not shrink and stick above the tracks: ' + JSON.stringify({ compact: header.dataset.compact, height: compact.height, fullHeight, cover: cover.width, top: compact.top, scrollTop: scroller.scrollTop, paneTop: scroller.getBoundingClientRect().top }));
           if (view.querySelector('[data-nebula-track-section]').getBoundingClientRect().top - compact.bottom > 30) throw new Error('${kind} leaves a gap before tracks');
           if (Math.abs(scroller.scrollHeight - documentHeight) > 1) throw new Error('${kind} header changes document height while scrolling');
           if (!header.querySelector('h1').textContent.trim() || !header.querySelector('[data-nebula-album-options] button')) throw new Error('Compact collection controls are missing');

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_LOCAL_DJ } from '../playback/djTypes';
 import { desktopSettingsSchema } from './settingsSchema';
 
 describe('desktopSettingsSchema aiDj settings', () => {
   it('defaults the AI DJ to disabled with a sensible configuration', () => {
     const parsed = desktopSettingsSchema.parse({});
     expect(parsed.aiDj).toEqual({
+      local: DEFAULT_LOCAL_DJ,
       enabled: false,
       provider: 'groq',
       model: 'openai/gpt-oss-20b',
@@ -32,6 +34,7 @@ describe('desktopSettingsSchema aiDj settings', () => {
       },
     });
     expect(parsed.aiDj).toEqual({
+      local: DEFAULT_LOCAL_DJ,
       enabled: true,
       provider: 'openai',
       model: 'gpt-5.6-luna',
@@ -53,4 +56,10 @@ describe('desktopSettingsSchema aiDj settings', () => {
     expect(partial.aiDj.baseUrl).toBe('htt');
     expect(partial.aiDj.model).toBe('');
   });
+});
+
+it('migrates old local DJ settings to visible transcription and persists opt-out', () => {
+  const { showTranscript, ...legacy } = DEFAULT_LOCAL_DJ;
+  expect(desktopSettingsSchema.parse({ aiDj: { local: legacy } }).aiDj.local.showTranscript).toBe(true);
+  expect(desktopSettingsSchema.parse({ aiDj: { local: { ...legacy, showTranscript: false } } }).aiDj.local.showTranscript).toBe(false);
 });

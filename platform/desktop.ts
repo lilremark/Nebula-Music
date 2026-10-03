@@ -48,6 +48,8 @@ export const createDesktopPlatform = (): Platform => {
 
   const playback: PlaybackTransport = {
     onCommand: (handler) => bridge.playback.onCommand(handler),
+    publishDjEnergy: (energy) => bridge.playback.publishDjEnergy?.(energy),
+    onDjEnergy: (handler) => bridge.playback.onDjEnergy?.(handler) ?? (() => {}),
     publishSnapshot: (snapshot) => bridge.playback.publishSnapshot(snapshot),
     onSnapshot: (handler) => bridge.playback.onSnapshot(handler),
     sendCommand: (envelope) => bridge.playback.sendCommand(envelope),
@@ -94,6 +96,7 @@ export const createDesktopPlatform = (): Platform => {
     playback,
     miniPlayer: {
       toggle: () => bridge.miniPlayer.toggle(),
+      onVisibility: (handler) => bridge.miniPlayer.onVisibility?.(handler) ?? (() => {}),
       showMain: () => bridge.miniPlayer.showMain(),
     },
     power,
@@ -104,14 +107,7 @@ export const createDesktopPlatform = (): Platform => {
       openDownloadPage: () => bridge.updater.openDownloadPage(),
       onStatus: (handler) => bridge.updater.onStatus(handler),
     },
-    aiDj: bridge.aiDj
-      ? {
-          speak: (text, voiceId) => bridge.aiDj!.speak(text, voiceId),
-          cancel: () => bridge.aiDj!.cancel(),
-          voices: () => bridge.aiDj!.voices(),
-          onAudio: (handler) => bridge.aiDj!.onAudio(handler),
-        }
-      : undefined,
+    aiDj: bridge.aiDj,
     fetchJson,
     resolveMediaUrl,
   };

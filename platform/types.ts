@@ -50,6 +50,8 @@ export interface CredentialVault {
 export interface PlaybackTransport {
   onCommand(handler: (envelope: DesktopCommandEnvelope) => void): () => void;
   publishSnapshot(snapshot: DesktopSnapshot): void;
+  publishDjEnergy?(energy: number): void;
+  onDjEnergy?(handler: (energy: number) => void): () => void;
   onSnapshot(handler: (snapshot: DesktopSnapshot) => void): () => void;
   sendCommand(envelope: DesktopCommandEnvelope): void;
 }
@@ -66,6 +68,7 @@ export interface MiniPlayerControl {
   toggle(): Promise<void>;
   /** Shows and focuses the main Nebula window (mini-player window only). */
   showMain(): Promise<void>;
+  onVisibility?(handler: (visible: boolean) => void): () => void;
 }
 
 /** System power notifications (desktop only; inert on the web). */
@@ -87,12 +90,7 @@ export interface UpdaterApi {
   onStatus(handler: (state: UpdaterState) => void): () => void;
 }
 
-export interface AiDjApi {
-  speak(text: string, voiceId?: string): Promise<{ ok: boolean; error?: string }>;
-  cancel(): Promise<void>;
-  voices(): Promise<{ voices: string[]; defaultVoice: string }>;
-  onAudio(handler: (payload: { wavBase64: string; mimeType: string }) => void): () => void;
-}
+export type AiDjApi = import('../electron/aiDj/localProtocol').LocalDjApi;
 
 /**
  * Platform is the boundary between the renderer and the host. The web build

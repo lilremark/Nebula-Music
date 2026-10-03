@@ -72,12 +72,13 @@ if (isCli) {
     const metadataName = platform === 'windows' ? 'latest.yml' : 'latest-mac.yml';
     const metadataPath = entries.find((entry) => entry.name === metadataName)?.path;
     const metadataText = metadataPath ? fs.readFileSync(metadataPath, 'utf8') : '';
-    const errors = validateReleaseArtifacts({
+    const oversized = entries.filter(entry => fs.statSync(entry.path).size >= 2 ** 31).map(entry => `release asset exceeds 2 GiB: ${entry.name}`);
+    const errors = [...oversized, ...validateReleaseArtifacts({
       platform,
       version,
       files: entries.map((entry) => entry.name),
       metadataText,
-    });
+    })];
     if (errors.length) {
       for (const error of errors) console.error(error);
       process.exitCode = 1;

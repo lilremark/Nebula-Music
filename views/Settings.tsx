@@ -15,12 +15,7 @@ import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPre
 import { getAutoEqPreampDb } from '../services/eqPreamp';
 import { CustomDropdown } from '../components/CustomDropdown';
 import { getUpdateAction } from '../components/updateAction';
-import { AVAILABLE_DJ_VOICES as AVAILABLE_DJ_VOICE_IDS } from '../electron/settingsSchema';
-import {
-  PROVIDER_CATALOG,
-  getProviderById,
-  isCustomProvider,
-} from '../electron/aiDj/providerCatalog';
+import { AiDjSettings } from '../components/AiDjSettings';
 import {
     AutoEqIndexEntry,
     fetchAutoEqIndex,
@@ -38,6 +33,7 @@ const SETTINGS_JUMPS = [
     ['settings-equalizer', 'Sound'],
     ['settings-appearance', 'Interface'],
     ['settings-stream-deck', 'Integrations'],
+    ['settings-ai-dj', 'AI DJ'],
     ['settings-desktop-integration', 'Desktop'],
 ] as const;
 
@@ -320,289 +316,6 @@ const DesktopUpdatesPanel = () => {
     );
 };
 
-interface AiDjConfig {
-  enabled: boolean;
-  provider: string;
-  model: string;
-  baseUrl: string;
-  interval: number;
-  voice: string;
-}
-
-const AI_DJ_VAULT_KEY = 'aiDj:apiKey';
-// Queue orchestration is not yet wired into the playback owner. Keep the
-// unfinished settings reversible without deleting configuration or speech code.
-const AI_DJ_SETTINGS_ENABLED = false;
-
-const AI_DJ_VOICE_LABELS: Record<string, string> = {
-  'en_US-ryan-high': 'Ryan — US English (high, DJ default)',
-  'en_US-amy-medium': 'Amy — US English (medium)',
-  'en_US-lessac-medium': 'Lessac — US English (medium)',
-  'en_GB-alan-medium': 'Alan — UK English (medium)',
-};
-
-const AI_DJ_VOICES = (AVAILABLE_DJ_VOICE_IDS as readonly string[]).map((id) => ({
-  value: id,
-  label: AI_DJ_VOICE_LABELS[id] ?? id,
-}));
-
-const AI_DJ_PREVIEW_LINE = "Hey, you're listening to Nebula — here's a taste of your next queue.";
-
-// Temporarily keep the AI DJ configuration surface out of beta builds while
-// the feature is being prepared for a later release.
-const AiDjPanel = () => {
-  const platform = usePlatform();
-  // The main-process settings store always returns a complete aiDj object with
-  // schema defaults, so there is no separate renderer-side default constant.
-  const [config, setConfig] = useState<AiDjConfig | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  const [hasKey, setHasKey] = useState(false);
-  const [keyInput, setKeyInput] = useState('');
-  const [keySaving, setKeySaving] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [speakError, setSpeakError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!platform || platform.info.kind !== 'desktop') return;
-    let cancelled = false;
-    Promise.all([
-      platform.settings.get('aiDj'),
-      platform.vault.getSecret(AI_DJ_VAULT_KEY),
-    ]).then(([stored, key]) => {
-      if (cancelled) return;
-      setConfig((stored as AiDjConfig | null) ?? null);
-      setHasKey(Boolean(key));
-      setLoaded(true);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [platform]);
-
-  if (!platform || platform.info.kind !== 'desktop') return null;
-
-  const save = async (patch: Partial<AiDjConfig>) => {
-    if (!config) return;
-    const next = { ...config, ...patch };
-    setConfig(next);
-    try {
-      await platform.settings.set('aiDj', next);
-    } catch (error) {
-      console.warn('[nebula] failed to persist AI DJ settings', error);
-      setConfig(config);
-    }
-  };
-
-  const changeProvider = async (provider: string) => {
-    if (!config) return;
-    const preset = getProviderById(provider);
-    if (!preset) {
-      await save({ provider });
-      return;
-    }
-    if (isCustomProvider(provider)) {
-      await save({ provider, baseUrl: preset.baseUrl });
-      return;
-    }
-    const nextModel = preset.models[0]?.id ?? config.model;
-    await save({ provider, baseUrl: preset.baseUrl, model: nextModel });
-  };
-
-  const saveKey = async () => {
-    const value = keyInput.trim();
-    setKeySaving(true);
-    try {
-      if (value) {
-        await platform.vault.setSecret(AI_DJ_VAULT_KEY, value);
-        setHasKey(true);
-      } else {
-        await platform.vault.clearSecret(AI_DJ_VAULT_KEY);
-        setHasKey(false);
-      }
-      setKeyInput('');
-    } catch (error) {
-      console.warn('[nebula] failed to save AI DJ API key', error);
-    } finally {
-      setKeySaving(false);
-    }
-  };
-
-  return (
-    <SettingPanel icon={Headphones} title="AI DJ">
-      <ToggleRow
-        label="Enable AI DJ"
-        description="A local voice curates your up-next queue from your listening history and chimes in between tracks."
-        checked={loaded ? config?.enabled ?? false : false}
-        onChange={(v) => save({ enabled: v })}
-      />
-
-      <div className={rowClass}>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">LLM Provider</span>
-          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-            Powered by your own API key. Custom accepts any OpenAI-compatible endpoint.
-          </span>
-        </span>
-        <div className="w-48 shrink-0">
-          <CustomDropdown
-            value={config?.provider ?? ''}
-            onChange={changeProvider}
-            options={PROVIDER_CATALOG.map(p => ({ value: p.id, label: p.label }))}
-            disabled={!loaded}
-          />
-        </div>
-      </div>
-
-      {isCustomProvider(config?.provider ?? '') ? (
-        <>
-          <div className={rowClass}>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Model</span>
-              <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">Free-form model ID for your custom endpoint.</span>
-            </span>
-            <input
-              type="text"
-              value={config?.model ?? ''}
-              onChange={(e) => save({ model: e.target.value })}
-              placeholder="e.g. my-custom-model"
-              className={`${inputClass} w-48 shrink-0`}
-            />
-          </div>
-          <div className={rowClass}>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Base URL</span>
-              <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">OpenAI-compatible API base URL.</span>
-            </span>
-            <input
-              type="text"
-              value={config?.baseUrl ?? ''}
-              onChange={(e) => save({ baseUrl: e.target.value })}
-              placeholder="https://api.example.com/v1"
-              className={`${inputClass} w-48 shrink-0`}
-            />
-          </div>
-        </>
-      ) : (
-        <div className={rowClass}>
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Model</span>
-            <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">Model for the selected provider.</span>
-          </span>
-          <div className="w-48 shrink-0">
-            {(() => {
-              const entry = getProviderById(config?.provider ?? '');
-              const models = entry?.models ?? [];
-              const currentModel = config?.model ?? '';
-              const hasCurrent = models.some(m => m.id === currentModel);
-              const options = hasCurrent
-                ? models.map(m => ({ value: m.id, label: m.label }))
-                : currentModel
-                  ? [...models.map(m => ({ value: m.id, label: m.label })), { value: currentModel, label: `${currentModel} (current)` }]
-                  : models.map(m => ({ value: m.id, label: m.label }));
-              return (
-                <CustomDropdown
-                  value={currentModel}
-                  onChange={(v) => save({ model: v })}
-                  options={options}
-                  disabled={!loaded || models.length === 0}
-                  placeholder="Select model"
-                />
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      <div className={rowClass}>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Chime every</span>
-          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">Tracks between DJ interludes.</span>
-        </span>
-        <input
-          type="number"
-          min={1}
-          max={50}
-          value={config?.interval ?? 6}
-          onChange={(e) => save({ interval: Number(e.target.value) || config?.interval || 6 })}
-          className={`${inputClass} w-24 shrink-0`}
-        />
-      </div>
-
-      <div className={rowClass}>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">DJ Voice</span>
-          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-            Local Piper voice for spoken lines. Downloads on first use, then works offline. Default is Ryan (natural DJ persona).
-          </span>
-        </span>
-        <div className="w-64 shrink-0">
-          <CustomDropdown
-            value={config?.voice ?? 'en_US-ryan-high'}
-            onChange={(v) => save({ voice: v })}
-            options={AI_DJ_VOICES}
-            disabled={!loaded}
-          />
-        </div>
-      </div>
-
-      <div className={rowClass}>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Voice Preview</span>
-          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-            Synthesized locally via Piper — no API call or network. New preview cancels any in-flight line and does not interrupt playback.
-          </span>
-          {speakError && <span className="mt-1 block text-xs font-medium text-red-600 dark:text-red-400">{speakError}</span>}
-        </span>
-        <button
-          type="button"
-          onClick={async () => {
-            if (!platform || platform.info.kind !== 'desktop' || !platform.aiDj) return;
-            setSpeakError(null);
-            setSpeaking(true);
-            try {
-              const result = await platform.aiDj.speak(AI_DJ_PREVIEW_LINE, config?.voice);
-              if (!result.ok) setSpeakError(result.error ?? 'Speech failed.');
-            } catch (error) {
-              setSpeakError(error instanceof Error ? error.message : 'Speech failed.');
-            } finally {
-              setSpeaking(false);
-            }
-          }}
-          disabled={!loaded || speaking}
-          className="flex shrink-0 items-center gap-2 rounded-lg bg-neutral-900 px-4 py-3 text-xs font-bold text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
-        >
-          {speaking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Headphones className="h-3.5 w-3.5" />}
-          {speaking ? 'Speaking…' : 'Preview voice'}
-        </button>
-      </div>
-
-      <div className={rowClass}>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-neutral-900 dark:text-white">API Key</span>
-          <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-            {hasKey ? 'A key is saved in the OS credential vault.' : 'No key saved yet. The DJ is disabled until you add one.'}
-          </span>
-        </span>
-        <div className="flex w-64 shrink-0 items-center gap-2">
-          <input
-            type="password"
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
-            placeholder={hasKey ? '•••••••••••• (saved)' : 'Enter API key'}
-            className={inputClass}
-          />
-          <button
-            type="button"
-            onClick={() => void saveKey()}
-            disabled={keySaving || (!keyInput.trim() && !hasKey)}
-            className="shrink-0 rounded-lg bg-primary px-3 py-3 text-xs font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {keySaving ? 'Saving…' : (keyInput.trim() ? 'Save' : 'Clear')}
-          </button>
-        </div>
-      </div>
-    </SettingPanel>
-  );
-};
-
 export const SettingsView: React.FC = () => {
     const { settings, updateSettings, connectToSubsonic, isDemoMode, credentials, visualizerMode, setVisualizerMode, disconnect } = useStore();
     const { mode, setTheme } = useTheme();
@@ -623,7 +336,9 @@ export const SettingsView: React.FC = () => {
     const [autoEqLastFetchedAt, setAutoEqLastFetchedAt] = useState<number | null>(() => settings.eq.autoEqIndexFetchedAt || getCachedAutoEqIndexInfo()?.fetchedAt || null);
     const [pairingCode, setPairingCode] = useState('');
     const [pairingError, setPairingError] = useState('');
-    const [activeSettingsJump, setActiveSettingsJump] = useState<string>(SETTINGS_JUMPS[0][0]);
+    const { viewData } = useStore();
+    const [activeSettingsJump, setActiveSettingsJump] = useState<string>(viewData === 'settings-ai-dj' ? 'settings-ai-dj' : SETTINGS_JUMPS[0][0]);
+    useEffect(() => { if (viewData === 'settings-ai-dj') setActiveSettingsJump('settings-ai-dj'); }, [viewData]);
 
     useEffect(() => {
         setIsInsecure(isInsecureHttpUrl(url));
@@ -1328,7 +1043,7 @@ export const SettingsView: React.FC = () => {
 
                         {activeSettingsJump === 'settings-desktop-integration' && <DesktopSettingsPanel />}
                         {activeSettingsJump === 'settings-desktop-integration' && <DesktopUpdatesPanel />}
-                        {AI_DJ_SETTINGS_ENABLED && activeSettingsJump === 'settings-stream-deck' && <AiDjPanel />}
+                        {activeSettingsJump === 'settings-ai-dj' && <AiDjSettings />}
                 </div>
             </div>
         </div>

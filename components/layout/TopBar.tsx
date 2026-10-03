@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CSSProperties } from 'react';
-import { ArrowLeft, Menu, Moon, Search, Settings, Sun } from 'lucide-react';
+import { ArrowLeft, Menu, Moon, Search, Sun } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { useTheme } from '../../context/ThemeContext';
 import { usePlatform } from '../../platform/PlatformContext';
@@ -99,17 +99,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }
 
                 <button type="button" className="nebula-topbar-theme" onClick={toggleTheme} aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} theme`} style={appRegion('no-drag')}>
                     {mode === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                </button>
-
-                <button
-                    data-nebula-topbar-settings
-                    onClick={() => setView('SETTINGS')}
-                    className={`p-2.5 rounded-xl hover:bg-neutral-200 dark:hover:bg-white/10 transition-all duration-200 active:scale-95 ${currentView === 'SETTINGS' ? 'text-neutral-900 dark:text-white bg-neutral-200 dark:bg-white/10' : 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white'
-                        }`}
-                    aria-label="Settings"
-                    style={appRegion('no-drag')}
-                >
-                    <Settings className="w-5 h-5" />
                 </button>
 
             </div>

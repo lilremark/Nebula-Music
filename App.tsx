@@ -14,7 +14,7 @@ import { SearchModal } from './components/SearchModal';
 import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { UpdateBanner } from './components/UpdateBanner';
-import { DjSpeechPlayer } from './components/DjSpeechPlayer';
+
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
@@ -26,6 +26,7 @@ import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 // being visited. Library and settings code need not delay first paint.
 const HomeView = lazy(() => import('./views/Home').then(module => ({ default: module.HomeView })));
 const LibraryView = lazy(() => import('./views/Library').then(module => ({ default: module.LibraryView })));
+const AiDjView = lazy(() => import('./views/AiDj').then(module => ({ default: module.AiDjView })));
 const BrowseView = lazy(() => import('./views/Browse').then(module => ({ default: module.BrowseView })));
 const InternetRadioView = lazy(() => import('./views/InternetRadio').then(module => ({ default: module.InternetRadioView })));
 const SettingsView = lazy(() => import('./views/Settings').then(module => ({ default: module.SettingsView })));
@@ -53,7 +54,6 @@ export const AppContent: React.FC<{
   } = useStore();
 
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [compactSidebarOpen, setCompactSidebarOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(initialPlayerExpanded);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(initialSidebarCollapsed);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
@@ -148,6 +148,7 @@ export const AppContent: React.FC<{
   switch (currentView) {
     case 'HOME': ViewComponent = HomeView; break;
     case 'BROWSE': ViewComponent = BrowseView; break;
+    case 'AI_DJ': ViewComponent = AiDjView; break;
     case 'RADIO': ViewComponent = InternetRadioView; break;
     case 'SETTINGS': ViewComponent = SettingsView; break;
     case 'ARTISTS':
@@ -170,8 +171,8 @@ export const AppContent: React.FC<{
   // Determine player display mode based on settings
   const useSidebarPlayer = settings.miniPlayerMode === 'sidebar';
   const useFloatingPlayer = settings.miniPlayerMode === 'floating';
-  const collapsePlayerPanel = () => { setIsSidebarCollapsed(true); setCompactSidebarOpen(false); };
-  const showSidebarPlayer = (viewportWidth >= 1320 || compactSidebarOpen) && useSidebarPlayer && isPlayerVisible && !isSidebarCollapsed;
+  const collapsePlayerPanel = () => setIsSidebarCollapsed(true);
+  const showSidebarPlayer = useSidebarPlayer && isPlayerVisible && !isSidebarCollapsed;
   const showFloatingPlayer = viewportWidth >= 1024 && useFloatingPlayer;
   const showDesktopPlaybackBar = isPlayerVisible && !showSidebarPlayer && !showFloatingPlayer && (!isNavOpen || viewportWidth >= 768);
 
@@ -259,8 +260,7 @@ export const AppContent: React.FC<{
         panelOpen={showSidebarPlayer}
         onTogglePanel={() => {
           updateSettings({ miniPlayerMode: 'sidebar' });
-          if (viewportWidth < 1320) { setCompactSidebarOpen(true); setIsSidebarCollapsed(false); }
-          else setIsSidebarCollapsed(value => !value);
+          setIsSidebarCollapsed(false);
         }}
       />}
 
@@ -275,7 +275,7 @@ export const AppContent: React.FC<{
       <PlaylistModal />
       <SearchModal />
       <WhatsNewModal />
-      <DjSpeechPlayer />
+
     </div>
   );
 };

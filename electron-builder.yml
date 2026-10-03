@@ -4,7 +4,9 @@ directories:
   output: release
 files:
   - dist/**/*
-  - electron/dist/**/*
+  - electron/dist/main.cjs
+  - electron/dist/preload.cjs
+  - electron/dist/voiceWorker.cjs
   - electron/assets/**/*
   - package.json
 asar: true
@@ -23,6 +25,15 @@ win:
       arch:
         - x64
   artifactName: ${productName}-${version}-setup.${ext}
+  extraResources:
+    - from: electron/aiDj/resources
+      to: aiDj
+      filter:
+        - "llama/**/*"
+        - "notices/**/*"
+        - "NOTICE.md"
+        - "manifest.json"
+
 nsis:
   oneClick: true
   perMachine: false

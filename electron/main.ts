@@ -33,8 +33,10 @@ import {
   type DesktopCommandEnvelope,
   type DesktopSnapshot,
 } from '../playback/desktopProtocol';
-import { AVAILABLE_DJ_VOICES, DEFAULT_DJ_VOICE, createDjSpeechController } from './aiDj/speech';
-import { createEchogardenSynth } from './aiDj/echogardenSynth';
+import { DjModelManager } from './aiDj/modelManager';
+import { LocalDjRuntime } from './aiDj/localRuntime';
+import { djPrepareSchema } from './aiDj/localProtocol';
+import { randomUUID } from 'node:crypto';
 
 const SCHEME = 'app';
 const PROTOCOL_URL = 'app://nebula/';
@@ -78,42 +80,10 @@ const broadcastSnapshotToMiniPlayer = (snapshot: DesktopSnapshot): void => {
   miniPlayerWindow?.webContents.send(IPC.playback.snapshotToClient, snapshot);
 };
 
-const broadcastDjAudio = (payload: { wavBase64: string; mimeType: string } | null): void => {
-  const message = payload ?? { wavBase64: '', mimeType: 'audio/wav' };
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send(IPC.aiDj.audio, message);
-  }
-};
-
-let djSpeechController: ReturnType<typeof createDjSpeechController> | null = null;
-
-const getDjSpeechController = (): ReturnType<typeof createDjSpeechController> => {
-  if (djSpeechController) return djSpeechController;
-  const cacheDir = path.join(app.getPath('userData'), 'aiDj', 'voices');
-  const synth = createEchogardenSynth({ cacheDir });
-  const player = {
-    play: (wavBytes: Uint8Array): void => {
-      const wavBase64 = Buffer.from(wavBytes).toString('base64');
-      broadcastDjAudio({ wavBase64, mimeType: 'audio/wav' });
-    },
-    stop: (): void => {
-      broadcastDjAudio(null);
-    },
-  };
-  djSpeechController = createDjSpeechController({
-    synth,
-    player,
-    getVoice: () => {
-      try {
-        const aiDj = settingsStore.get('aiDj') as { voice?: string } | undefined;
-        return aiDj?.voice ?? DEFAULT_DJ_VOICE;
-      } catch {
-        return DEFAULT_DJ_VOICE;
-      }
-    },
-  });
-  return djSpeechController;
-};
+let localDj: LocalDjRuntime | null = null;
+let djModels: DjModelManager | null = null;
+const getDjModels = () => djModels ??= new DjModelManager(path.join(app.getPath('userData'), 'aiDj', 'smollm3-q4-kokoro-v1'), state => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(IPC.aiDj.modelsChanged, state); }, net.fetch as typeof fetch);
+const getLocalDj = () => localDj ??= new LocalDjRuntime(getDjModels().resources, path.join(__dirname, 'voiceWorker.cjs'), app.isPackaged ? path.join(process.resourcesPath, 'aiDj') : path.join(app.getAppPath(), 'electron/aiDj/resources'));
 
 // Snapshots arrive up to ~4x/sec (on `timeupdate`). Re-creating native images
 // from disk and poking the Windows taskbar on every snapshot is measurable
@@ -349,6 +319,7 @@ const createWindow = (): BrowserWindow => {
 
   win.webContents.on('did-finish-load', () => {
     console.log('[nebula] renderer loaded');
+    win.webContents.send(IPC.miniPlayer.visibility, miniPlayerWindow?.isVisible() ?? false);
   });
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
     console.error(
@@ -412,6 +383,9 @@ const createMiniPlayerWindow = (): BrowserWindow => {
     }
   });
 
+  win.on('show', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, true));
+  win.on('hide', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
+  win.on('closed', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
   win.once('ready-to-show', () => win.show());
 
   win.webContents.on('did-finish-load', () => {
@@ -589,6 +563,12 @@ const registerIpc = (): void => {
     }
   });
 
+  onTrusted(IPC.playback.djEnergy, (event, energy: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !miniPlayerWindow?.isVisible()) return;
+    if (energy !== 0 && !lastSnapshot?.dj?.playing) return;
+    if (typeof energy !== 'number' || !Number.isFinite(energy) || energy < 0 || energy > 1) return;
+    miniPlayerWindow.webContents.send(IPC.playback.djEnergyToClient, energy);
+  });
   onTrusted(IPC.playback.snapshot, (event, snapshot: unknown) => {
     if (!mainWindow || event.sender !== mainWindow.webContents) return;
     const parsed = desktopSnapshotSchema.safeParse(snapshot);
@@ -643,30 +623,34 @@ const registerIpc = (): void => {
     return url ? openExternalSafely(url) : false;
   });
 
-  handleTrusted(IPC.aiDj.voices, async () => ({
-    voices: [...AVAILABLE_DJ_VOICES],
-    defaultVoice: DEFAULT_DJ_VOICE,
-  }));
-
-  handleTrusted(IPC.aiDj.speak, async (event, text: unknown, voiceId: unknown) => {
-    if (!isTrustedSender(event.sender)) return { ok: false, error: 'Unauthorized.' };
-    if (typeof text !== 'string' || text.trim().length === 0) {
-      return { ok: false, error: 'Text is required.' };
-    }
-    // Voice is validated loosely: any non-empty string is accepted so custom
-    // Piper voices can be used; the schema validates the persisted value.
-    const voice = typeof voiceId === 'string' && voiceId.trim().length > 0 ? voiceId.trim() : undefined;
-    try {
-      await getDjSpeechController().speak(text, voice);
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, error: (error as Error)?.message ?? 'Speech synthesis failed.' };
-    }
+  handleTrusted(IPC.aiDj.modelsStatus, async event => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
+    return getDjModels().status();
   });
-
+  handleTrusted(IPC.aiDj.downloadModels, async event => {
+    if (event.sender !== mainWindow?.webContents || lastSnapshot?.dj?.active) throw new Error('Stop DJ before downloading models.');
+    localDj?.cancel(); localDj = null;
+    return getDjModels().download();
+  });
+  handleTrusted(IPC.aiDj.cancelDownload, async event => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
+    getDjModels().cancel();
+  });
+  handleTrusted(IPC.aiDj.readiness, async (event) => {
+    if (event.sender !== mainWindow?.webContents) return { ready: false, error: 'Unauthorized.' };
+    const models = await getDjModels().status();
+    return models.ready ? getLocalDj().readiness() : { ready: false, error: models.error || 'Download AI DJ models in Settings first.' };
+  });
+  handleTrusted(IPC.aiDj.prepare, async (event, request: unknown) => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
+    return getLocalDj().prepare(djPrepareSchema.parse(request));
+  });
+  handleTrusted(IPC.aiDj.preview, async (event, voice: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !['Michael', 'Heart'].includes(String(voice))) throw new Error('Invalid voice preview.');
+    return getLocalDj().prepare({ requestId: randomUUID(), sessionId: randomUUID(), tracks: [{ id: 'preview', title: 'your next set', artist: 'Nebula' }], taste: '', welcome: true, voice: voice as 'Michael' | 'Heart' }, true);
+  });
   handleTrusted(IPC.aiDj.cancel, async (event) => {
-    if (!isTrustedSender(event.sender)) return;
-    getDjSpeechController().cancel();
+    if (event.sender === mainWindow?.webContents) localDj?.cancel();
   });
 };
 
@@ -837,7 +821,7 @@ if (!gotLock) {
     destroyTray();
     updater?.dispose();
     try {
-      djSpeechController?.dispose();
+      localDj?.cancel();
     } catch {
       // ignore
     }
@@ -845,3 +829,5 @@ if (!gotLock) {
     miniPlayerWindow = null;
   });
 }
+
+app.on('before-quit', () => { localDj?.cancel(); djModels?.cancel(); });

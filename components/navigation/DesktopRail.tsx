@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Compass, Disc3, Heart, Home, ListMusic, Mic2, Music2, PanelLeftClose, PanelLeftOpen, Radio, Search, Settings } from 'lucide-react';
+import { Compass, Headphones, Disc3, Heart, Home, ListMusic, Mic2, Music2, PanelLeftClose, PanelLeftOpen, Radio, Search, Settings } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import logo from '../../logo.svg';
 import { ServerConnectionStatus } from './ServerConnectionStatus';
@@ -52,6 +52,7 @@ export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }>
   const listenItems = [
     { view: 'HOME', label: 'Home', icon: Home, flag: settings.sidebar.showHome },
     { view: 'BROWSE', label: 'Browse', icon: Compass, flag: settings.sidebar.showBrowse },
+    { view: 'AI_DJ', label: 'AI DJ', icon: Headphones, flag: true },
     { view: 'RADIO', label: 'Internet Radio', icon: Radio, flag: settings.sidebar.showRadio },
   ] as const;
 

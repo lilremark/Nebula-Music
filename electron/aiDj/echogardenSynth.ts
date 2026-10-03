@@ -2,19 +2,11 @@ import type { SpeechSynthesisResult, SpeechSynth } from './speech';
 import { SpeechError } from './speech';
 
 export interface EchogardenSynthOptions {
-  /** Optional on-disk directory where echogarden caches models/voices. */
+  /** Optional voice-list cache directory; model packages use NEBULA_DJ_PACKAGES_DIR. */
   cacheDir?: string;
 }
 
-/**
- * Create a real SpeechSynth backed by `echogarden` + `onnxruntime-node`.
- *
- * The voice model for `en_US-ryan-high` (~100-120MB) is downloaded on first
- * use via echogarden's internal package manager and cached locally so later
- * calls work offline. This factory is intentionally lazy: `echogarden` is
- * only imported when `synthesize` is first called, so tests can inject a
- * fake synth without having the native dependency installed.
- */
+/** Lazy Kokoro adapter. The utility process supplies the verified bundled package root. */
 export const createEchogardenSynth = (options: EchogardenSynthOptions = {}): SpeechSynth => ({
   async synthesize(text: string, voiceId: string): Promise<SpeechSynthesisResult> {
     const trimmed = text.trim();
@@ -31,9 +23,6 @@ export const createEchogardenSynth = (options: EchogardenSynthOptions = {}): Spe
       );
     }
 
-    // echogarden's package cache defaults to a per-user directory. When
-    // running inside Electron we prefer the app's userData folder if provided
-    // so the model lives next to settings/vault and is easy to clear.
     if (options.cacheDir) {
       try {
         // echogarden exposes a global cache path via its config; if unavailable
@@ -53,11 +42,12 @@ export const createEchogardenSynth = (options: EchogardenSynthOptions = {}): Spe
           synthOptions: Record<string, unknown>,
         ) => Promise<{ audio: unknown }>;
       }).synthesize(trimmed, {
-        engine: 'vits',
+        engine: 'kokoro',
+        kokoro: { model: '82m-v1.0-quantized', provider: 'cpu' },
+        language: 'en-US',
         voice: voiceId,
-        // Ask echogarden to return a WAV buffer directly when possible so we
-        // can forward raw bytes over IPC without re-encoding.
-        outputAudioFormat: { codec: 'wav' },
+        // Return raw PCM so synthesis never downloads an external WAV encoder.
+
         // Non-blocking synthesis should be quick; we keep defaults for speed/pitch
         // and let the DJ persona be defined purely by voice selection.
         ...(options.cacheDir ? { cache: { path: options.cacheDir } } : {}),

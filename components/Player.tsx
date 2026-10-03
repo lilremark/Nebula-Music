@@ -1,3 +1,4 @@
+import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './player/DjPresentation';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import {
@@ -60,7 +61,10 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         settings, updateSettings
     } = useStore();
 
+    const { dj, playQueueIndex } = useStore();
+    const voice = useDjPlayback();
     const [activeTab, setActiveTab] = useState<'playing' | 'queue' | 'lyrics'>('playing');
+    useEffect(() => { if (dj.state.active && activeTab === 'lyrics') setActiveTab('queue'); }, [dj.state.active, activeTab]);
     const [lyrics, setLyrics] = useState('');
     const [syncedLyrics, setSyncedLyrics] = useState<SyncedLine[]>([]);
     const [loadingLyrics, setLoadingLyrics] = useState(false);
@@ -75,7 +79,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 800) : '';
     const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
-    const progressMode = settings.progressVisualization;
+    const progressMode = voice.speech ? 'bar' : settings.progressVisualization;
     const waveform = useTrackWaveform(currentSong?.id, progressMode === 'waveform' ? streamUrl : null);
     const { colors } = useAdaptiveColors(coverArt);
     const { image: artistImage } = useArtistImage(currentSong?.artistId, currentSong?.artist);
@@ -163,7 +167,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     if (!currentSong) return null;
 
     const progress = duration ? (currentTime / duration) * 100 : 0;
-    const displayProgress = visualProgress || progress; // Use visual progress if actively seeking
+    const displayProgress = voice.speech ? voice.progress : visualProgress || progress; // Use visual progress if actively seeking
     const formatTime = (s: number) => {
         const min = Math.floor(s / 60);
         const sec = Math.floor(s % 60);
@@ -171,6 +175,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     };
 
     const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (voice.speech) return;
         const newProgress = parseFloat(e.target.value);
         setVisualProgress(newProgress); // Immediate visual update
         const newTime = (newProgress / 100) * duration;
@@ -206,6 +211,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             aria-hidden={!isExpanded && !isZenMode}
             style={playerBackground}
         >
+            <DjHaze speech={voice.speech} />
             {isWindows && (
                 <div
                     className="relative z-20 h-8 flex items-center justify-between px-3 border-b border-white/10"
@@ -248,14 +254,14 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             />
 
             {/* Ambient Visualizer with gaussian blur */}
-            {isPlaying && !isZenMode && (
+            {isPlaying && !voice.speech && !isZenMode && (
                 <div className="absolute inset-0 z-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
                     <Visualizer className={`w-full h-full ${isLightMode ? 'opacity-10' : 'opacity-15'}`} primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
                 </div>
             )}
 
             {/* Zen Mode Visualizer */}
-            {isZenMode && (
+            {isZenMode && !voice.speech && (
                 <div className="absolute inset-0 z-0">
                     <Visualizer className="w-full h-full opacity-80" primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
                 </div>
@@ -279,7 +285,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         data-nebula-fullscreen-tabs
                         style={appRegion('no-drag')}
                     >
-                        {(['playing', 'lyrics', 'queue'] as const).map(tab => (
+                        {(dj.state.active ? ['playing', 'queue'] as const : ['playing', 'lyrics', 'queue'] as const).map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -323,9 +329,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         {/* Album Art */}
                         <div className="relative w-full max-w-[380px] lg:max-w-[480px] shrink-0" data-nebula-fullscreen-art>
                             <div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 w-full max-w-[min(55vh,480px)] ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
-                                <img
-                                    src={coverArt}
-                                    alt={currentSong.title}
+                                <PlayerCover src={coverArt}
+                                    alt={voice.speech ? 'AI DJ' : currentSong.title}
                                     className="w-full h-full object-cover"
                                 />
                                 {/* Vinyl spinning indicator */}
@@ -340,21 +345,22 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         {/* Song Info & Controls */}
                         <div className="relative flex-1 flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-lg" data-nebula-fullscreen-info>
                             {/* Title & Artist */}
+                            <DjBadge />
                             <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-neutral-900 dark:text-white mb-2 leading-tight">
-                                {currentSong.title}
+                                {voice.speech ? 'AI DJ' : currentSong.title}
                             </h1>
                             <p
                                 className="text-lg md:text-xl text-neutral-600 dark:text-white/50 font-medium mb-2 cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
-                                onClick={() => { setView('ARTIST_DETAIL', currentSong.artistId); onClose(); }}
+                                onClick={() => { if (voice.speech) return; setView('ARTIST_DETAIL', currentSong.artistId); onClose(); }}
                             >
-                                {currentSong.artist}
+                                {voice.speech ? voice.subtitle : currentSong.artist}
                             </p>
                             <p
                                 className="text-sm text-neutral-500 dark:text-white/50 mb-8 cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
-                                onClick={() => { setView('ALBUM_DETAIL', currentSong.albumId); onClose(); }}
+                                onClick={() => { if (voice.speech) return; setView('ALBUM_DETAIL', currentSong.albumId); onClose(); }}
                             >
-                                {currentSong.album}
-                                {currentSong.suffix && (
+                                {voice.speech ? '' : currentSong.album}
+                                {!voice.speech && currentSong.suffix && (
                                     <>
                                         <span aria-hidden="true"> · </span>
                                         {currentSong.suffix.toUpperCase()}
@@ -385,14 +391,15 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     markerColor={colors.secondary || colors.primary}
                                     waveform={waveform}
                                     onScrub={handleScrub}
+                                    scrubbable={!voice.speech}
                                     trackClassName={`cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
                                         ? 'h-28 bg-transparent rounded-none'
                                         : 'h-2 bg-neutral-300 dark:bg-white/10 rounded'
                                         }`}
                                 />
                                 <div className="flex justify-between mt-2 text-xs font-mono text-neutral-600 dark:text-white/60">
-                                    <span>{formatTime(currentTime)}</span>
-                                    <span>{formatTime(duration)}</span>
+                                    <span>{formatTime(voice.speech ? voice.position : currentTime)}</span>
+                                    <span>{formatTime(voice.speech ? voice.duration : duration)}</span>
                                 </div>
                             </div>
 
@@ -400,6 +407,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <div className="flex items-center justify-center gap-6 mb-8 w-full" data-nebula-fullscreen-transport>
                                 <button
                                     onClick={toggleRepeat}
+                                    disabled={dj.state.active}
+                                    title={dj.state.active ? "Repeat is unavailable during AI DJ" : undefined}
                                     className={`p-3 rounded-lg transition-all ${repeatMode === 'OFF' ? 'text-neutral-500 dark:text-white/50 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-white/5' : 'text-neutral-900 dark:text-white bg-neutral-200 dark:bg-white/10'}`}
                                     aria-label={`Repeat mode: ${repeatMode}`}
                                 >
@@ -417,9 +426,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 <button
                                     onClick={togglePlay}
                                     className="w-20 h-20 rounded-lg bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
-                                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                                    aria-label={voice.playing ? 'Pause' : 'Play'}
                                 >
-                                    {isPlaying ? (
+                                    {voice.playing ? (
                                         <Pause className="w-8 h-8" fill="currentColor" />
                                     ) : (
                                         <Play className="w-8 h-8 ml-1" fill="currentColor" />
@@ -435,6 +444,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 </button>
 
                                 <button
+                                    disabled={voice.speech}
                                     onClick={() => toggleLike(currentSong)}
                                     className={`p-3 rounded-lg transition-all ${currentSong.starred ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/5'}`}
                                     aria-label={currentSong.starred ? 'Unlike' : 'Like'}
@@ -479,7 +489,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                 )}
 
                 {/* Lyrics Tab */}
-                {activeTab === 'lyrics' && !isZenMode && (
+                {activeTab === 'lyrics' && !dj.state.active && !isZenMode && (
                     <div className="flex-1 overflow-hidden relative" data-nebula-fullscreen-lyrics>
                         <div className="absolute inset-0 overflow-y-auto custom-scrollbar scroll-smooth" ref={lyricsContainerRef}>
                             <div className="min-h-full flex flex-col items-center justify-center py-20 px-6 text-center">
@@ -520,11 +530,16 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         </div>
                     </div>
                 )}
-
                 {/* Queue Tab */}
                 {activeTab === 'queue' && !isZenMode && (
                     <div className="flex-1 overflow-hidden px-4 md:px-8 pb-8" data-nebula-fullscreen-queue>
                         <div className="max-w-3xl mx-auto h-full flex flex-col">
+                            {(dj.state.active || voice.speech) && <div className="nebula-dj-queue-player">
+                                <div><PlayerCover src={coverArt} className="w-full h-full object-cover" /></div>
+                                <div className="nebula-dj-queue-player-copy"><DjBadge /><strong>{voice.speech ? 'AI DJ' : currentSong.title}</strong><span>{voice.speech ? voice.subtitle : currentSong.artist}</span></div>
+                                <button type="button" onClick={togglePlay} aria-label={voice.playing ? 'Pause' : 'Play'}>{voice.playing ? <Pause size={20} /> : <Play size={20} />}</button>
+                                <button type="button" onClick={nextSong} aria-label="Next track"><SkipForward size={20} /></button>
+                            </div>}
                             <div className="flex items-center justify-between py-4">
                                 <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Up Next</h2>
                                 <span className="text-sm text-neutral-600 dark:text-white/60">{queue.length} songs</span>
@@ -534,7 +549,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     <div
                                         data-nebula-fullscreen-queue-row
                                         key={`${song.id}-${idx}`}
-                                        onClick={() => playSong(song, queue)}
+                                        onClick={() => playQueueIndex(idx)}
                                         className={`flex items-center p-3 rounded-lg transition-all cursor-pointer hover:bg-neutral-100 dark:hover:bg-white/5 mb-1 ${idx === currentSongIndex ? 'bg-neutral-200 dark:bg-white/10' : ''
                                             }`}
                                     >
@@ -575,20 +590,21 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <div className="grid items-end gap-6 md:grid-cols-[minmax(220px,320px)_1fr_minmax(220px,320px)]">
                                 <div className="flex min-w-0 items-center gap-4">
                                     <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white/10 shadow-2xl md:h-24 md:w-24">
-                                        <img src={coverArt} alt={currentSong.title} className="h-full w-full object-cover" />
+                                        <PlayerCover src={coverArt} alt={voice.speech ? 'AI DJ' : currentSong.title} className="h-full w-full object-cover" />
                                     </div>
                                     <div className="min-w-0 text-left">
+                                        <DjBadge />
                                         <div className="relative max-w-full overflow-hidden">
-                                            {currentSong.title.length > 34 ? (
+                                            {!voice.speech && currentSong.title.length > 34 ? (
                                                 <h2 className="zen-title-marquee text-lg font-black text-white md:text-2xl">
-                                                    <span>{currentSong.title}</span>
-                                                    <span aria-hidden="true">{currentSong.title}</span>
+                                                    <span>{voice.speech ? 'AI DJ' : currentSong.title}</span>
+                                                    <span aria-hidden="true">{voice.speech ? 'AI DJ' : currentSong.title}</span>
                                                 </h2>
                                             ) : (
-                                                <h2 className="truncate text-lg font-black text-white md:text-2xl">{currentSong.title}</h2>
+                                                <h2 className="truncate text-lg font-black text-white md:text-2xl">{voice.speech ? 'AI DJ' : currentSong.title}</h2>
                                             )}
                                         </div>
-                                        <p className="mt-1 truncate text-sm font-medium text-white/55 md:text-base">{currentSong.artist}</p>
+                                        <p className="mt-1 truncate text-sm font-medium text-white/55 md:text-base">{voice.speech ? voice.subtitle : currentSong.artist}</p>
                                     </div>
                                 </div>
 
@@ -600,9 +616,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                         <button
                                             onClick={togglePlay}
                                             className="flex h-16 w-16 items-center justify-center rounded-lg bg-white text-black shadow-xl transition hover:scale-105"
-                                            aria-label={isPlaying ? 'Pause' : 'Play'}
+                                            aria-label={voice.playing ? 'Pause' : 'Play'}
                                         >
-                                            {isPlaying ? <Pause className="h-7 w-7" fill="currentColor" /> : <Play className="ml-0.5 h-7 w-7" fill="currentColor" />}
+                                            {voice.playing ? <Pause className="h-7 w-7" fill="currentColor" /> : <Play className="ml-0.5 h-7 w-7" fill="currentColor" />}
                                         </button>
                                         <button onClick={nextSong} className="p-4 text-white/50 transition hover:text-white" aria-label="Next track">
                                             <SkipForward className="h-7 w-7" fill="currentColor" />
@@ -610,7 +626,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <span className="w-12 text-right font-mono text-sm text-white/60">{formatTime(currentTime)}</span>
+                                        <span className="w-12 text-right font-mono text-sm text-white/60">{formatTime(voice.speech ? voice.position : currentTime)}</span>
                                         <PlaybackProgress
                                             progress={displayProgress}
                                             mode={progressMode}
@@ -620,12 +636,13 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                             markerColor={colors.secondary || colors.primary}
                                             waveform={waveform}
                                             onScrub={handleScrub}
+                                            scrubbable={!voice.speech}
                                             trackClassName={`flex-1 cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
                                                 ? 'h-16 bg-transparent rounded-none'
                                                 : 'h-1.5 bg-white/10 rounded'
                                                 }`}
                                         />
-                                        <span className="w-12 font-mono text-sm text-white/60">{formatTime(duration)}</span>
+                                        <span className="w-12 font-mono text-sm text-white/60">{formatTime(voice.speech ? voice.duration : duration)}</span>
                                     </div>
                                 </div>
 

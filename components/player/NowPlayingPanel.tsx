@@ -1,3 +1,4 @@
+import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './DjPresentation';
 import React, { useState, useEffect } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
@@ -45,6 +46,8 @@ const withAlpha = (color: string, alpha: number) => {
 export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCollapse }) => {
     const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, repeatMode, toggleRepeat, toggleLike, settings, updateSettings } = useStore();
 
+    const { dj, playQueueIndex } = useStore();
+    const voice = useDjPlayback();
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isHoveringVolume, setIsHoveringVolume] = useState(false);
@@ -54,7 +57,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 600) : '';
     const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
-    const progressMode = settings.progressVisualization;
+    const progressMode = voice.speech ? 'bar' : settings.progressVisualization;
     const waveform = useTrackWaveform(currentSong?.id, progressMode === 'waveform' ? streamUrl : null);
 
     // Adaptive colors from album art
@@ -96,7 +99,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     }, [audioRef]);
 
     const progress = duration ? (currentTime / duration) * 100 : 0;
-    const displayProgress = visualProgress || progress;
+    const displayProgress = voice.speech ? voice.progress : visualProgress || progress;
 
     const formatTime = (s: number) => {
         const min = Math.floor(s / 60);
@@ -105,6 +108,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     };
 
     const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (voice.speech) return;
         const newProgress = parseFloat(e.target.value);
         setVisualProgress(newProgress);
         const newTime = (newProgress / 100) * duration;
@@ -136,11 +140,12 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
             data-nebula-player="sidebar"
             style={{ background: `linear-gradient(180deg, ${colors.primary}15 0%, transparent 50%)` }}
         >
+            <DjHaze speech={voice.speech} active={dj.state.active} />
             {/* Top Section: Media Controls (Scrollable if needed on small screens, but usually fixed) */}
             <div className="flex-none flex flex-col items-center w-full pb-4 pt-4" data-nebula-sidebar-player-main>
                 {/* Header with collapse button */}
                 <div className="w-full relative z-10 flex items-center justify-between px-4 mb-2" data-nebula-sidebar-player-header>
-                    <span className="text-xs font-bold text-neutral-600 dark:text-white/50 uppercase tracking-wider">Now Playing</span>
+                    <span className="text-xs font-bold text-neutral-600 dark:text-white/50 uppercase tracking-wider">Now Playing <DjBadge /></span>
                     <button
                         onClick={onCollapse}
                         className="p-2 rounded-lg hover:bg-neutral-300 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-all active:scale-95"
@@ -157,9 +162,8 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         className="relative w-full aspect-square max-w-[240px] mx-auto group cursor-pointer rounded-xl shadow-2xl overflow-hidden"
                         onClick={onExpand}
                     >
-                        <img
-                            src={coverArt}
-                            alt={currentSong.title}
+                        <PlayerCover src={coverArt}
+                            alt={voice.speech ? 'AI DJ' : currentSong.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                         />
 
@@ -174,22 +178,22 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
                 {/* Song Info */}
                 <div className="px-6 text-center w-full mb-2" data-nebula-sidebar-player-info>
-                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white truncate" title={currentSong.title}>
-                        {currentSong.title}
+                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white truncate" title={voice.speech ? 'AI DJ' : currentSong.title}>
+                        {voice.speech ? 'AI DJ' : currentSong.title}
                     </h2>
                     <p
                         className="text-sm text-neutral-700 dark:text-white/50 truncate cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
-                        title={currentSong.artist}
-                        onClick={() => setView('ARTIST_DETAIL', currentSong.artistId)}
+                        title={voice.speech ? voice.subtitle : currentSong.artist}
+                        onClick={() => { if (!voice.speech) setView('ARTIST_DETAIL', currentSong.artistId); }}
                     >
-                        {currentSong.artist}
+                        {voice.speech ? voice.subtitle : currentSong.artist}
                     </p>
                     <p
                         className="text-xs text-neutral-500 dark:text-white/50 truncate cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
-                        title={currentSong.album}
-                        onClick={() => setView('ALBUM_DETAIL', currentSong.albumId)}
+                        title={voice.speech ? '' : currentSong.album}
+                        onClick={() => { if (!voice.speech) setView('ALBUM_DETAIL', currentSong.albumId); }}
                     >
-                        {currentSong.album}
+                        {voice.speech ? '' : currentSong.album}
                     </p>
                 </div>
 
@@ -215,6 +219,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         markerColor={colors.secondary || colors.primary}
                         waveform={waveform}
                         onScrub={handleScrub}
+                        scrubbable={!voice.speech}
                         showHandle
                         trackStyle={{
                             boxShadow: progressMode === 'bar'
@@ -227,8 +232,8 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                             }`}
                     />
                     <div className="flex justify-between mt-1.5 text-[10px] text-neutral-600 dark:text-white/60 font-mono tabular-nums">
-                        <span>{formatTime(currentTime)}</span>
-                        <span>{formatTime(duration)}</span>
+                        <span>{formatTime(voice.speech ? voice.position : currentTime)}</span>
+                        <span>{formatTime(voice.speech ? voice.duration : duration)}</span>
                     </div>
                 </div>
 
@@ -245,9 +250,9 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                     <button
                         onClick={togglePlay}
                         className="nebula-playback-toggle transition-all hover:scale-105 active:scale-95 shadow-xl"
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                        aria-label={voice.playing ? 'Pause' : 'Play'}
                     >
-                        {isPlaying ? (
+                        {voice.playing ? (
                             <Pause className="w-5 h-5 text-black" fill="black" />
                         ) : (
                             <Play className="w-5 h-5 ml-0.5 text-black" fill="black" />
@@ -266,6 +271,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 {/* Secondary Controls */}
                 <div className="flex items-center justify-center gap-3" data-nebula-sidebar-player-tools>
                     <button
+                        disabled={voice.speech}
                         onClick={() => toggleLike(currentSong)}
                         className={`p-2 transition-all active:scale-95 ${currentSong.starred ? 'text-red-500' : 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white'}`}
                         aria-label={currentSong.starred ? 'Unlike' : 'Like'}
@@ -274,8 +280,9 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                     </button>
                     <button
                         onClick={toggleRepeat}
+                        disabled={dj.state.active}
+                        title={dj.state.active ? "Repeat is unavailable during AI DJ" : undefined}
                         className={`p-2 transition-colors active:scale-95 ${repeatMode === 'OFF' ? 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white' : 'text-neutral-900 dark:text-white'}`}
-                        title={`Repeat: ${repeatMode}`}
                         aria-label={`Repeat mode: ${repeatMode}`}
                     >
                         {repeatMode === 'ONE' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
@@ -357,7 +364,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                                     className="group flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-white/5 cursor-pointer transition-colors"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        playSong(song, queue);
+                                        playQueueIndex(currentSongIndex + i + 1);
                                     }}
                                 >
                                     <div className="relative w-8 h-8 rounded overflow-hidden shrink-0 bg-neutral-300 dark:bg-white/10">

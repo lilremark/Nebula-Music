@@ -78,6 +78,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run dj:assets
       - run: npm run dist:win
       - run: node scripts/releaseVersion.mjs --tag "v${RELEASE_VERSION}"
       - run: node scripts/releaseArtifacts.mjs --platform windows --version "${RELEASE_VERSION}" --dir release
@@ -168,6 +169,10 @@ jobs:
 
           Windows updates download and install automatically. Unsigned macOS builds check for updates but open this GitHub release for manual DMG installation.
           EOF
+          fi
+          if [[ -f "docs/release/v${RELEASE_VERSION}.md" ]]; then
+            printf "\n" >> release-notes.md
+            cat "docs/release/v${RELEASE_VERSION}.md" >> release-notes.md
           fi
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
