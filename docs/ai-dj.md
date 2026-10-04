@@ -44,10 +44,11 @@ revisions discard obsolete work. Model errors use grounded deterministic
 commentary. TTS failures produce a recoverable error and continue music. Helpers
 start lazily and are released when DJ or voice preview ends.
 
-Discover shows the queue, completion progress, preparation/errors and session
-actions. Transcription defaults on, can be changed immediately, and appears only
-there. Players retain the real queue/track identity and normal controls. Voice
-replaces their main cover/metadata/progress temporarily and disables seeking and
+Discover uses the shared Album/Playlist header, actions and track rows, showing
+the queue, completion progress, preparation/errors and session actions. Its
+cover keeps moving while visible, including idle and paused sessions.
+Transcription defaults on, can be changed immediately, and appears only there.
+Players retain the real queue/track identity and normal controls. Voice replaces their main cover/metadata/progress temporarily and disables seeking and
 song actions. Pause keeps a static cover and haze; finish, Next, stop, error and
 profile changes clear it. Preview uses speech presentation without starting a
 session or creating a queue. Sidebar and bottom player show a subtle purple
@@ -59,8 +60,10 @@ TypeGPU 0.12.6 and unplugin-typegpu 0.12.4. The renderer is MIT; **the shader is
 non-commercial only, with XorDev attribution**. Both notices ship in
 `electron/assets/shadercn-NOTICE.txt`. A static SVG covers reduced motion,
 unavailable WebGPU, initialization failure and device loss. GPU rendering is
-capped at 30 fps and DPR 1.5, stops when paused/hidden/offscreen, and releases
-resources after use. Audio remains usable if visualization fails.
+capped at 30 fps and DPR 1.5, stops when hidden/offscreen, and releases resources
+after use. Player covers freeze on pause; the Discover cover continues its
+ambient animation. Reduced-motion changes immediately switch to a static cover.
+Audio remains usable if visualization fails.
 
 Desktop snapshots contain validated presentation/progress, never transcripts
 or audio. A bounded 10 Hz energy channel runs only while the native mini-player

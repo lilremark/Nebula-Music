@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.24';
+export const APP_VERSION = '2.5.0-beta.25';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,17 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.25',
+    date: '2026-10-04',
+    title: 'AI DJ Collection View',
+    changes: [
+      'Match the AI DJ Discover view to Album and Playlist headers, actions and track rows.',
+      'Keep the Discover orb moving while visible, including idle and paused sessions, with speech-reactive animation.',
+      'Improve compact layouts and retain live reduced-motion and static visualization fallbacks.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.25' },
+  },
   {
     version: '2.5.0-beta.24',
     date: '2026-10-03',
