@@ -1,5 +1,6 @@
 .nebula-dj-cover { position: relative; width: 100%; height: 100%; overflow: hidden; background: #15101e; }
 .nebula-dj-cover > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.nebula-dj-cover[data-shader-ready="true"] > img { visibility: hidden; }
 .nebula-dj-cover > div { position: absolute !important; inset: 0; }
 .nebula-dj-haze { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 1; opacity: 0; transition: opacity 300ms ease; background: radial-gradient(ellipse at 25% 30%, rgba(168,85,247,.19), transparent 65%), radial-gradient(ellipse at 80% 90%, rgba(126,34,206,.12), transparent 70%); }
 .nebula-dj-haze[data-session="true"] { opacity: .7; }
@@ -9,32 +10,15 @@
 .dark .nebula-dj-badge { color: #d8b4fe; }
 .nebula-transport { position: relative; }
 .nebula-transport-track-copy .nebula-dj-badge { width: max-content; font-size: 8px; }
-.nebula-dj-view { max-width: 1160px; margin: 0 auto; padding: 32px; color: var(--next-text, inherit); }
-.nebula-dj-view-header { display: flex; align-items: flex-end; gap: 32px; margin-bottom: 28px; }
-.nebula-dj-view-art { width: clamp(150px, 22vw, 230px); aspect-ratio: 1; border-radius: 12px; overflow: hidden; flex-shrink: 0; box-shadow: 0 12px 32px rgba(0,0,0,.12); }
-.nebula-dj-view-copy { min-width: 0; }
-.nebula-dj-view-copy h1 { font-size: clamp(36px, 5vw, 64px); font-weight: 800; letter-spacing: -.04em; line-height: 1.1; margin: 10px 0 14px; }
-.nebula-dj-view-copy > p { max-width: 650px; color: var(--next-muted, #737373); font-size: 14px; line-height: 1.7; margin-bottom: 20px; }
 .nebula-dj-eyebrow { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; color: var(--next-muted, #737373); }
-.nebula-dj-view-status { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.nebula-dj-view-status { font-size: 13px; font-weight: 600; padding-top: 20px; }
+.nebula-dj-empty { font-size: 14px; color: var(--next-muted); }
 .nebula-dj-caption { padding: 18px 20px; border-radius: 10px; border: 1px solid rgba(168,85,247,.12); background: rgba(168,85,247,.04); margin: 20px 0 28px; }
 .nebula-dj-caption h2 { font-size: 11px; font-weight: 700; color: #9333ea; margin-bottom: 8px; }
 .nebula-dj-caption blockquote { font-size: 14px; line-height: 1.7; margin: 0; }
-.nebula-dj-queue-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
-.nebula-dj-queue-heading h2 { font-size: 17px; font-weight: 700; }
-.nebula-dj-queue-heading > span, .nebula-dj-empty, .nebula-dj-next-summary { font-size: 12px; color: var(--next-muted, #737373); }
-.nebula-dj-track-row { display: flex; width: 100%; align-items: center; gap: 14px; border-radius: 8px; padding: 9px 12px; text-align: left; color: inherit; }
-.nebula-dj-track-row:hover { background: var(--next-surface, rgba(128,128,128,.08)); }
-.nebula-dj-track-row[data-current="true"] { background: rgba(168,85,247,.07); }
-.nebula-dj-track-row img { width: 42px; height: 42px; border-radius: 5px; object-fit: cover; }
-.nebula-dj-track-number { width: 22px; flex-shrink: 0; font-size: 11px; color: var(--next-muted, #737373); }
 .nebula-dj-track-copy { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.nebula-dj-track-copy strong { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nebula-dj-track-copy small { font-size: 11px; color: var(--next-muted, #737373); }
-.nebula-dj-track-album { width: 28%; font-size: 12px; color: var(--next-muted, #737373); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nebula-dj-track-duration { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--next-muted, #737373); }
 .nebula-dj-next-summary { margin-top: 18px; }
-@media (max-width: 767px) { .nebula-dj-view { padding: 20px; } .nebula-dj-view-header { flex-direction: column; align-items: flex-start; gap: 20px; } .nebula-dj-view-art { width: 160px; } .nebula-dj-track-album { display: none; } }
+@media (max-width: 767px) { .nebula-dj-track-album { display: none; } }
 @media (prefers-reduced-motion: reduce) { .nebula-dj-haze { transition: none; } }
 
 .nebula-dj-actions button:focus-visible, .nebula-dj-track-row:focus-visible { outline: 2px solid var(--next-accent); outline-offset: 3px; }
@@ -55,10 +39,28 @@
   .nebula-dj-preference-control { width: 100%; }
 }
 
+.nebula-dj-track-row { color: var(--next-text); }
+.nebula-dj-track-art { width: 42px; height: 42px; border-radius: 5px; object-fit: cover; flex-shrink: 0; }
+.nebula-dj-track-number { color: var(--next-muted); }
+.nebula-dj-track-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nebula-dj-track-copy small { font-size: 12px; color: var(--next-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nebula-dj-track-album { width: 28%; font-size: 14px; color: var(--next-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nebula-dj-track-duration { color: var(--next-muted); }
+.nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] .nebula-dj-mix-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 14px; margin: 0; }
 @container nebula-content (max-width: 700px) {
-  .nebula-dj-view { padding: 20px; }
-  .nebula-dj-view-header { flex-wrap: wrap; align-items: flex-start; gap: 20px; }
-  .nebula-dj-view-art { width: 160px; }
-  .nebula-dj-view-copy { flex: 1 1 260px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] { --collection-expanded-cover: clamp(110px, 25cqw, 180px); --collection-expanded-font: 28px; --collection-expanded-height: calc(var(--collection-expanded-cover) + 136px); }
   .nebula-dj-track-album { display: none; }
+}
+@container nebula-content (max-width: 420px) {
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] { --collection-expanded-height: calc(var(--collection-expanded-cover) + 160px); }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] .nebula-collection-heading { padding-inline: 16px; gap: 16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] .nebula-collection-actions { padding-inline: 16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-album-options] { gap: 6px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-album-options] button:first-child { padding-inline: 12px; font-size: 12px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-album-options] svg { width: 16px; height: 16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-detail-content] { padding-inline: 16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-track-section] { margin-inline: -16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-track-row] { padding-inline: 16px; gap: 6px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] .nebula-dj-mix-heading { padding-inline: 16px; }
+  .nebula-dj-view [data-nebula-album-meta] { font-size: 13px; }
 }

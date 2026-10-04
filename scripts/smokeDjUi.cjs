@@ -77,6 +77,22 @@ app.on('browser-window-created', (_event, win) => {
         await new Promise(resolve => setTimeout(resolve, 650));
         fs.writeFileSync(path.join(profile, name + '.png'), (await win.webContents.capturePage()).toPNG());
       };
+      const assertOrbMoving = async label => {
+        await js(`waitForDj(()=>!navigator.gpu || matchMedia('(prefers-reduced-motion: reduce)').matches || document.querySelector('[data-nebula-view="ai-dj"] [data-nebula-detail-cover] canvas')?.style.opacity==='1','${label} orb painted')`);
+        const rect = await js(`(() => {
+          const canvas=document.querySelector('[data-nebula-view="ai-dj"] [data-nebula-detail-cover] canvas');
+          if(!navigator.gpu || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+          if(!canvas || getComputedStyle(canvas).opacity!=='1') throw new Error('${label} orb missing');
+          if(getComputedStyle(canvas.closest('.nebula-dj-cover').querySelector('img')).visibility!=='hidden') throw new Error('Static cover shows through the live shader');
+          const rect=canvas.getBoundingClientRect();
+          return { x:Math.ceil(rect.x), y:Math.ceil(rect.y), width:Math.floor(rect.width)-2, height:Math.floor(rect.height)-2 };
+        })()`);
+        if(!rect) return;
+        const first=(await win.webContents.capturePage(rect)).toPNG();
+        await new Promise(resolve=>setTimeout(resolve,1200));
+        const second=(await win.webContents.capturePage(rect)).toPNG();
+        if(first.equals(second)) throw new Error(label+' orb remained static');
+      };
       await js(`window.waitForDj = async (check, name) => { for (let i=0;i<240;i++) { if(check()) return; await new Promise(r=>setTimeout(r,25)); } throw new Error(name); }; window.djButton = text => [...document.querySelectorAll('button')].find(b=>b.textContent.trim()===text); void 0;`);
       await js(`(async () => {
         await waitForDj(()=>djButton('Try Demo Mode'),'demo'); djButton('Try Demo Mode').click();
@@ -91,6 +107,18 @@ app.on('browser-window-created', (_event, win) => {
         await waitForDj(()=>document.querySelector('[data-nebula-view="ai-dj"]'),'DJ view');
         if(document.querySelector('.nebula-dj-badge')) throw new Error('Navigation started a session');
         if(!djButton('Start AI DJ').disabled) throw new Error('DJ enabled without models');
+        if(!document.querySelector('[data-nebula-view="ai-dj"] [data-nebula-collection-header]')) throw new Error('DJ collection header missing');
+        await waitForDj(()=>!navigator.gpu || document.querySelector('[data-nebula-view="ai-dj"] canvas')?.style.opacity==='1','idle cover');
+      })()`);
+      await assertOrbMoving('Idle');
+      await capture('discover-idle-dark');
+      win.webContents.debugger.attach('1.3');
+      await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+      await js(`waitForDj(()=>!document.querySelector('[data-nebula-view="ai-dj"] canvas'),'reduced motion static cover')`);
+      await capture('discover-reduced-motion');
+      await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [] });
+      win.webContents.debugger.detach();
+      await js(`(async () => {
         djButton('DJ settings').click();
         await waitForDj(()=>document.querySelector('#settings-ai-dj-tab[aria-selected="true"]'),'settings link');
         if(djButton('Start AI DJ') || djButton('Stop DJ') || document.querySelector('.nebula-dj-transcript')) throw new Error('Session controls remained in settings');
@@ -147,6 +175,39 @@ app.on('browser-window-created', (_event, win) => {
         document.querySelector('.nebula-transport [aria-label="Pause"]').click();
         await waitForDj(()=>document.querySelector('.nebula-transport [aria-label="Play"]'),'paused');
         if(!document.querySelector('.nebula-transport [aria-label="AI DJ cover"]')) throw new Error('Pause lost DJ cover');
+      })()`);
+      await assertOrbMoving('Paused');
+      await capture('discover-paused-dark');
+      win.setMinimumSize(320, 480);
+      win.setContentSize(360, 780);
+      await capture('discover-mobile-paused');
+      await js(`(() => {
+        const view=document.querySelector('[data-nebula-view="ai-dj"]');
+        const toolbar=view.querySelector('[data-nebula-album-options]').getBoundingClientRect();
+        const pane=document.querySelector('[data-nebula-main-scroll]').getBoundingClientRect();
+        if(view.scrollWidth>view.clientWidth+1 || toolbar.right>pane.right+1) throw new Error('Mobile DJ view or controls overflow');
+        const info=view.querySelector('[data-nebula-detail-info]').getBoundingClientRect();
+        if(view.querySelector('[data-nebula-album-meta] p:last-child').getBoundingClientRect().bottom>info.bottom+1) throw new Error('Mobile DJ metadata clips');
+      })()`);
+      win.setContentSize(1450, 1000);
+      await js(`(async () => {
+        const view=document.querySelector('[data-nebula-view="ai-dj"]');
+        const header=view.querySelector('[data-nebula-collection-header]');
+        const list=view.querySelector('[data-nebula-track-list]');
+        const row=list.querySelector('[data-nebula-track-row]');
+        const scroller=document.querySelector('[data-nebula-main-scroll]');
+        if(parseFloat(getComputedStyle(row).borderBottomWidth)<=0 || parseFloat(getComputedStyle(row).borderRadius)!==0) throw new Error('DJ rows do not match collections');
+        const clones=Array.from({length:16},()=>{ const clone=row.cloneNode(true); list.append(clone); return clone; });
+        const height=scroller.scrollHeight;
+        const fullHeight=header.getBoundingClientRect().height;
+        scroller.scrollTo({top:fullHeight-124+2,behavior:'instant'});
+        await waitForDj(()=>header.dataset.compact==='true','compact DJ header');
+        if(header.querySelector('[data-nebula-detail-cover]').getBoundingClientRect().width>49 || Math.abs(scroller.scrollHeight-height)>1) throw new Error('DJ header changes document height or cover does not shrink');
+        scroller.scrollTo({top:0,behavior:'instant'});
+        await waitForDj(()=>header.dataset.compact==='false','expanded DJ header');
+        clones.forEach(clone=>clone.remove());
+      })()`);
+      await js(`(async () => {
         document.querySelector('.nebula-transport [aria-label="Play"]').click();
         document.querySelector('.nebula-transport [aria-label="Open full screen player"]').click();
         await waitForDj(()=>document.querySelector('[data-nebula-player="fullscreen"].translate-y-0'),'full');
@@ -238,6 +299,15 @@ app.on('browser-window-created', (_event, win) => {
         document.querySelector('#settings-appearance-tab').click(); await waitForDj(()=>djButton('Floating Bar'),'floating option'); djButton('Floating Bar').click();
         document.querySelector('.nebula-rail [aria-label="AI DJ"]').click(); await waitForDj(()=>djButton('Stop DJ'),'stop');
         if(!document.querySelector('.nebula-dj-badge')) throw new Error('Music lost DJ identity');
+        document.querySelectorAll('.nebula-dj-track-row')[1].click();
+        await waitForDj(()=>document.querySelectorAll('.nebula-dj-track-row')[1]?.getAttribute('data-current')==='true','DJ queue selection');
+        if(!djButton('Stop DJ') || !document.querySelector('.nebula-dj-badge')) throw new Error('Queue selection ended DJ');
+      })()`);
+      await assertOrbMoving('Music');
+      await capture('discover-music-dark');
+      await js(`document.querySelector('.nebula-topbar-theme[aria-label="Switch to light theme"]').click()`);
+      await capture('discover-music-light');
+      await js(`(async () => {
         djButton('Stop DJ').click(); await waitForDj(()=>djButton('Start AI DJ'),'stopped');
         if(document.querySelector('.nebula-dj-badge')) throw new Error('Stale DJ badge after stop');
         djButton('Return to previous queue').click();

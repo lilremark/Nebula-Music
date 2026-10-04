@@ -45,6 +45,7 @@ export interface ShaderOrbProps {
   style?: CSSProperties;
   ariaLabel?: string;
   onError?: () => void;
+  onFirstFrame?: () => void;
 }
 
 /**
@@ -69,8 +70,10 @@ export const ShaderOrb = ({
   style,
   ariaLabel,
   onError,
+  onFirstFrame,
 }: ShaderOrbProps) => {
   const errorRef = useRef(onError); errorRef.current = onError;
+  const firstFrameRef = useRef(onFirstFrame); firstFrameRef.current = onFirstFrame;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [paintedKey, setPaintedKey] = useState<string | null>(null);
   const drive = useRef<OrbDrive>({ state });
@@ -95,7 +98,7 @@ export const ShaderOrb = ({
       drive: () => drive.current,
       maxDpr,
       onError: () => errorRef.current?.(),
-      onFirstFrame: () => setPaintedKey(variant.key),
+      onFirstFrame: () => { setPaintedKey(variant.key); firstFrameRef.current?.(); },
       pauseOffscreen,
       variant,
     });

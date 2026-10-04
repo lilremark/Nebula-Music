@@ -33,7 +33,7 @@ artwork. The stable branch retains its own screenshots.
 <table>
   <tr>
     <td width="50%">
-      <img src="./screenshots/beta-ai-dj.png" alt="AI DJ Discover view with session queue, transcription and purple voice cover">
+      <img src="./screenshots/beta-ai-dj.png" alt="AI DJ collection-style Discover view with session queue, transcription and animated purple cover">
     </td>
     <td width="50%">
       <img src="./screenshots/beta-player.png" alt="Full-screen player showing the purple DJ orb during speech">
@@ -152,6 +152,7 @@ reset the DJ's learning without removing likes or existing play counts.
 Players show a small AI DJ label and the normal music queue. During speech, the
 main cover becomes a purple orb that responds to voice audio. Next skips speech;
 pause freezes it. Reduced motion or unavailable WebGPU uses a static cover.
+The Discover cover keeps moving while visible, including idle or paused sessions.
 Optional transcription appears only in Discover. Stop DJ keeps queued music
 playing; Return to previous queue restores your earlier queue and position.
 
