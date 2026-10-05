@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.25';
+export const APP_VERSION = '2.5.0-beta.26';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,17 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.26',
+    date: '2026-10-05',
+    title: 'Smoother Player Switching',
+    changes: [
+      'Smoothly switch between the bottom and sidebar players with coordinated content resizing and a proper close animation.',
+      'Preserve playback, keyboard focus and reduced-motion preferences while switching players.',
+      'Round the search modal focus highlight and keep the input and close button within compact layouts.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.26' },
+  },
   {
     version: '2.5.0-beta.25',
     date: '2026-10-04',
