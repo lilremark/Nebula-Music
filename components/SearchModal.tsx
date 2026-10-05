@@ -90,7 +90,7 @@ export const SearchModal: React.FC = () => {
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent dark:from-white/5 pointer-events-none" />
 
-                    <div className={`relative p-2.5 rounded-xl border transition-all duration-300 ${query.length > 0 ? 'bg-primary/20 border-primary/40 shadow-glow-sm' : 'bg-neutral-100 border-neutral-200 dark:bg-white/5 dark:border-white/10'
+                    <div className={`relative shrink-0 p-2.5 rounded-xl border transition-all duration-300 ${query.length > 0 ? 'bg-primary/20 border-primary/40 shadow-glow-sm' : 'bg-neutral-100 border-neutral-200 dark:bg-white/5 dark:border-white/10'
                         }`}>
                         <Search className={`w-5 h-5 transition-colors duration-300 ${query.length > 0 ? 'text-primary' : 'text-neutral-400'
                             }`} />
@@ -98,20 +98,22 @@ export const SearchModal: React.FC = () => {
 
                     <input
                         ref={inputRef}
+                        data-nebula-search-input
+                        aria-label="Search music"
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search artists, albums, songs..."
-                        className="flex-1 bg-transparent border-none outline-hidden text-xl font-medium text-neutral-900 dark:text-white px-4 py-2 placeholder-neutral-500 dark:placeholder-neutral-600"
+                        className="relative flex-1 min-w-0 rounded-xl ml-3 mr-2 bg-transparent border-none text-xl font-medium text-neutral-900 dark:text-white px-4 py-2 placeholder-neutral-500 dark:placeholder-neutral-600"
                     />
 
                     {loading && (
-                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-3" />
+                        <div className="shrink-0 w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-3" />
                     )}
 
                     <button
                         onClick={handleClose}
-                        className="p-2 rounded-xl hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 transition-all duration-200 interactive-scale dark:hover:bg-white/10 dark:hover:text-white"
+                        className="shrink-0 p-2 rounded-xl hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 transition-all duration-200 interactive-scale dark:hover:bg-white/10 dark:hover:text-white"
                         aria-label="Close search"
                     >
                         <X className="w-5 h-5" />

@@ -298,6 +298,7 @@ html.dark .nebula-next-setup .nebula-setup-card { border-color: #303030; backgro
 .nebula-content-modal[data-nebula-content-modal="search"] .nebula-content-backdrop { background: rgb(0 0 0 / 20%); backdrop-filter: blur(2px); }
 .nebula-next .nebula-search-dialog, .nebula-next [data-nebula-radio-modal] { max-height: 100%; background: var(--next-surface); border: 1px solid var(--next-line); box-shadow: 0 24px 70px rgb(0 0 0 / 35%); backdrop-filter: none; }
 .nebula-next [data-nebula-radio-modal] { overflow-y: auto; }
+.nebula-search-dialog [data-nebula-search-input]:focus-visible { outline: 2px solid rgb(var(--color-primary)); outline-offset: -2px; }
 
 /* Shared collection header contracts without changing the document height. */
 .nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) { --album-line: color-mix(in srgb, var(--album-color) 24%, var(--next-line)); --collection-expanded-cover: clamp(280px, 25vw, 360px); --collection-expanded-font: clamp(36px, 4vw, 64px); --collection-expanded-height: calc(var(--collection-expanded-cover) + 136px); --collection-compact-height: 124px; background: linear-gradient(180deg, color-mix(in srgb, var(--album-color) 42%, var(--next-canvas)) 0px, color-mix(in srgb, var(--album-color) 18%, var(--next-canvas)) 520px, var(--next-canvas) 1150px); }
