@@ -127,6 +127,18 @@ app.on('browser-window-created', (_event, win) => {
         document.querySelector('[aria-label="Close playback settings"]').click();
         document.querySelector('[aria-label="Open now playing panel"]').click();
         await waitFor(() => document.querySelector('[data-nebula-panel="now-playing"]'), 'side player');
+        await new Promise(resolve => setTimeout(resolve, 90));
+        const enteringSide = document.querySelector('[data-nebula-panel="now-playing"]');
+        const exitingDock = document.querySelector('.nebula-transport');
+        const sideWidth = enteringSide.getBoundingClientRect().width;
+        if (!exitingDock?.inert || exitingDock.getAttribute('aria-hidden') !== 'true') throw new Error('Outgoing dock remains interactive during switch');
+        if (sideWidth <= 0 || sideWidth >= 339) throw new Error('Sidebar width snapped instead of animating');
+        const currentOwner = [...document.querySelectorAll('audio')].find(audio => !audio.paused);
+        const beforeSwitchTime = currentOwner.currentTime;
+        await waitFor(() => !document.querySelector('.nebula-transport'), 'dock exit');
+        await waitFor(() => enteringSide.getBoundingClientRect().width >= 339, 'sidebar entrance');
+        if (currentOwner.paused || currentOwner.currentTime <= beforeSwitchTime) throw new Error('Player switch interrupted playback');
+        console.log(JSON.stringify({ playerSwitch: true, intermediateSideWidth: sideWidth, playbackContinuous: true }));
         if (document.querySelector('.nebula-transport')) throw new Error('Bottom and side players are visible together');
         document.querySelector('[data-nebula-panel="now-playing"] [aria-label="Speed and pitch controls"]').click();
         await waitFor(() => document.querySelector('[data-nebula-speed-pitch]'), 'sidebar speed pitch panel');
@@ -158,6 +170,7 @@ app.on('browser-window-created', (_event, win) => {
         for (let i = 0; i < 100 && !document.querySelector('[data-nebula-panel="now-playing"]'); i++) await new Promise(resolve => setTimeout(resolve, 25));
         const panel = document.querySelector('[data-nebula-panel="now-playing"]');
         for (const animation of panel?.getAnimations({ subtree: true }) || []) if (animation instanceof CSSAnimation && animation.effect.getTiming().iterations !== Infinity) animation.finish();
+        for (let i = 0; i < 100 && document.querySelector('.nebula-transport'); i++) await new Promise(resolve => setTimeout(resolve, 25));
         if (!panel || document.querySelector('.nebula-transport') || getComputedStyle(panel).display === 'none' || panel.getBoundingClientRect().right > innerWidth) throw new Error('Compact sidebar player is missing or overlaps the bottom player');
         panel.querySelector('[aria-label="Collapse now playing panel"]').click();
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -228,8 +241,20 @@ app.on('browser-window-created', (_event, win) => {
       fs.writeFileSync(path.join(profile, 'navigation-collapsed-hover.png'), (await win.webContents.capturePage()).toPNG());
       await win.webContents.debugger.sendCommand('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] });
       await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-      await win.webContents.executeJavaScript(`(() => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await win.webContents.executeJavaScript(`(async () => {
         if (parseFloat(getComputedStyle(document.querySelector('.nebula-next')).transitionDuration) > 0.001) throw new Error('Sidebar animation ignores reduced-motion preferences');
+        const open = document.querySelector('[aria-label="Open now playing panel"]');
+        open.focus(); open.click();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const side = document.querySelector('[data-nebula-panel="now-playing"]');
+        const close = side.querySelector('[aria-label="Collapse now playing panel"]');
+        if (document.querySelector('.nebula-transport') || side.getBoundingClientRect().width < 300) throw new Error('Reduced-motion player switch did not settle immediately: ' + JSON.stringify({ dock: !!document.querySelector('.nebula-transport'), width: side.getBoundingClientRect().width, viewport: innerWidth }));
+        if (document.activeElement !== close) throw new Error('Switch to sidebar lost keyboard focus');
+        close.focus(); close.click();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (document.querySelector('[data-nebula-panel="now-playing"]') || !document.querySelector('.nebula-transport')) throw new Error('Reduced-motion close retained a stale player');
+        if (document.activeElement.getAttribute('aria-label') !== 'Open now playing panel') throw new Error('Closing sidebar lost keyboard focus');
       })()`);
       await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [] });
       const { nodeId: toggleNodeId } = await win.webContents.debugger.sendCommand('DOM.querySelector', { nodeId: root.nodeId, selector: '.nebula-rail-toggle' });
@@ -286,9 +311,20 @@ app.on('browser-window-created', (_event, win) => {
         };
         const findButton = text => [...document.querySelectorAll('button')].find(button => button.textContent.trim() === text);
         await waitFor(() => document.querySelector('[data-nebula-panel="now-playing"]'), 'restored side player');
+        await waitFor(() => !document.querySelector('.nebula-transport'), 'restored dock exit');
         if (document.querySelector('.nebula-transport')) throw new Error('Wide layout showed both players');
+        await new Promise(resolve => setTimeout(resolve, 400));
+        const fullSideWidth = document.querySelector('[data-nebula-panel="now-playing"]').getBoundingClientRect().width;
         document.querySelector('[aria-label="Collapse now playing panel"]').click();
         await waitFor(() => document.querySelector('.nebula-transport'), 'restored bottom player');
+        const closingSide = document.querySelector('[data-nebula-panel="now-playing"]');
+        await waitFor(() => closingSide?.inert, 'sidebar close state');
+        const closingTransition = document.querySelector('.nebula-next').getAnimations().find(animation => animation instanceof CSSTransition && animation.transitionProperty === '--nebula-player-width');
+        if (closingTransition?.effect.getTiming().duration !== 280 || closingSide.getBoundingClientRect().width > fullSideWidth + 1) throw new Error('Sidebar close did not animate its reserved width');
+        // A hidden Windows compositor can suspend CSS frames; complete after
+        // confirming the real close transition and retained, inert surface.
+        closingTransition.finish();
+        await waitFor(() => !document.querySelector('[data-nebula-panel="now-playing"]'), 'sidebar exit');
         if (document.querySelector('[data-nebula-panel="now-playing"]')) throw new Error('Side player remained mounted after collapse');
         findButton('Settings').click();
         await waitFor(() => document.querySelector('[data-nebula-settings-jumps]'), 'settings');

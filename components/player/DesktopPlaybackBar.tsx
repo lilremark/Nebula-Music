@@ -6,6 +6,7 @@ import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
 import { SpeedPitchControls } from './SpeedPitchControls';
+import { PlayerSurface } from './PlayerSurface';
 
 interface DesktopPlaybackBarProps {
   onExpand: () => void;
@@ -81,7 +82,7 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
     setPosition(nextPosition);
   };
 
-  return <footer className="nebula-transport" aria-label="Playback controls">
+  return <PlayerSurface kind="dock" className="nebula-transport">
     <DjHaze speech={voice.speech} active={voice.dj.state.active} />
     <div className="nebula-transport-progress">
       {isRadio ? <span className="nebula-transport-live" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }} /> : <PlaybackProgress
@@ -131,5 +132,5 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
       <input type="range" min={0} max={1} step={0.01} value={volume} onChange={event => setVolume(Number(event.target.value))} aria-label="Volume" style={{ '--progress': `${volume * 100}%` } as React.CSSProperties} />
       <button type="button" className="nebula-transport-icon" onClick={onExpand} aria-label="Open full screen player"><Maximize2 size={18} /></button>
     </div>
-  </footer>;
+  </PlayerSurface>;
 };

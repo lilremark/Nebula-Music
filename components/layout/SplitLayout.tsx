@@ -1,4 +1,6 @@
 import React from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { PlayerSurface } from '../player/PlayerSurface';
 
 interface SplitLayoutProps {
     leftPanel?: React.ReactNode;
@@ -29,9 +31,9 @@ export const SplitLayout: React.FC<SplitLayoutProps> = ({
             </section>
 
             {/* Right Panel - Now Playing (Desktop, when not collapsed) */}
+            <AnimatePresence initial={false}>
             {showSidebar && (
-                <aside
-                    data-nebula-panel="now-playing"
+                <PlayerSurface kind="sidebar" key="sidebar-player"
                     className="
                         nebula-side-player flex flex-col
                         w-[340px] min-w-[340px] max-w-[340px]
@@ -39,11 +41,11 @@ export const SplitLayout: React.FC<SplitLayoutProps> = ({
                         bg-gradient-to-b from-neutral-100 via-neutral-200 to-neutral-100
                         dark:from-black dark:via-neutral-950 dark:to-black
                     "
-                    style={{ animation: 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}
                 >
-                    {rightPanel}
-                </aside>
+                    <div className="nebula-side-player-content">{rightPanel}</div>
+                </PlayerSurface>
             )}
+            </AnimatePresence>
 
             {/* Floating Mini-Player (centered at bottom when collapsed) */}
             {isPlayerVisible && floatingPlayer && (

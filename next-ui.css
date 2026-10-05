@@ -3,10 +3,17 @@
   inherits: true;
   initial-value: 234px;
 }
+@property --nebula-player-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
 
 .nebula-next {
   --nebula-rail-width: 234px;
-  transition: --nebula-rail-width 260ms cubic-bezier(.2, .8, .2, 1);
+  --nebula-player-width: 0px;
+  --nebula-player-expanded-width: clamp(260px, 28vw, 340px);
+  transition: --nebula-rail-width 260ms cubic-bezier(.2, .8, .2, 1), --nebula-player-width 280ms cubic-bezier(.22, 1, .36, 1);
   --next-canvas: #f3f4f8;
   --next-rail: #e8eaf1;
   --next-surface: #ffffff;
@@ -18,6 +25,10 @@
   color: var(--next-text);
   background: var(--next-canvas);
   font-family: 'Manrope', 'Inter', sans-serif;
+}
+.nebula-next[data-nebula-sidebar-player-open="true"] {
+  --nebula-player-width: var(--nebula-player-expanded-width);
+  transition-duration: 260ms, 360ms;
 }
 
 html.dark .nebula-next {
@@ -184,6 +195,11 @@ html.dark .nebula-next {
 .nebula-next [data-nebula-floating-dock] { left: calc(50% + var(--nebula-rail-width) / 2); }
 
 .nebula-content-with-dock { padding-bottom: 228px; }
+.nebula-next .nebula-transport { left: calc(50% + var(--nebula-rail-width) / 2 - var(--nebula-player-width) / 2); width: min(1040px, calc(100% - var(--nebula-rail-width) - var(--nebula-player-width) - 40px)); }
+.nebula-player-content-space { transition: padding-bottom 360ms cubic-bezier(.22, 1, .36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .nebula-player-content-space { transition: none; }
+}
 .nebula-transport { position: fixed; left: calc(50% + var(--nebula-rail-width) / 2); bottom: 16px; transform: translateX(-50%); z-index: 45; display: grid; grid-template-columns: minmax(0, 1fr) 160px minmax(0, 1fr); align-items: center; column-gap: 20px; row-gap: 10px; width: min(1040px, calc(100% - var(--nebula-rail-width) - 40px)); padding: 12px 18px 14px; border: 1px solid var(--next-line); border-radius: 20px; box-shadow: 0 16px 48px rgb(0 0 0 / 35%); background: var(--next-surface); color: var(--next-text); }
 .nebula-transport-track { display: flex; align-items: center; min-width: 0; gap: 11px; }
 .nebula-transport-art { width: 55px; height: 55px; flex: none; border-radius: 8px; object-fit: cover; }
@@ -230,12 +246,13 @@ html:not(.dark) .nebula-transport { --next-waveform: #b8b8b8; }
   .nebula-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 1180px) {
-  .nebula-transport { grid-template-columns: minmax(0, 1fr) 152px minmax(0, 1fr); column-gap: 14px; width: min(920px, calc(100% - var(--nebula-rail-width) - 32px)); }
+  .nebula-transport { grid-template-columns: minmax(0, 1fr) 152px minmax(0, 1fr); column-gap: 14px; }
+  .nebula-next .nebula-transport { width: min(920px, calc(100% - var(--nebula-rail-width) - var(--nebula-player-width) - 32px)); }
   .nebula-transport-tools input { width: 80px; }
 }
 
 @media (max-width: 1023px) {
-  .nebula-transport { left: 50%; width: calc(100% - 32px); }
+  .nebula-next .nebula-transport { left: calc(50% - var(--nebula-player-width) / 2); width: calc(100% - var(--nebula-player-width) - 32px); }
   .nebula-next .nebula-topbar { padding-inline: 18px; }
   .nebula-next .nebula-search-trigger { min-width: 0; width: 40px; height: 40px; justify-content: center; padding: 0; }
   .nebula-next .nebula-search-trigger span, .nebula-next .nebula-search-trigger kbd { display: none; }
@@ -264,6 +281,7 @@ html:not(.dark) .nebula-transport { --next-waveform: #b8b8b8; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .nebula-next { transition: none !important; }
   .nebula-next, .nebula-next *, .nebula-next *::before, .nebula-next *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
@@ -389,7 +407,9 @@ html.dark .nebula-next-setup .nebula-setup-card { border-color: #303030; backgro
 }
 
 .nebula-split-layout { position: relative; }
-.nebula-next .nebula-side-player { overflow: hidden; flex: 0 0 clamp(260px, 28vw, 340px); width: clamp(260px, 28vw, 340px); min-width: 0; max-width: 340px; }
+.nebula-next .nebula-side-player { overflow: hidden; flex: 0 0 auto; width: var(--nebula-player-width); min-width: 0; max-width: 340px; }
+.nebula-side-player-content { display: flex; flex-direction: column; width: var(--nebula-player-expanded-width); min-width: var(--nebula-player-expanded-width); height: 100%; }
+[data-nebula-player-surface][data-player-exiting] { pointer-events: none; }
 .nebula-next [data-nebula-content-shell] { container: nebula-content / inline-size; }
 @media (max-height: 740px) {
   .nebula-side-player [data-nebula-sidebar-player-art] > div { max-width: 160px; }

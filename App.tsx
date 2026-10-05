@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useState, useEffect, useCallback, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { StoreProvider, useStore } from './context/Store';
 import { SplitLayout, TopBar, MacTitleBar, WindowsTitleBar } from './components/layout';
 import { NavDrawer } from './components/navigation';
@@ -177,7 +178,7 @@ export const AppContent: React.FC<{
   const showDesktopPlaybackBar = isPlayerVisible && !showSidebarPlayer && !showFloatingPlayer && (!isNavOpen || viewportWidth >= 768);
 
   return (
-    <div data-nebula-rail-collapsed={settings.sidebar.collapsed ? 'true' : 'false'} className="nebula-next relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
+    <div data-nebula-rail-collapsed={settings.sidebar.collapsed ? 'true' : 'false'} data-nebula-sidebar-player-open={showSidebarPlayer ? 'true' : 'false'} className="nebula-next relative flex h-screen flex-col overflow-hidden bg-neutral-200 dark:bg-neutral-950 text-neutral-900 dark:text-white">
       <WindowsTitleBar />
       <MacTitleBar />
 
@@ -241,7 +242,7 @@ export const AppContent: React.FC<{
           data-nebula-main-scroll
           className="flex-1 overflow-y-auto custom-scrollbar"
         >
-          <div className={`min-h-full ${showDesktopPlaybackBar ? 'nebula-content-with-dock' : isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
+          <div className={`min-h-full nebula-player-content-space ${showDesktopPlaybackBar ? 'nebula-content-with-dock' : isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
             <BlurFade key={`${currentView}-${String(viewData ?? '')}`} duration={0.3} blur="4px" offset={10}>
               <ViewErrorBoundary key={currentView}>
                 <Suspense fallback={<div className="p-8 text-neutral-500" role="status">Loading view…</div>}>
@@ -255,7 +256,8 @@ export const AppContent: React.FC<{
       </SplitLayout>
       </div>
 
-      {showDesktopPlaybackBar && <DesktopPlaybackBar
+      <AnimatePresence initial={false}>
+      {showDesktopPlaybackBar && <DesktopPlaybackBar key="bottom-player"
         onExpand={() => setIsExpanded(true)}
         panelOpen={showSidebarPlayer}
         onTogglePanel={() => {
@@ -263,6 +265,7 @@ export const AppContent: React.FC<{
           setIsSidebarCollapsed(false);
         }}
       />}
+      </AnimatePresence>
 
       {/* Full Screen Player (expanded mode) */}
       {isRadioPlayerVisible ? (
