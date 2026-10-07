@@ -6,7 +6,7 @@ import { StepPlayer } from '../components/vendor/rare-step-player';
 import { Tabs } from '../components/vendor/aceternity-tabs';
 import SpotlightCard from '../components/vendor/reactbits-spotlight-card';
 import { ISong, IAlbum } from '../types';
-import { Play, Plus, Clock, Flame, Compass, ListPlus, RefreshCw, ChevronRight, BarChart2 } from 'lucide-react';
+import { Play, Plus, Clock, Flame, Compass, ListPlus, RefreshCw, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
 
 // Album Card Component - Square, minimal rounding
 const AlbumCard: React.FC<{ album: IAlbum; onClick: () => void }> = ({ album, onClick }) => {
@@ -206,9 +206,11 @@ interface SongRowProps {
 }
 
 const SongRow: React.FC<SongRowProps> = ({ song, onClick, getCoverArtUrl }) => (
-    <div
-        className="flex items-center gap-3 p-2 hover:bg-neutral-100 dark:hover:bg-white/5 rounded cursor-pointer group transition"
+    <button
+        type="button"
+        className="flex w-full items-center gap-3 p-2 text-left hover:bg-neutral-100 dark:hover:bg-white/5 rounded cursor-pointer group transition"
         onClick={onClick}
+        aria-label={`Play ${song.title} by ${song.artist}`}
     >
         <div className="w-10 h-10 relative shrink-0">
             <img
@@ -236,14 +238,17 @@ const SongRow: React.FC<SongRowProps> = ({ song, onClick, getCoverArtUrl }) => (
             )}
             {song.duration && <span>{formatDuration(song.duration)}</span>}
         </div>
-    </div>
+    </button>
 );
+
+const ROTATION_PAGE_SIZE = 6;
 
 export const HomeView: React.FC = () => {
     const { service, playSong, setView, getMostPlayedSongs, homeData, refreshHomeData, refreshQuickPicks, refreshDiscovery, isInitialized } = useStore();
     const [loadingExplore, setLoadingExplore] = useState(false);
     const [loadingQuickPicks, setLoadingQuickPicks] = useState(false);
     const [activeTab, setActiveTab] = useState<'played' | 'recommended'>('played');
+    const [rotationPage, setRotationPage] = useState(0);
 
     useEffect(() => {
         // Wait for Store initialization to complete before fetching data
@@ -259,6 +264,13 @@ export const HomeView: React.FC = () => {
     }, [refreshHomeData, isInitialized]);
 
     const { randomSongs, exploreAlbums, recentAlbums, newestAlbums } = homeData;
+    const mostPlayedSongs = getMostPlayedSongs();
+    const rotationSongs = activeTab === 'played'
+        ? mostPlayedSongs.slice(0, 50)
+        : homeData.recommendedTracks.slice(0, 20);
+    const rotationPageCount = Math.ceil(rotationSongs.length / ROTATION_PAGE_SIZE);
+    const currentRotationPage = Math.min(rotationPage, Math.max(0, rotationPageCount - 1));
+    const rotationStart = currentRotationPage * ROTATION_PAGE_SIZE;
 
     return (
         <div data-nebula-view="home" className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
@@ -270,13 +282,13 @@ export const HomeView: React.FC = () => {
             <HeroSection songs={randomSongs} />
 
             {/* Quick Picks & Most Played */}
-            <div data-nebula-home-picks className="grid grid-cols-1 gap-6 mb-12">
+            <div data-nebula-home-picks className="grid grid-cols-1 items-start gap-6 mb-12">
                 {/* Quick Picks Grid */}
                 <div>
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                             <Flame className="w-5 h-5 text-orange-500" />
-                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Quick Picks</h2>
+                            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Quick Picks</h2>
                         </div>
                         <button
                             onClick={async () => { setLoadingQuickPicks(true); await refreshQuickPicks(); setLoadingQuickPicks(false); }}
@@ -296,54 +308,64 @@ export const HomeView: React.FC = () => {
                 {/* Listening history and personal recommendations */}
                 <section className="nebula-home-rotation" aria-labelledby="nebula-home-rotation-heading">
                     <div className="nebula-home-rotation-heading">
-                        <div>
-                            <h2 id="nebula-home-rotation-heading">Your rotation</h2>
-                        </div>
-                        <span>{activeTab === 'played'
-                            ? `${getMostPlayedSongs().length} most-played tracks`
-                            : `${homeData.recommendedTracks.length} tracks for you`}</span>
+                        <h2 id="nebula-home-rotation-heading">Your rotation</h2>
                     </div>
                     <div id="most-played-panel">
                             <Tabs
                                 tabs={[{ title: 'Most Played', value: 'played' }, { title: 'For You', value: 'recommended' }]}
                                 value={activeTab}
-                                onValueChange={value => setActiveTab(value as 'played' | 'recommended')}
+                                onValueChange={value => {
+                                    setActiveTab(value as 'played' | 'recommended');
+                                    setRotationPage(0);
+                                }}
                                 showContent={false}
                                 containerClassName="nebula-home-tabs"
                                 tabClassName="nebula-home-tab"
                                 activeTabClassName="nebula-home-tab-active"
                             />
 
-                            <div className="max-h-[400px] overflow-y-auto p-4 custom-scrollbar">
-                                {activeTab === 'played' ? (
-                                    <div className="space-y-1">
-                                        {getMostPlayedSongs().slice(0, 50).map((song) => (
-                                            <SongRow
-                                                key={song.id}
-                                                song={song}
-                                                onClick={() => playSong(song, getMostPlayedSongs())}
-                                                getCoverArtUrl={(id, size) => service.getCoverArtUrl(id, size)}
-                                            />
-                                        ))}
-                                        {getMostPlayedSongs().length === 0 && (
-                                            <div className="text-center py-8 text-neutral-600 dark:text-white/60 text-sm">
-                                                Your most-played music will appear here as you listen.
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-1">
-                                        {homeData.recommendedTracks.slice(0, 20).map((song, i) => (
-                                            <SongRow
-                                                key={song.id}
-                                                song={song}
-                                                onClick={() => playSong(song, homeData.recommendedTracks)}
-                                                getCoverArtUrl={(id, size) => service.getCoverArtUrl(id, size)}
-                                            />
-                                        ))}
+                            <div id="nebula-home-rotation-tracks" className="p-3 space-y-1">
+                                {rotationSongs.slice(rotationStart, rotationStart + ROTATION_PAGE_SIZE).map(song => (
+                                    <SongRow
+                                        key={song.id}
+                                        song={song}
+                                        onClick={() => playSong(song, activeTab === 'played' ? mostPlayedSongs : homeData.recommendedTracks)}
+                                        getCoverArtUrl={(id, size) => service.getCoverArtUrl(id, size)}
+                                    />
+                                ))}
+                                {rotationSongs.length === 0 && (
+                                    <div className="text-center py-8 text-neutral-600 dark:text-white/60 text-sm">
+                                        {activeTab === 'played' ? 'No played tracks yet.' : 'No recommendations yet.'}
                                     </div>
                                 )}
                             </div>
+                            {rotationPageCount > 1 && (
+                                <nav className="nebula-home-rotation-pagination" aria-label="Rotation pages">
+                                    <span aria-live="polite" aria-atomic="true">
+                                        {rotationStart + 1}–{Math.min(rotationStart + ROTATION_PAGE_SIZE, rotationSongs.length)} of {rotationSongs.length}
+                                    </span>
+                                    <div>
+                                        <button
+                                            type="button"
+                                            aria-label="Previous tracks"
+                                            aria-controls="nebula-home-rotation-tracks"
+                                            disabled={currentRotationPage === 0}
+                                            onClick={() => setRotationPage(currentRotationPage - 1)}
+                                        >
+                                            <ChevronLeft size={16} aria-hidden="true" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-label="Next tracks"
+                                            aria-controls="nebula-home-rotation-tracks"
+                                            disabled={currentRotationPage === rotationPageCount - 1}
+                                            onClick={() => setRotationPage(currentRotationPage + 1)}
+                                        >
+                                            <ChevronRight size={16} aria-hidden="true" />
+                                        </button>
+                                    </div>
+                                </nav>
+                            )}
                     </div>
                 </section>
             </div>

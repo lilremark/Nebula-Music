@@ -18,7 +18,7 @@ const finish = error => {
   console.log(JSON.stringify({ playerUi: error ? 'failed' : 'passed', screenshots: profile, error: error?.stack }));
   app.exit(error ? 1 : 0);
 };
-const timeout = setTimeout(() => finish(new Error('Player UI check timed out')), 60_000);
+const timeout = setTimeout(() => finish(new Error('Player UI check timed out')), 120_000);
 app.whenReady().then(() => {
   // Offline fixtures exercise real decoding and playback without network traffic.
   const artwork = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" fill="#c06040"/><circle cx="340" cy="160" r="80" fill="#e8af70"/><path d="M0 400L512 230V512H0Z" fill="#722c24"/></svg>';
@@ -79,6 +79,32 @@ app.on('browser-window-created', (_event, win) => {
           throw new Error('Official branding or OLED background was not applied');
         if (parseFloat(getComputedStyle(document.querySelector('.nebula-rail-status strong')).fontSize) < 13)
           throw new Error('Sidebar connection status is too small');
+        const rotation = document.querySelector('.nebula-home-rotation');
+        const picks = document.querySelector('[data-nebula-home-picks]');
+        const quickBounds = picks.firstElementChild.getBoundingClientRect();
+        const rotationBounds = rotation.getBoundingClientRect();
+        if (rotationBounds.left <= quickBounds.right || Math.abs(rotationBounds.top - quickBounds.top) > 1)
+          throw new Error('Rotation is not beside Quick Picks on desktop');
+        if (rotation.querySelector('.nebula-home-eyebrow') || /as you listen|from your listening/i.test(rotation.textContent))
+          throw new Error('Rotation flavor text remained visible');
+        const rotationTab = title => [...rotation.querySelectorAll('.nebula-home-tab')].find(button => button.textContent === title);
+        rotationTab('For You').click();
+        await waitFor(() => rotation.querySelector('[aria-label="Next tracks"]'), 'rotation pagination');
+        const rotationTracks = () => rotation.querySelector('#nebula-home-rotation-tracks');
+        const rotationRange = () => rotation.querySelector('.nebula-home-rotation-pagination > span')?.textContent.replace(/\\s/g, '') ?? '';
+        if (rotationTracks().children.length !== 6 || rotationRange() !== '1–6of8' || !rotation.querySelector('[aria-label="Previous tracks"]').disabled)
+          throw new Error('First rotation page is incorrect');
+        const firstPageHeight = rotation.getBoundingClientRect().height;
+        rotation.querySelector('[aria-label="Next tracks"]').click();
+        await waitFor(() => rotationRange() === '7–8of8', 'last rotation page');
+        if (rotationTracks().children.length !== 2 || !rotation.querySelector('[aria-label="Next tracks"]').disabled || Math.abs(rotation.getBoundingClientRect().height - firstPageHeight) > 1)
+          throw new Error('Last rotation page is incorrect or changes the card height');
+        rotationTab('Most Played').click();
+        await waitFor(() => rotation.textContent.includes('No played tracks yet.'), 'empty rotation');
+        rotationTab('For You').click();
+        await waitFor(() => rotationRange() === '1–6of8', 'rotation tab page reset');
+        if ([rotation, ...rotation.querySelectorAll('*')].some(element => ['auto', 'scroll'].includes(getComputedStyle(element).overflowY) && element.scrollHeight > element.clientHeight))
+          throw new Error('Rotation still contains a nested vertical scroller');
         document.querySelector('.nebula-quick-song-play').click();
         await waitFor(() => document.querySelector('.nebula-transport'), 'bottom player');
         document.querySelector('[aria-label="Switch to waveform"]')?.click();
@@ -154,6 +180,13 @@ app.on('browser-window-created', (_event, win) => {
       await new Promise(resolve => setTimeout(resolve, 100));
       win.setContentSize(1450, 1050);
       await new Promise(resolve => setTimeout(resolve, 1000));
+      await win.webContents.executeJavaScript(`(() => {
+        const picks = document.querySelector('[data-nebula-home-picks]');
+        const quick = picks.firstElementChild.getBoundingClientRect();
+        const rotation = picks.querySelector('.nebula-home-rotation').getBoundingClientRect();
+        if (rotation.left <= quick.right || Math.abs(rotation.top - quick.top) > 1)
+          throw new Error('Rotation stops sitting beside Quick Picks with the side player open');
+      })()`);
       fs.writeFileSync(path.join(profile, 'home-side-player.png'), (await win.webContents.capturePage()).toPNG());
       // An open sidebar stays beside the content when the window gets smaller.
       win.setContentSize(1100, 850);
@@ -163,6 +196,11 @@ app.on('browser-window-created', (_event, win) => {
         const content = document.querySelector('[data-nebula-content-shell]');
         if (!panel || document.querySelector('.nebula-transport') || content.getBoundingClientRect().right > panel.getBoundingClientRect().left + 1)
           throw new Error('Responsive sidebar overlaps the content');
+        const picks = document.querySelector('[data-nebula-home-picks]');
+        const quick = picks.firstElementChild.getBoundingClientRect();
+        const rotation = picks.querySelector('.nebula-home-rotation').getBoundingClientRect();
+        if (rotation.top < quick.bottom || rotation.right > content.getBoundingClientRect().right + 1)
+          throw new Error('Rotation does not stack below Quick Picks in narrow content');
         panel.querySelector('[aria-label="Collapse now playing panel"]').click();
       })()`);
       await win.webContents.executeJavaScript(`(async () => {
