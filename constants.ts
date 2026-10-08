@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.26';
+export const APP_VERSION = '2.5.0-beta.27';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,17 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.27',
+    date: '2026-10-07',
+    title: 'Home Rotation Layout',
+    changes: [
+      'Place Your Rotation to the right of Quick Picks on desktop, including with the sidebar player open.',
+      'Replace the nested track scrollbar with six-track pages while retaining access to all Top 50 and For You tracks.',
+      'Remove flavor text from the rotation card and stack it below Quick Picks when space is limited.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.27' },
+  },
   {
     version: '2.5.0-beta.26',
     date: '2026-10-05',
