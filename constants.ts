@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.27';
+export const APP_VERSION = '2.5.0-beta.28';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,16 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.28',
+    date: '2026-10-07',
+    title: 'More Quick Picks',
+    changes: [
+      'Show up to 12 Quick Picks instead of eight, filling six desktop rows beside Your Rotation.',
+      'Keep the existing playback, refresh controls and responsive layout.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.28' },
+  },
   {
     version: '2.5.0-beta.27',
     date: '2026-10-07',
