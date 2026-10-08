@@ -299,7 +299,7 @@ export const HomeView: React.FC = () => {
                         </button>
                     </div>
                     <div className="nebula-quick-grid">
-                        {randomSongs.slice(0, 8).map((song, i) => (
+                        {randomSongs.slice(0, 12).map((song, i) => (
                             <SongCard key={`${song.id}-${i}`} song={song} songs={randomSongs} />
                         ))}
                     </div>
