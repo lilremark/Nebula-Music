@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.28';
+export const APP_VERSION = '2.5.0-beta.29';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,17 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.29',
+    date: '2026-10-07',
+    title: 'macOS Beta',
+    changes: [
+      'Publish the current beta for macOS Apple Silicon with DMG and ZIP downloads.',
+      'Include the latest player, search, Home rotation and expanded Quick Picks improvements.',
+      'Verify both macOS and Windows builds before publishing beta releases.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.29' },
+  },
   {
     version: '2.5.0-beta.28',
     date: '2026-10-07',

@@ -14,7 +14,7 @@ The stable/beta toggle is an in-app setting that maps to
 - **Beta** (`allowPrerelease = true`) — the updater also considers GitHub
   releases marked as **Prerelease**.
 
-The updater always reads the `latest.yml` that `electron-builder` publishes;
+The updater reads `latest.yml` on Windows and `latest-mac.yml` on macOS, as published by `electron-builder`;
 the channel is never a separate filename. Pre-release versions use semver
 prerelease tags (`2.5.0-beta.1`). See
 [ADR 0004](../adr/0004-beta-release-channel.md) for the rationale.
@@ -76,7 +76,8 @@ appended to the published prerelease by the desktop workflow.
 `.github/workflows/release-desktop.yml` runs on `v*` tags:
 
 - Any tag containing `-beta.` is treated as a **beta pre-release**:
-  - builds Windows only (macOS is skipped),
+  - builds Windows x64 and macOS Apple Silicon (arm64),
+  - requires both platform builds and artifact checks to pass before publication,
   - publishes a **published GitHub Prerelease** immediately (drafts are
     invisible to the updater, so a beta must be published to be delivered).
 - Any other `v*` tag is a **stable release**:
@@ -97,4 +98,8 @@ When a beta line matures:
 
 - Windows beta builds are unsigned and may trigger SmartScreen on install;
   updates download and install automatically once installed.
+- macOS beta builds are unsigned and not notarized, and Gatekeeper may block
+  first launch. Updates open the GitHub release for manual DMG installation.
+- Local AI DJ currently requires Windows x64; the macOS beta includes the
+  current music-player UI and playback features without local AI DJ inference.
 - Stable users are never offered pre-release builds.

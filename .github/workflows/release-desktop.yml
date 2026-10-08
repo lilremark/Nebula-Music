@@ -94,7 +94,6 @@ jobs:
 
   macos:
     name: Build macOS arm64
-    if: needs.verify.outputs.is-beta != 'true'
     needs: verify
     runs-on: macos-latest
     timeout-minutes: 35
@@ -131,7 +130,7 @@ jobs:
 
   draft-release:
     name: Assemble draft release
-    if: github.ref_type == 'tag' && !cancelled() && needs.verify.result == 'success' && needs.windows.result == 'success'
+    if: github.ref_type == 'tag' && !cancelled() && needs.verify.result == 'success' && needs.windows.result == 'success' && needs.macos.result == 'success'
     needs: [verify, windows, macos]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -149,15 +148,16 @@ jobs:
           path: release-assets
           merge-multiple: true
       - run: node scripts/releaseArtifacts.mjs --platform windows --version "${RELEASE_VERSION}" --dir release-assets
-      - if: needs.verify.outputs.is-beta != 'true'
-        run: node scripts/releaseArtifacts.mjs --platform mac --version "${RELEASE_VERSION}" --dir release-assets
+      - run: node scripts/releaseArtifacts.mjs --platform mac --version "${RELEASE_VERSION}" --dir release-assets
       - name: Write release caveats
         run: |
           if [[ "${{ needs.verify.outputs.is-beta }}" == "true" ]]; then
             cat > release-notes.md <<'EOF'
           ## Beta build
 
-          This is a pre-release beta of Nebula. The Windows build is unsigned and may show a SmartScreen warning; updates download and install automatically once installed.
+          This is a pre-release beta of Nebula for Windows x64 and macOS Apple Silicon (arm64). Both builds are unsigned. Windows may show a SmartScreen warning; updates download and install automatically once installed.
+
+          macOS builds are not notarized and may be blocked by Gatekeeper. macOS updates open the GitHub release for manual DMG installation. Local AI DJ currently requires Windows x64.
 
           Switch the update channel to Beta in Settings to receive this and future beta builds. Stable users are never offered pre-release builds.
           EOF
