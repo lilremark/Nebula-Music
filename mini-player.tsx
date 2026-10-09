@@ -19,8 +19,8 @@ import type { DesktopSnapshot, DesktopUpcomingTrack } from './playback/desktopPr
 const appRegion = (region: 'drag' | 'no-drag'): CSSProperties =>
   ({ WebkitAppRegion: region }) as CSSProperties;
 
-const formatDuration = (seconds: number): string => {
-  if (!Number.isFinite(seconds) || seconds <= 0) return '--:--';
+const formatDuration = (seconds: number, fallback = '--:--'): string => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return fallback;
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
@@ -116,112 +116,109 @@ const MiniPlayerContent: React.FC = () => {
 
   const track = snapshot?.track ?? null;
   const upcoming: DesktopUpcomingTrack[] = snapshot?.upcoming ?? [];
+  const title = speech ? 'AI DJ' : track ? track.title : snapshot?.playing ? 'Playing…' : 'Not playing';
+  const subtitle = speech ? snapshot?.dj?.preview ? 'Voice preview' : snapshot?.dj?.playing ? 'Introducing your next set' : 'DJ paused' : track?.artist ?? 'Nebula Music';
+  const position = speech ? snapshot?.dj?.position ?? 0 : track ? snapshot?.positionSeconds ?? 0 : 0;
+  const duration = speech ? snapshot?.dj?.duration ?? 0 : track ? snapshot?.durationSeconds ?? 0 : 0;
 
   return (
-    <div className="relative flex h-full w-full flex-col select-none overflow-hidden bg-neutral-900/95">
+    <div className="nebula-mini">
       <div className="nebula-dj-haze" data-speaking={speech} aria-hidden="true" />
       {/* Compact now-playing bar */}
-      <div className="flex items-center gap-3 px-3 py-2.5" style={appRegion('drag')}>
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg">{speech ? <DjCover playing={!!snapshot?.dj?.playing} energy={energy} /> : <Art url={track?.coverArtUrl} size="h-12 w-12" />}</div>
+      <div className="nebula-mini-header" style={appRegion('drag')}>
+        <div className="nebula-mini-track">
+          <div className="nebula-mini-art">{speech ? <DjCover playing={!!snapshot?.dj?.playing} energy={energy} /> : <Art url={track?.coverArtUrl} size="h-12 w-12" />}</div>
 
-        <div className="min-w-0 flex-1">
-          {snapshot?.dj?.active && <span className="nebula-dj-badge">AI DJ</span>}
-          <p className="truncate text-sm font-semibold text-white">
-            {speech ? 'AI DJ' : track ? track.title : snapshot?.playing ? 'Playing…' : 'Not playing'}
-          </p>
-          <p className="truncate text-xs text-white/50">
-            {speech ? snapshot?.dj?.preview ? 'Voice preview' : snapshot?.dj?.playing ? 'Introducing your next set' : 'DJ paused' : track ? `${track.artist}${track.album ? ` — ${track.album}` : ''}` : 'Nebula Music'}
-          </p>
-          <PlaybackProgress progress={displayProgress} mode="bar" accentColor={colors.primary}
-            secondaryColor={colors.secondary} markerColor={colors.secondary} baseColor="rgba(255,255,255,.1)"
-            scrubbable={false} showHandle trackClassName="mt-1.5 h-0.5 w-full rounded-full" />
+          <div className="nebula-mini-copy">
+            {snapshot?.dj?.active && <span className="nebula-dj-badge">AI DJ</span>}
+            <p className="nebula-mini-title" title={title}>{title}</p>
+            <p className="nebula-mini-subtitle" title={subtitle}>{subtitle}</p>
+            {!speech && track?.album && <p className="nebula-mini-album" title={track.album}>{track.album}</p>}
+          </div>
+          <button type="button" onClick={() => void platform?.miniPlayer.showMain()}
+            className="nebula-mini-icon" style={appRegion('no-drag')}
+            aria-label="Open Nebula window" title="Open Nebula window">
+            <ExternalLink size={16} />
+          </button>
         </div>
+        <div className="nebula-mini-bottom">
+          <div className="nebula-mini-progress">
+            <PlaybackProgress progress={track || speech ? displayProgress : 0} mode="bar" accentColor={colors.primary}
+              secondaryColor={colors.secondary} markerColor={colors.secondary} baseColor="rgba(255,255,255,.1)"
+              scrubbable={false} showHandle trackClassName="nebula-mini-progress-track" />
+            <div className="nebula-mini-times"><span>{formatDuration(position, '0:00')}</span><span>{formatDuration(duration)}</span></div>
+          </div>
 
-        {/* Transport controls */}
-        <div className="flex items-center gap-0.5" style={appRegion('no-drag')}>
-          <button
-            type="button"
-            onClick={() => send('previous')}
-            className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Previous track"
-          >
-            <SkipBack className="h-4 w-4" fill="currentColor" />
-          </button>
-          <button
-            type="button"
-            onClick={() => send(snapshot?.playing ? 'setPlayback' : 'togglePlayback')}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-500 text-black transition-transform hover:scale-105 active:scale-95"
-            aria-label={snapshot?.playing ? 'Pause' : 'Play'}
-          >
-            {snapshot?.playing ? (
-              <Pause className="h-4 w-4" fill="black" />
-            ) : (
-              <Play className="ml-0.5 h-4 w-4" fill="black" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => send('next')}
-            className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Next track"
-          >
-            <SkipForward className="h-4 w-4" fill="currentColor" />
-          </button>
-          <button
-            type="button"
-            onClick={() => void platform?.miniPlayer.showMain()}
-            className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Open Nebula window"
-            title="Open Nebula window"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </button>
+          {/* Transport controls */}
+          <div className="nebula-mini-controls" style={appRegion('no-drag')}>
+            <button
+              type="button"
+              onClick={() => send('previous')}
+              className="nebula-mini-icon nebula-mini-skip"
+              aria-label="Previous track"
+            >
+              <SkipBack size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={() => send(snapshot?.playing ? 'setPlayback' : 'togglePlayback')}
+              className="nebula-mini-play"
+              aria-label={snapshot?.playing ? 'Pause' : 'Play'}
+            >
+              {snapshot?.playing ? (
+                <Pause size={20} />
+              ) : (
+                <Play className="ml-0.5" size={20} />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => send('next')}
+              className="nebula-mini-icon nebula-mini-skip"
+              aria-label="Next track"
+            >
+              <SkipForward size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Up Next list */}
       {upcoming.length > 0 && (
-        <div className="border-t border-white/10 bg-neutral-950/60">
-          <div className="flex items-center justify-between px-3 pt-2 pb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
-              Up Next
-            </span>
-            <span className="text-[10px] font-semibold text-cyan-400">{upcoming.length} tracks</span>
+        <section className="nebula-mini-queue">
+          <div className="nebula-mini-queue-heading">
+            <h2>Up Next</h2>
+            <span>{upcoming.length} {upcoming.length === 1 ? 'track' : 'tracks'}</span>
           </div>
-          <div className="max-h-[168px] overflow-y-auto pb-1.5">
+          <div className="nebula-mini-queue-list custom-scrollbar" aria-label="Up next">
             {upcoming.map((item, index) => (
               <button
-                key={item.id}
+                key={`${item.id}-${index}`}
                 type="button"
                 onClick={() => jumpTo(index)}
                 style={appRegion('no-drag')}
-                className="group flex w-full items-center gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-white/5"
+                className="nebula-mini-queue-item"
                 title={`Play "${item.title}"`}
               >
                 <Art url={item.coverArtUrl} size="h-8 w-8" />
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={`block truncate text-xs ${
-                      index === 0
-                        ? 'font-semibold text-cyan-400'
-                        : 'font-medium text-white/90'
-                    }`}
-                  >
+                <span className="nebula-mini-copy">
+                  <span className="nebula-mini-title">
                     {item.title}
                   </span>
-                  <span className="block truncate text-[11px] text-white/40">
+                  <span className="nebula-mini-subtitle">
                     {item.artist}
                     {item.album ? ` — ${item.album}` : ''}
                   </span>
                 </span>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-white/35">
+                <span className="nebula-mini-duration">
                   {formatDuration(item.durationSeconds)}
                 </span>
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
+      {upcoming.length === 0 && <div className="nebula-mini-empty"><Music2 size={22} aria-hidden="true" /><strong>Nothing queued</strong><span>Your upcoming tracks will appear here.</span></div>}
     </div>
   );
 };

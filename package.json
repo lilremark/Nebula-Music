@@ -21,6 +21,7 @@
     "test:desktop": "electron scripts/smokeDesktop.cjs",
     "test:taskbar": "electron scripts/smokeTaskbar.cjs",
     "test:player-ui": "electron scripts/smokePlayerUi.cjs",
+    "test:mini-player": "electron scripts/smokeMiniPlayer.cjs",
     "test:audio": "electron scripts/testEqAudio.cjs",
     "build:electron": "node esbuild.config.mjs && vite build",
     "start:electron": "node esbuild.config.mjs && vite build && electron .",

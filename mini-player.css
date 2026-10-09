@@ -1,0 +1,40 @@
+/* Companion to the current dark player: OLED canvas, raised surfaces,
+   white square transport, and artwork-derived progress colors. */
+html { color-scheme: dark; }
+html, body, #mini-player-root { width: 100%; height: 100%; }
+body { background: #000; color: #f5f5f5; }
+.nebula-mini { display: flex; flex-direction: column; width: 100%; height: 100%; overflow: hidden; position: relative; user-select: none; background: #000; font-family: 'Manrope', 'Inter', sans-serif; }
+.nebula-mini-header { flex: none; position: relative; padding: 12px 14px; background: #101010; border-bottom: 1px solid #ffffff1a; }
+.nebula-mini-track { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.nebula-mini-art { width: 48px; height: 48px; flex: none; overflow: hidden; border-radius: 8px; }
+.nebula-mini-copy { flex: 1; min-width: 0; }
+.nebula-mini-title, .nebula-mini-subtitle, .nebula-mini-album { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nebula-mini-title { font-size: 14px; line-height: 20px; font-weight: 800; color: #f5f5f5; }
+.nebula-mini-subtitle { font-size: 11px; line-height: 17px; color: #bcbcbc; }
+.nebula-mini-album { font-size: 10px; line-height: 15px; color: #a8a8a8; }
+.nebula-mini-bottom { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
+.nebula-mini-progress { flex: 1; min-width: 0; padding: 4px 0; }
+.nebula-mini-progress-track { height: 3px; width: 100%; border-radius: 4px; }
+.nebula-mini-times { display: flex; justify-content: space-between; margin-top: 7px; font-size: 10px; line-height: 14px; color: #a8a8a8; font-variant-numeric: tabular-nums; }
+.nebula-mini-controls { display: flex; align-items: center; gap: 8px; flex: none; }
+.nebula-mini-icon { width: 28px; height: 32px; display: grid; place-items: center; flex: none; padding: 0; border-radius: 7px; color: #bcbcbc; transition: color 150ms, background 150ms; }
+.nebula-mini-icon:hover { background: #242424; color: #f5f5f5; }
+.nebula-mini-skip svg { stroke: #f5f5f5; fill: #a8a8a8; stroke-opacity: .85; }
+.nebula-mini-play { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border-radius: 8px; background: #fff; color: #000; transition: transform 150ms; }
+.nebula-mini-play:hover { transform: scale(1.04); }
+.nebula-mini-play:active { transform: scale(.96); }
+.nebula-mini-play svg { fill: currentColor; }
+.nebula-mini button:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.nebula-mini-queue { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
+.nebula-mini-queue-heading { display: flex; align-items: center; justify-content: space-between; flex: none; padding: 10px 14px 6px; font-size: 10px; line-height: 14px; color: #a8a8a8; }
+.nebula-mini-queue-heading h2 { font-size: inherit; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.nebula-mini-queue-list { flex: 1; min-height: 0; overflow-y: auto; padding: 0 6px 6px; scrollbar-gutter: stable; }
+.nebula-mini-queue-item { display: flex; align-items: center; width: 100%; min-width: 0; gap: 10px; padding: 7px 8px; border-radius: 7px; text-align: left; }
+.nebula-mini-queue-item:hover { background: #181818; }
+.nebula-mini-queue-item:first-child { background: #101010; }
+.nebula-mini-queue-item .nebula-mini-title { font-size: 12px; line-height: 18px; font-weight: 600; }
+.nebula-mini-queue-item .nebula-mini-subtitle { font-size: 10px; line-height: 15px; }
+.nebula-mini-duration { flex: none; font-size: 10px; color: #a8a8a8; font-variant-numeric: tabular-nums; }
+.nebula-mini-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: #a8a8a8; font-size: 11px; }
+.nebula-mini-empty strong { color: #f5f5f5; font-size: 12px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .nebula-mini button { transition: none; } }
