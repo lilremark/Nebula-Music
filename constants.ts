@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.29';
+export const APP_VERSION = '2.5.0-beta.30';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,18 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.5.0-beta.30',
+    date: '2026-10-09',
+    title: 'Mini Player Refresh',
+    changes: [
+      'Match the mini player to the current desktop design with white square playback controls and dark surfaces.',
+      'Give track, artist and album text more room, and show elapsed and total playback time.',
+      'Fix queue sizing and scrolling so upcoming tracks use the available window height.',
+      'Add a clear empty queue state while preserving playback commands and AI DJ presentation.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.30' },
+  },
   {
     version: '2.5.0-beta.29',
     date: '2026-10-07',
