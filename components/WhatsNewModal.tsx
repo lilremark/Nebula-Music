@@ -29,10 +29,10 @@ export const WhatsNewModal: React.FC = () => {
         onClick={handleClose}
       />
 
-      <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-scale-in">
+      <div className="relative w-full max-w-lg max-h-[calc(100dvh-2rem)] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-scale-in">
 
         {/* Header */}
-        <div className="relative p-8 pb-6 overflow-hidden border-b border-neutral-200 dark:border-white/5 bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-800/50 dark:to-neutral-900/50">
+        <div className="relative p-8 pb-6 shrink-0 overflow-hidden border-b border-neutral-200 dark:border-white/5 bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-800/50 dark:to-neutral-900/50">
           <div className="absolute inset-0 bg-grid-white/[0.02] dark:bg-grid-white/[0.02] bg-[length:20px_20px]" />
 
           <button
@@ -57,7 +57,7 @@ export const WhatsNewModal: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="p-8 pt-6 flex-1 max-h-[60vh] overflow-y-auto custom-scrollbar bg-neutral-50 dark:bg-neutral-900/50">
+        <div className="p-8 pt-6 flex-1 min-h-0 max-h-[60vh] overflow-y-auto custom-scrollbar bg-neutral-50 dark:bg-neutral-900/50">
           <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-6 flex items-center justify-center">
             {currentLog.title}
           </h3>
@@ -80,7 +80,7 @@ export const WhatsNewModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-neutral-900 space-y-3">
+        <div className="p-6 shrink-0 border-t border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-neutral-900 space-y-3">
           {currentLog.link && (
             <a
               href={currentLog.link.href}

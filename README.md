@@ -23,25 +23,25 @@
 
 ## Screenshots
 
-Nebula **3.0**, captured with Computer Use from the real desktop app in an
-isolated **Demo Mode** session. These screenshots use the demo library only;
-no personal music server or account is shown.
+Nebula **3.0** in **Demo Mode**, with dark and light themes, the floating
+playback dock, the Now Playing sidebar, and the full-screen player.
+These screenshots use the demo library only.
 
 <p align="center">
-  <img src="./screenshots/v3-home-demo.png" alt="Nebula 3.0 Home in Demo Mode with Quick Picks, recommendations and the now-playing sidebar" width="100%">
+  <img src="./screenshots/v3-home-demo.png" alt="Nebula 3.0 Home in dark mode with featured music, Quick Picks and Your Rotation from the demo library" width="100%">
 </p>
 
 <table>
   <tr>
-    <td width="50%"><img src="./screenshots/v3-browse-demo.png" alt="Demo library Browse with generated mixes and daily album picks"></td>
-    <td width="50%"><img src="./screenshots/v3-library-light-demo.png" alt="Demo album library in the light theme with the sidebar player"></td>
+    <td width="50%"><img src="./screenshots/v3-dock-demo.png" alt="Demo Mode Home with the floating playback dock showing Synthesizer Love"></td>
+    <td width="50%"><img src="./screenshots/v3-home-light-demo.png" alt="Demo Mode Home in the light theme with the Now Playing sidebar"></td>
   </tr>
   <tr>
-    <td align="center"><strong>Browse and discovery</strong></td>
-    <td align="center"><strong>Album library in light mode</strong></td>
+    <td align="center"><strong>Floating playback dock</strong></td>
+    <td align="center"><strong>Light theme and Now Playing sidebar</strong></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="./screenshots/v3-player-demo.png" alt="Full-screen player with a demo track and playback controls" width="100%"></td>
+    <td colspan="2"><img src="./screenshots/v3-player-demo.png" alt="Full-screen player showing the demo track Synthesizer Love, artwork, seeking and speed controls" width="100%"></td>
   </tr>
 </table>
 
@@ -419,11 +419,18 @@ permitted by the music server's CORS policy.
 
 ### v3.0.0 — October 9, 2026
 
-- Promote the beta design, playback reliability, search and mini-player improvements to stable.
-- Update every direct dependency to its latest stable version and remove known npm audit findings.
-- Disable and hide AI DJ on web and macOS while retaining optional experimental Windows support.
-- Refresh README screenshots using the real app and an isolated demo library.
-- Publish Windows x64 and macOS Apple Silicon builds together.
+Highlights since **v2.4.6**, the previous stable release:
+
+- Redesigned dark and light interfaces, collapsible navigation, and sticky album/playlist headers.
+- Floating playback dock, responsive Now Playing sidebar, smooth layout switching, and refreshed native mini player.
+- Detailed stereo waveforms, artwork-colored progress, and shared speed/pitch controls.
+- Up to 12 Quick Picks and paginated Top 50 / For You rotation on Home.
+- Refined search, library controls, and keyboard-accessible Settings sections.
+- Experimental local AI DJ with optional model downloads on Windows; hidden and disabled on web/macOS.
+- More reliable long queues and crossfades, consistent AutoEQ preamp, updated dependencies, and stronger account isolation.
+- Windows x64 and macOS Apple Silicon downloads, Stable/Beta update channels, and reliable taskbar playback controls.
+
+[Full 3.0 release notes](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)
 
 
 ### v2.5.0-beta.26 — October 5, 2026

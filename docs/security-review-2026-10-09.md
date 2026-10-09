@@ -81,8 +81,8 @@ advisories or prove all possible malicious-server behaviors are safe.
   the optional feature. Both desktop and compact mobile navigation are checked.
 - Player smoke assertion now waits for the completed dark-theme animation
   before testing its final background color.
-- Real Computer Use screenshots from a fresh Demo Mode profile, saved unchanged
-  as the README's Home, Browse, light album library and full-player images.
+- Real Computer Use screenshots from a fresh Demo Mode profile. The README
+  subsequently uses maintainer-supplied Demo Mode captures to exclude the cursor.
 
 Hosted release CI additionally builds Windows x64 and macOS arm64, runs native
 startup/platform smoke checks on both hosts, checks bundle version/architecture,
