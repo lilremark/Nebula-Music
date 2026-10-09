@@ -47,4 +47,15 @@ describe('createDesktopPlatform', () => {
     expect(desktopBridge.playback.sendCommand).toHaveBeenCalled();
     expect(desktopBridge.vault.set).toHaveBeenCalled();
   });
+
+  it.each(['darwin', 'linux'])('disables a supplied AI DJ bridge on %s', (os) => {
+    vi.stubGlobal('window', { desktop: { ...desktopBridge, info: { ...desktopBridge.info, os }, aiDj: { readiness: vi.fn() } } });
+    expect(createDesktopPlatform().aiDj).toBeUndefined();
+  });
+
+  it('retains the AI DJ bridge on Windows', () => {
+    const aiDj = { readiness: vi.fn() };
+    vi.stubGlobal('window', { desktop: { ...desktopBridge, aiDj } });
+    expect(createDesktopPlatform().aiDj).toBe(aiDj);
+  });
 });

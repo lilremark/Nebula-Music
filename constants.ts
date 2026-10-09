@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.4.6';
+export const APP_VERSION = '3.0.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,337 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '3.0.0',
+    date: '2026-10-09',
+    title: 'Nebula 3.0',
+    changes: [
+      'Bring the redesigned library, responsive player, search and refreshed mini player to the stable channel.',
+      'Include playback recovery, account isolation, secure desktop IPC and network hardening from beta.',
+      'Update direct dependencies to current stable versions and remove known dependency vulnerabilities.',
+      'Keep optional local AI DJ exclusive to Windows; hide and disable it on web and macOS.',
+      'Release Windows x64 and macOS Apple Silicon builds together.',
+    ],
+    link: { label: 'View stable release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0' },
+  },
+  {
+    version: '2.5.0-beta.30',
+    date: '2026-10-09',
+    title: 'Mini Player Refresh',
+    changes: [
+      'Match the mini player to the current desktop design with white square playback controls and dark surfaces.',
+      'Give track, artist and album text more room, and show elapsed and total playback time.',
+      'Fix queue sizing and scrolling so upcoming tracks use the available window height.',
+      'Add a clear empty queue state while preserving playback commands and AI DJ presentation.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.30' },
+  },
+  {
+    version: '2.5.0-beta.29',
+    date: '2026-10-07',
+    title: 'macOS Beta',
+    changes: [
+      'Publish the current beta for macOS Apple Silicon with DMG and ZIP downloads.',
+      'Include the latest player, search, Home rotation and expanded Quick Picks improvements.',
+      'Verify both macOS and Windows builds before publishing beta releases.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.29' },
+  },
+  {
+    version: '2.5.0-beta.28',
+    date: '2026-10-07',
+    title: 'More Quick Picks',
+    changes: [
+      'Show up to 12 Quick Picks instead of eight, filling six desktop rows beside Your Rotation.',
+      'Keep the existing playback, refresh controls and responsive layout.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.28' },
+  },
+  {
+    version: '2.5.0-beta.27',
+    date: '2026-10-07',
+    title: 'Home Rotation Layout',
+    changes: [
+      'Place Your Rotation to the right of Quick Picks on desktop, including with the sidebar player open.',
+      'Replace the nested track scrollbar with six-track pages while retaining access to all Top 50 and For You tracks.',
+      'Remove flavor text from the rotation card and stack it below Quick Picks when space is limited.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.27' },
+  },
+  {
+    version: '2.5.0-beta.26',
+    date: '2026-10-05',
+    title: 'Smoother Player Switching',
+    changes: [
+      'Smoothly switch between the bottom and sidebar players with coordinated content resizing and a proper close animation.',
+      'Preserve playback, keyboard focus and reduced-motion preferences while switching players.',
+      'Round the search modal focus highlight and keep the input and close button within compact layouts.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.26' },
+  },
+  {
+    version: '2.5.0-beta.25',
+    date: '2026-10-04',
+    title: 'AI DJ Collection View',
+    changes: [
+      'Match the AI DJ Discover view to Album and Playlist headers, actions and track rows.',
+      'Keep the Discover orb moving while visible, including idle and paused sessions, with speech-reactive animation.',
+      'Improve compact layouts and retain live reduced-motion and static visualization fallbacks.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.25' },
+  },
+  {
+    version: '2.5.0-beta.24',
+    date: '2026-10-03',
+    title: 'AI DJ Settings Refinement',
+    changes: [
+      'Match AI DJ preferences to the shared Settings switches, dropdowns, buttons, typography and row spacing.',
+      'Group model downloads and system requirements in a padded section, with consistent progress and action controls.',
+      'Show the DJ voice level as a percentage and keep preferences usable in compact windows and both themes.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.24' },
+  },
+  {
+    version: '2.5.0-beta.23',
+    date: '2026-10-03',
+    title: 'Local AI DJ',
+    changes: [
+      'Start personalized AI DJ sessions from Discover, with local commentary and Michael or Heart voices after four or five completed tracks.',
+      'Download verified SmolLM3 and Kokoro models in AI DJ Settings; the models are optional and excluded from the installer.',
+      'Choose familiar, balanced or discovery listening, interludes between sets or over lowered music, and optional Discover transcription.',
+      'Show a speech-reactive purple orb in every player, with a subtle purple background during DJ sessions.',
+      'Keep the main view visible with both sidebars open, separate Home slideshow controls from album actions, and simplify the top bar.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.23' },
+  },
+  {
+    version: '2.5.0-beta.20',
+    date: '2026-10-02',
+    title: 'Windows Taskbar Transport Controls',
+    changes: [
+      'Show Previous, Play/Pause, and Next in the Windows taskbar thumbnail preview when Nebula opens.',
+      'Retry toolbar registration when Windows is not ready and restore the controls when returning from the tray.',
+      'Keep the Play/Pause button synchronized with playback without rebuilding the toolbar on every progress update.',
+    ],
+  },
+  {
+    version: '2.5.0-beta.19',
+    date: '2026-10-02',
+    title: 'Subtle Sidebar Highlight',
+    changes: [
+      'Removed the shadow from selected sidebar items while keeping a subtle background highlight.',
+      'Updated the Electron build downloader to remove a vulnerable transitive HTTP caching dependency.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.19'
+    }
+  },
+  {
+    version: '2.5.0-beta.17',
+    date: '2026-10-02',
+    title: 'Player and Library UI Refinements',
+    changes: [
+      'Fixed the sidebar logo staying hidden after mouse interaction and refined active navigation highlights.',
+      'Made the sidebar player available in smaller windows with a compact panel and exclusive player visibility.',
+      'Shared the speed and pitch popover across bottom, sidebar, and full-screen players with 0.1-step buttons and sliders.',
+      'Clarified update status with red Available and green Up to Date badges.',
+      'Removed excess spacing before collection tracks while preserving stable sticky-header scrolling.',
+      'Restyled Songs with divided track rows, larger controls, artwork, and favorite actions.',
+      'Kept Albums filters on a single compact row with a shorter search field.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.17'
+    }
+  },
+  {
+    version: '2.5.0-beta.16',
+    date: '2026-10-02',
+    title: 'Sidebar and Progress Refinements',
+    changes: [
+      'Lightened elapsed progress bars with a pale artwork-tinted gradient for clearer playback position.',
+      'Aligned collapsed navigation icons and playlist artwork, and added smooth sidebar opening and closing with reduced-motion support.',
+      'Added section dividers in both sidebar states and revealed the expand button over the collapsed Nebula logo on hover or keyboard focus.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.16'
+    }
+  },
+  {
+    version: '2.5.0-beta.15',
+    date: '2026-10-01',
+    title: 'Artwork Gradients and Collapsible Navigation',
+    changes: [
+      'Applied artwork-color gradients to progress bars, played waveform bars, and playheads across all music players, including the native mini-player.',
+      'Added a collapsible left sidebar with navigation icons, playlist artwork, accessible labels, and saved collapse state.',
+      'Kept navigation vertical without scrolling in short windows and centered the playback dock as the sidebar changes width.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.15'
+    }
+  },
+  {
+    version: '2.5.0-beta.14',
+    date: '2026-10-01',
+    title: 'Playback Control Visuals',
+    changes: [
+      'Replaced the progress-bar knob with an unclipped vertical playhead extending beyond the bar.',
+      'Reduced bottom waveform height slightly while preserving its detail and smooth playback position.',
+      'Matched bottom and sidebar transport controls to the large player with white square play buttons and outlined skip controls.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.14'
+    }
+  },
+  {
+    version: '2.5.0-beta.13',
+    date: '2026-10-01',
+    title: 'Waveform and Settings Refinements',
+    changes: [
+      'Extended album and playlist track highlights and dividers to the edges of the content pane.',
+      'Added taller, more detailed stereo waveforms with a smooth playhead, white played bars, and a yellow position marker.',
+      'Added bottom-dock speed, pitch, independent-pitch, and waveform/progress controls.',
+      'Showed actual audio-derived peaks and used a progress bar when a waveform is unavailable.',
+      'Separated Settings into individual sections with keyboard-accessible tabs.',
+      'Kept sidebar navigation vertical in short windows and sized playlists to the available space.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.13'
+    }
+  },
+  {
+    version: '2.5.0-beta.12',
+    date: '2026-10-01',
+    title: 'Floating Playback Dock and Collection Headers',
+    changes: [
+      'Replaced the full-width bottom player with a centered, rounded dock and moved the waveform above its controls.',
+      'Separated album and playlist details from their action bars and replaced track cards with flat rows and dividers.',
+      'Added shared sticky album and playlist headers that shrink while scrolling and expand again at the top.',
+      'Kept artwork, titles, and playback actions visible in compact headers without changing scroll height.',
+      'Restored bottom playback controls in narrower desktop windows and preserved volume, seeking, and full-screen playback.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.12'
+    }
+  },
+  {
+    version: '2.5.0-beta.11',
+    date: '2026-10-01',
+    title: 'Album Layout and Modal Refinements',
+    changes: [
+      'Enlarged album artwork, titles, metadata, and controls, and removed the duplicate album back button.',
+      'Blended artwork colors through the album header and track list, with larger track controls and hover feedback.',
+      'Renamed Listen Now to Home, removed Browse shortcuts, and removed introductory Settings copy.',
+      'Scoped radio and Search backdrops to the central pane, with uniform radio blur and lighter Search blur.',
+      'Made sidebar playlist shortcuts adapt to available height and added compact navigation for short windows without sidebar scrolling.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.11'
+    }
+  },
+  {
+    version: '2.5.0-beta.10',
+    date: '2026-10-01',
+    title: 'OLED Theme and Interface Cleanup',
+    changes: [
+      'Replaced placeholder branding with the official Nebula logo.',
+      'Removed Listen Now header shortcuts, sidebar appearance controls, and extra introductory copy while retaining Settings descriptions.',
+      'Enlarged sidebar connection status and added the connected server address.',
+      'Changed dark mode to a pure black canvas with neutral gray surfaces.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.10'
+    }
+  },
+  {
+    version: '2.5.0-beta.9',
+    date: '2026-10-01',
+    title: 'Player and Settings Refinements',
+    changes: [
+      'Added a seekable waveform to the bottom mini player.',
+      'The bottom and side players now replace one another, including when resizing the window.',
+      'Improved Settings section spacing and separated the HTTP connection option from its warning and action buttons.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.9'
+    }
+  },
+  {
+    version: '2.5.0-beta.8',
+    date: '2026-09-30',
+    title: 'Security, Playback and AutoEQ',
+    changes: [
+      'Refreshed the desktop and web interface while retaining library, playlist, radio, and playback controls.',
+      'Updated dependencies and improved desktop security and isolation between music servers and accounts.',
+      'Improved queue and crossfade recovery, radio cleanup, artwork loading, and settings persistence.',
+      'Applied AutoEQ preamp to music, crossfades, and radio with saved-profile restore, EQ bypass, and smooth live changes.',
+      'Reduced the initial web bundle by loading views on demand while keeping playback active.',
+      'AI DJ settings remain temporarily hidden.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.8'
+    }
+  },
+  {
+    version: '2.5.0-beta.6',
+    date: '2026-09-20',
+    title: 'Queue Playback Reliability',
+    changes: [
+      'Stopped opening an unused crossfade stream for every track when Magic Crossfade is disabled, preventing stream connections from accumulating during long queues.',
+      'Added end-of-track recovery to the active crossfade player so the queue keeps advancing if the primary stream handoff stalls.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.6'
+    }
+  },
+  {
+    version: '2.5.0-beta.5',
+    date: '2026-09-19',
+    title: 'AI DJ Settings Pause',
+    changes: [
+      'Temporarily disabled the AI DJ settings panel while the feature is prepared for a later beta.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.5'
+    }
+  },
+  {
+    version: '2.5.0-beta.4',
+    date: '2026-09-19',
+    title: 'Playback Stability',
+    changes: [
+      'Cancelled stale waveform downloads between tracks so long queues continue loading streams without exhausting the server connection pool.',
+    ],
+    link: {
+      label: 'View beta release',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.4'
+    }
+  },
+  {
+    version: '2.5.0-beta.3',
+    date: '2026-08-20',
+    title: 'Beta Channel',
+    changes: [
+      'Introduced the beta release channel: pre-release builds published from the beta branch are delivered to users who switch the update channel to Beta in Settings.',
+      'Stable users continue to receive only published stable releases.',
+    ],
+    link: {
+      label: 'About the beta channel',
+      href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.3'
+    }
+  },
   {
     version: '2.4.6',
     date: '2026-08-19',

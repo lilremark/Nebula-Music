@@ -1,6 +1,7 @@
+import type { ListeningEvent } from '../playback/djTypes';
 
 const DB_NAME = 'nebula_music_db';
-const DB_VERSION = 3; // Increment version to trigger upgrade
+const DB_VERSION = 5;
 const STORE_SETTINGS = 'settings';
 const STORE_CACHE = 'api_cache';
 const STORE_STATS = 'stats';
@@ -15,11 +16,16 @@ export class LocalDB {
     this.initPromise = new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onerror = () => {
-        console.error("DB Open Error:", request.error);
+        this.initPromise = null;
         reject(request.error);
       };
       request.onsuccess = () => {
         this.db = request.result;
+        this.db.onversionchange = () => {
+          this.db?.close();
+          this.db = null;
+          this.initPromise = null;
+        };
         resolve();
       };
       request.onupgradeneeded = (event) => {
@@ -35,6 +41,12 @@ export class LocalDB {
           console.warn("Creating 'stats' object store");
           db.createObjectStore(STORE_STATS, { keyPath: 'id' });
         }
+        if (!db.objectStoreNames.contains('listeningEvents')) {
+          const events = db.createObjectStore('listeningEvents', { keyPath: 'id' });
+          events.createIndex('profile', 'profile');
+        }
+        const stats = request.transaction!.objectStore(STORE_STATS);
+        if (!stats.indexNames.contains('serverId')) stats.createIndex('serverId', 'serverId');
       };
     });
     return this.initPromise;
@@ -57,8 +69,9 @@ export class LocalDB {
       const tx = this.db!.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const req = store.put(value, key); // For object stores without keyPath, key is required. With keyPath, key is in value.
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error ?? new Error('Database write aborted.'));
+      tx.onerror = () => reject(tx.error ?? req.error);
     });
   }
 
@@ -68,8 +81,9 @@ export class LocalDB {
       const tx = this.db!.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const req = store.put(value);
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error ?? new Error('Database write aborted.'));
+      tx.onerror = () => reject(tx.error ?? req.error);
     });
   }
 
@@ -79,6 +93,7 @@ export class LocalDB {
       const tx = this.db!.transaction(storeName, 'readwrite');
       tx.objectStore(storeName).clear();
       tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error ?? new Error('Database write aborted.'));
       tx.onerror = () => reject(tx.error);
     });
   }
@@ -89,8 +104,9 @@ export class LocalDB {
       const tx = this.db!.transaction(storeName, 'readwrite');
       const store = tx.objectStore(storeName);
       const req = store.delete(key);
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error ?? new Error('Database write aborted.'));
+      tx.onerror = () => reject(tx.error ?? req.error);
     });
   }
 
@@ -111,6 +127,27 @@ export class LocalDB {
     return res.data;
   }
 
+  async addListeningEvent(event: ListeningEvent): Promise<void> {
+    await this.put('listeningEvents', event);
+    const events = await this.getListeningEvents(event.profile);
+    const expired = events.filter((entry, index) => index < events.length - 5000 || Date.now() - entry.at > 90 * 86400000);
+    for (const entry of expired) await this.remove('listeningEvents', entry.id);
+  }
+
+  async getListeningEvents(profile: string): Promise<ListeningEvent[]> {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      const req = this.db!.transaction('listeningEvents', 'readonly').objectStore('listeningEvents').index('profile').getAll(profile);
+      req.onsuccess = () => resolve((req.result as ListeningEvent[]).sort((a, b) => a.at - b.at));
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async resetDjLearning(profile: string): Promise<void> {
+    const events = await this.getListeningEvents(profile);
+    for (const event of events) await this.remove('listeningEvents', event.id);
+  }
+
   // Stats Methods
   private getStatsId(serverId: string, songId: string) {
     return `${serverId}:${songId}`;
@@ -120,30 +157,30 @@ export class LocalDB {
     await this.init();
     const id = this.getStatsId(serverId, song.id);
 
-    // Get existing entry
-    const existing = await new Promise<any>((resolve) => {
-      const tx = this.db!.transaction(STORE_STATS, 'readonly');
+    // Read and increment in one transaction so simultaneous scrobbles do not
+    // overwrite each other's counts.
+    await new Promise<void>((resolve, reject) => {
+      const tx = this.db!.transaction(STORE_STATS, 'readwrite');
       const store = tx.objectStore(STORE_STATS);
       const req = store.get(id);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => resolve(null);
+      req.onsuccess = () => {
+        const entry = req.result || {
+          id,
+          serverId,
+          songId: song.id,
+          song,
+          playCount: 0,
+          lastPlayed: 0,
+        };
+        entry.playCount = (entry.playCount || 0) + 1;
+        entry.lastPlayed = Date.now();
+        entry.song = { ...entry.song, ...song };
+        store.put(entry);
+      };
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error ?? new Error('Play count update aborted.'));
+      tx.onerror = () => reject(tx.error ?? req.error);
     });
-
-    const entry = existing || {
-      id,
-      serverId,
-      songId: song.id,
-      song: song, // Store song metadata for display
-      playCount: 0,
-      lastPlayed: 0
-    };
-
-    entry.playCount = (entry.playCount || 0) + 1;
-    entry.lastPlayed = Date.now();
-    // Update song metadata in case it changed (e.g. cover art)
-    entry.song = { ...entry.song, ...song };
-
-    await this.put(STORE_STATS, entry);
   }
 
   async getMostPlayed(serverId: string, limit: number = 20): Promise<any[]> {
@@ -151,11 +188,10 @@ export class LocalDB {
     return new Promise((resolve) => {
       const tx = this.db!.transaction(STORE_STATS, 'readonly');
       const store = tx.objectStore(STORE_STATS);
-      const req = store.getAll(); // Get all for now, filter in memory (dataset is small locally)
+      const req = store.index('serverId').getAll(serverId);
 
       req.onsuccess = () => {
-        const allStats = req.result || [];
-        const serverStats = allStats.filter((s: any) => s.serverId === serverId);
+        const serverStats = req.result || [];
         serverStats.sort((a: any, b: any) => b.playCount - a.playCount);
         resolve(serverStats.slice(0, limit).map((s: any) => s.song));
       };

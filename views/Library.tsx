@@ -53,7 +53,7 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
     const years = Array.from({ length: 12 }, (_, i) => startYear + i);
 
     return (
-        <div className="relative min-w-[120px]" ref={pickerRef}>
+        <div data-nebula-year-picker className="relative min-w-[120px]" ref={pickerRef}>
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
             <input
                 ref={inputRef}
@@ -61,6 +61,7 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 onFocus={() => setIsOpen(true)}
+                aria-label="Filter by year"
                 placeholder="Year"
                 className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 pl-10 pr-8 text-sm focus:border-primary/60 focus:bg-white focus:outline-hidden text-neutral-900 transition-all placeholder-neutral-500 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white"
             />
@@ -104,8 +105,8 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
 };
 
 const ViewHeader = ({ currentView, children }: { currentView: View, children?: React.ReactNode }) => (
-    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-6 animate-fade-in">
-        <h2 className="text-4xl md:text-5xl font-black capitalize flex items-center tracking-tight text-neutral-900 dark:text-white hidden md:flex">
+    <div data-nebula-view-header className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-6 animate-fade-in">
+        <h1 className="text-4xl md:text-5xl font-black capitalize flex items-center tracking-tight text-neutral-900 dark:text-white hidden md:flex">
             {currentView === 'ARTISTS' && <div className="p-2 bg-purple-500/20 rounded-xl mr-4 border border-purple-500/30"><Mic2 className="w-8 h-8 text-purple-400" /></div>}
             {currentView === 'ALBUMS' && <div className="p-2 bg-blue-500/20 rounded-xl mr-4 border border-blue-500/30"><Disc className="w-8 h-8 text-blue-400" /></div>}
             {currentView === 'SONGS' && <div className="p-2 bg-green-500/20 rounded-xl mr-4 border border-green-500/30"><Music className="w-8 h-8 text-green-400" /></div>}
@@ -113,7 +114,7 @@ const ViewHeader = ({ currentView, children }: { currentView: View, children?: R
             {currentView === 'LIKED_SONGS' && <div className="p-2 bg-red-500/20 rounded-xl mr-4 border border-red-500/30"><Heart className="w-8 h-8 text-red-500 fill-current" /></div>}
             {currentView === 'LIKED_ALBUMS' && <div className="p-2 bg-yellow-500/20 rounded-xl mr-4 border border-yellow-500/30"><Star className="w-8 h-8 text-yellow-500 fill-current" /></div>}
             {currentView === 'LIKED_SONGS' ? 'Liked Songs' : currentView === 'LIKED_ALBUMS' ? 'Liked Albums' : currentView.toLowerCase()}
-        </h2>
+        </h1>
 
         <div className="flex flex-wrap items-center w-full lg:w-auto gap-3">
             {children}
@@ -132,7 +133,7 @@ const MobileLibraryTabs = () => {
     ];
 
     return (
-        <div className="md:hidden w-full overflow-x-auto pb-6 -mx-6 px-6 scrollbar-hide">
+        <div data-nebula-library-tabs className="md:hidden w-full overflow-x-auto pb-6 -mx-6 px-6 scrollbar-hide">
             <div className="flex items-center gap-2">
                 {tabs.map(tab => (
                     <button
@@ -166,7 +167,7 @@ const FilterBar: React.FC<{
     genres: string[];
     resetFilters: () => void;
 }> = ({ currentView, filter, setFilter, setPage, sortType, setSortType, selectedGenre, setSelectedGenre, selectedYear, setSelectedYear, genres, resetFilters }) => (
-    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto p-1">
+    <div data-nebula-library-filters className="flex flex-wrap items-center gap-3 w-full md:w-auto p-1">
         {/* Text Search */}
         <div className="relative flex-1 min-w-[200px] group">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-neutral-900 transition-colors dark:group-focus-within:text-white" />
@@ -174,6 +175,7 @@ const FilterBar: React.FC<{
                 type="text"
                 value={filter}
                 onChange={(e) => { setFilter(e.target.value); setPage(0); }}
+                aria-label="Search collection"
                 placeholder="Search collection..."
                 className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 pl-10 pr-8 text-sm focus:border-primary/60 focus:bg-white focus:outline-hidden text-neutral-900 transition-all placeholder-neutral-500 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white"
             />
@@ -235,7 +237,7 @@ const FilterBar: React.FC<{
 );
 
 export const LibraryView: React.FC = () => {
-    const { currentView, setView, viewData, service, playSong, openPlaylistModal, playlists, createPlaylist, cachedArtists, fetchArtists } = useStore();
+    const { currentView, setView, viewData, service, playSong, openPlaylistModal, playlists, createPlaylist, cachedArtists, fetchArtists, queue, currentSongIndex, toggleLike } = useStore();
     const [items, setItems] = useState<any[]>([]);
     const [newPlName, setNewPlName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -352,7 +354,7 @@ export const LibraryView: React.FC = () => {
     const isSongView = currentView === 'SONGS' || currentView === 'LIKED_SONGS';
 
     return (
-        <div className="p-6 md:p-12 min-h-full flex flex-col max-w-[1800px] mx-auto animate-fade-in">
+        <div data-nebula-view="library" data-nebula-library={currentView.toLowerCase()} className="p-6 md:p-12 min-h-full flex flex-col max-w-[1800px] mx-auto animate-fade-in">
             <MobileLibraryTabs />
 
             <ViewHeader currentView={currentView}>
@@ -373,7 +375,7 @@ export const LibraryView: React.FC = () => {
                 )}
             </ViewHeader>
 
-            {shouldShowPagination && <PaginationControls />}
+            {shouldShowPagination && page > 0 && <PaginationControls />}
 
             {isLoading && !displayItems.length ? (
                 <div className="flex flex-col items-center justify-center h-64 text-neutral-500">
@@ -383,58 +385,35 @@ export const LibraryView: React.FC = () => {
             ) : (
                 <>
                     {isSongView ? (
-                        <div className="rounded-lg overflow-hidden flex-1 bg-neutral-100 dark:bg-neutral-900/50 border border-neutral-200 dark:border-white/5">
-                            <div className="overflow-x-auto custom-scrollbar">
-                                <table className="w-full text-left text-sm text-neutral-700 dark:text-neutral-400">
-                                    <thead className="bg-neutral-200 text-neutral-700 dark:bg-white/5 dark:text-neutral-300 uppercase tracking-widest text-[10px] font-bold">
-                                        <tr>
-                                            <th className="p-5 w-16 text-center">#</th>
-                                            <th className="p-5">Title</th>
-                                            <th className="p-5 hidden md:table-cell">Artist</th>
-                                            <th className="p-5 hidden lg:table-cell">Album</th>
-                                            <th className="p-5 text-right">Time</th>
-                                            <th className="p-5 w-24"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-200 dark:divide-white/5">
-                                        {displayItems.map((song: ISong, idx) => (
-                                            <tr key={song.id} className="hover:bg-neutral-100 dark:hover:bg-white/5 group transition-colors">
-                                                <td className="p-4 text-center cursor-pointer relative" onClick={() => playSong(song, displayItems as ISong[])}>
-                                                    <div className="flex items-center justify-center w-8 h-8 mx-auto relative">
-                                                        <span className="font-mono text-neutral-500 text-xs absolute inset-0 flex items-center justify-center transition-opacity duration-200 group-hover:opacity-0">{(page * ITEMS_PER_PAGE) + idx + 1}</span>
-                                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100">
-                                                            <Play className="w-4 h-4 text-primary fill-current" />
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 font-bold text-neutral-900 dark:text-white cursor-pointer" onClick={() => playSong(song, displayItems as ISong[])}>
-                                                    <div className="flex items-center gap-4">
-                                                        <img src={service.getCoverArtUrl(song.id, 50)} className="w-10 h-10 rounded object-cover bg-neutral-200 dark:bg-neutral-800 shadow group-hover:scale-105 transition-transform" loading="lazy" alt="" />
-                                                        <div className="min-w-0">
-                                                            <div className="truncate group-hover:text-primary transition-colors text-sm">{song.title}</div>
-                                                            <div className="md:hidden text-xs text-neutral-500 truncate mt-0.5">{song.artist}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 hidden md:table-cell cursor-pointer text-neutral-700 dark:text-white/80 hover:text-neutral-900 dark:hover:text-white transition-colors text-sm font-medium" onClick={(e) => { e.stopPropagation(); if (song.artistId) setView('ARTIST_DETAIL', song.artistId); }}>{song.artist}</td>
-                                                <td className="p-4 hidden lg:table-cell cursor-pointer text-neutral-600 dark:text-white/70 hover:text-neutral-900 dark:hover:text-white transition-colors text-sm" onClick={(e) => { e.stopPropagation(); if (song.albumId) setView('ALBUM_DETAIL', song.albumId); }}>{song.album}</td>
-                                                <td className="p-4 text-right font-mono text-xs tabular-nums cursor-pointer opacity-70 group-hover:opacity-100" onClick={() => playSong(song, displayItems as ISong[])}>{Math.floor(song.duration / 60)}:{song.duration % 60 < 10 ? '0' : ''}{song.duration % 60}</td>
-                                                <td className="p-4 text-right">
-                                                    <button onClick={(e) => { e.stopPropagation(); openPlaylistModal(song); }} className="text-neutral-500 hover:text-neutral-900 p-2 opacity-0 group-hover:opacity-100 transition-all hover:bg-neutral-200 rounded-full hover:scale-110 dark:hover:text-white dark:hover:bg-white/10" title="Add to Playlist" aria-label="Add to playlist">
-                                                        <ListPlus className="w-4 h-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div data-nebula-track-ledger data-nebula-track-list className="nebula-song-list">
+                            {displayItems.map((song: ISong, idx) => <div key={song.id} data-nebula-track-row data-active={queue[currentSongIndex]?.id === song.id} className="nebula-song-row group">
+                                <button type="button" data-nebula-track-play aria-label={`Play ${song.title}`} onClick={() => playSong(song, displayItems as ISong[])} className="nebula-song-play">
+                                    <span>{page * ITEMS_PER_PAGE + idx + 1}</span><Play size={18} fill="currentColor" />
+                                </button>
+                                <img src={service.getCoverArtUrl(song.coverArt || song.id, 80)} alt="" loading="lazy" className="nebula-song-art" />
+                                <div className="nebula-song-copy">
+                                    <button type="button" data-nebula-track-title onClick={() => playSong(song, displayItems as ISong[])} title={song.title}>{song.title}</button>
+                                    <div><button type="button" disabled={!song.artistId} onClick={() => song.artistId && setView('ARTIST_DETAIL', song.artistId)}>{song.artist}</button>
+                                        {song.album && <><span> · </span><button type="button" disabled={!song.albumId} onClick={() => song.albumId && setView('ALBUM_DETAIL', song.albumId)}>{song.album}</button></>}</div>
+                                </div>
+                                <span data-nebula-track-duration>{Math.floor(song.duration / 60)}:{String(Math.floor(song.duration % 60)).padStart(2, '0')}</span>
+                                <div data-nebula-track-actions className="nebula-song-actions">
+                                    {song.suffix && <span data-nebula-track-quality>{song.suffix.toUpperCase()}</span>}
+                                    <button type="button" aria-label={song.starred ? 'Unlike song' : 'Like song'} aria-pressed={!!song.starred} onClick={() => {
+                                        toggleLike(song);
+                                        if (currentView === 'LIKED_SONGS') setAllItemsCached(previous => previous?.filter(item => item.id !== song.id) || null);
+                                        setItems(previous => previous.map(item => item.id === song.id ? { ...item, starred: !song.starred } : item));
+                                    }}><Heart size={18} fill={song.starred ? 'currentColor' : 'none'} /></button>
+                                    <button type="button" aria-label="Add to playlist" onClick={() => openPlaylistModal(song)}><ListPlus size={18} /></button>
+                                </div>
+                            </div>)}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 content-start">
+                        <div data-nebula-collection-grid className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 content-start">
                             {displayItems.map((item: any, i) => (
                                 <div
                                     key={item.id}
+                                    data-nebula-collection-card
                                     className={`group cursor-pointer bg-transparent`}
                                     onClick={() => {
                                         if (currentView === 'ARTISTS') setView('ARTIST_DETAIL', item.id);

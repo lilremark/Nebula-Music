@@ -9,6 +9,7 @@ import type {
   UpdaterApi,
   WindowControl,
 } from './types';
+import { webSubsonicTransport } from '../services/subsonicTransport';
 
 const webWindow: WindowControl = {
   minimize: async () => {},
@@ -69,12 +70,6 @@ const webUpdater: UpdaterApi = {
   onStatus: () => noopUnsubscribe,
 };
 
-const webFetchJson = async (url: string) => {
-  const response = await fetch(url);
-  const body = await response.json().catch(() => null);
-  return { status: response.status, statusText: response.statusText, ok: response.ok, body };
-};
-
 const webInfo: PlatformInfo = {
   kind: 'web',
   os: 'web',
@@ -91,7 +86,11 @@ export const createWebPlatform = (): Platform => ({
   window: webWindow,
   openExternal: (url) => {
     try {
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const target = new URL(url);
+      if (!['https:', 'http:'].includes(target.protocol) || target.username || target.password) {
+        return Promise.resolve(false);
+      }
+      window.open(target.href, '_blank', 'noopener,noreferrer');
       return Promise.resolve(true);
     } catch {
       return Promise.resolve(false);
@@ -104,6 +103,6 @@ export const createWebPlatform = (): Platform => ({
   miniPlayer: webMiniPlayer,
   power: webPower,
   updater: webUpdater,
-  fetchJson: webFetchJson,
+  fetchJson: webSubsonicTransport.fetchJson,
   resolveMediaUrl: (url) => url,
 });

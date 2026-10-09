@@ -1,27 +1,32 @@
-name: Stream Deck bridge
+name: App verification
 
 on:
   pull_request:
     paths:
       - ".github/workflows/stream-deck-bridge.yml"
-      - "context/StreamDeckBridgeContext.tsx"
-      - "services/streamDeck*"
-      - "views/Settings.tsx"
-      - "App.tsx"
-      - "types.ts"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.css"
+      - "**/*.html"
+      - "docker/**"
       - "package.json"
       - "package-lock.json"
       - "vite.config.ts"
   push:
     branches:
       - main
+      - beta
     paths:
       - ".github/workflows/stream-deck-bridge.yml"
-      - "context/StreamDeckBridgeContext.tsx"
-      - "services/streamDeck*"
-      - "views/Settings.tsx"
-      - "App.tsx"
-      - "types.ts"
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.mjs"
+      - "**/*.css"
+      - "**/*.html"
+      - "docker/**"
       - "package.json"
       - "package-lock.json"
       - "vite.config.ts"
@@ -40,10 +45,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
@@ -57,5 +64,15 @@ jobs:
       - name: Test with coverage
         run: npm run test:coverage
 
-      - name: Build production bundle
-        run: npm run build
+      - name: Build web and Electron bundles
+        run: npm run build:electron
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=low
+
+      - name: Validate NGINX security headers
+        run: |
+          docker run --rm --entrypoint nginx \
+            -v "$PWD/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            -v "$PWD/docker/security-headers.conf:/etc/nginx/nebula-security-headers.conf:ro" \
+            nginxinc/nginx-unprivileged:1.30.3-alpine -t

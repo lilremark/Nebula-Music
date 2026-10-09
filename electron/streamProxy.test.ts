@@ -29,7 +29,7 @@ describe('createStreamProxy', () => {
       'https://music.example/rest/stream.view?id=1',
       expect.objectContaining({
         headers: expect.any(Headers),
-        redirect: 'follow',
+        redirect: 'manual',
         signal: request.signal,
       }),
     );
@@ -102,6 +102,20 @@ describe('createStreamProxy', () => {
 
     const response = await handle(proxyUrl('https://music.example/rest/stream.view?id=1'));
     expect(await response.text()).toBe('abcdef');
+  });
+
+  it('sandboxes remote documents served from the app origin', async () => {
+    const fetchImpl = vi.fn<StreamProxyFetch>().mockResolvedValue(upstreamResponse({ body: '<script>stealVault()</script>', headers: { 'content-type': 'text/html' } }));
+    const { handle } = createStreamProxy({ fetchImpl, isTrustedTarget: trusted });
+    const response = await handle(proxyUrl('https://music.example/remote.html'));
+    expect(response.headers.get('content-security-policy')).toContain("default-src 'none'; sandbox");
+  });
+
+  it('rejects an untrusted redirect instead of fetching it', async () => {
+    const fetchImpl = vi.fn<StreamProxyFetch>().mockResolvedValue(new Response(null, { status: 302, headers: { location: 'http://insecure.example/stream' } }));
+    const { handle } = createStreamProxy({ fetchImpl, isTrustedTarget: trusted });
+    expect((await handle(proxyUrl('https://music.example/stream'))).status).toBe(403);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it('rejects requests without a trusted target', async () => {

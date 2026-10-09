@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './DjPresentation';
+import React, { useState, useEffect } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Volume2, Volume1, VolumeX,
     Repeat, Repeat1, Heart, AudioWaveform,
-    ListMusic, Maximize2, PanelRightClose, Gauge, X, Minus, Plus
+    ListMusic, Maximize2, PanelRightClose
 } from 'lucide-react';
+import { SpeedPitchControls } from './SpeedPitchControls';
 import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
@@ -42,21 +44,21 @@ const withAlpha = (color: string, alpha: number) => {
 };
 
 export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCollapse }) => {
-    const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection, repeatMode, toggleRepeat, toggleLike, settings, updateSettings } = useStore();
+    const { queue, currentSongIndex, isPlaying, togglePlay, nextSong, prevSong, volume, setVolume, audioRef, playSong, setView, service, repeatMode, toggleRepeat, toggleLike, settings, updateSettings } = useStore();
 
+    const { dj, playQueueIndex } = useStore();
+    const voice = useDjPlayback();
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isHoveringVolume, setIsHoveringVolume] = useState(false);
-    const [showSpeedPitchModal, setShowSpeedPitchModal] = useState(false);
     const [visualProgress, setVisualProgress] = useState(0);
     const [isQueueCollapsed, setIsQueueCollapsed] = useState(false);
-    const speedPitchPopoverRef = useRef<HTMLDivElement>(null);
 
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 600) : '';
     const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
-    const waveform = useTrackWaveform(currentSong?.id, streamUrl);
-    const progressMode = settings.progressVisualization;
+    const progressMode = voice.speech ? 'bar' : settings.progressVisualization;
+    const waveform = useTrackWaveform(currentSong?.id, progressMode === 'waveform' ? streamUrl : null);
 
     // Adaptive colors from album art
     const { colors } = useAdaptiveColors(coverArt);
@@ -96,21 +98,8 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
         return () => audio.removeEventListener('loadedmetadata', syncDuration);
     }, [audioRef]);
 
-    useEffect(() => {
-        if (!showSpeedPitchModal) return;
-
-        const handlePointerDown = (event: PointerEvent) => {
-            if (!speedPitchPopoverRef.current?.contains(event.target as Node)) {
-                setShowSpeedPitchModal(false);
-            }
-        };
-
-        document.addEventListener('pointerdown', handlePointerDown);
-        return () => document.removeEventListener('pointerdown', handlePointerDown);
-    }, [showSpeedPitchModal]);
-
     const progress = duration ? (currentTime / duration) * 100 : 0;
-    const displayProgress = visualProgress || progress;
+    const displayProgress = voice.speech ? voice.progress : visualProgress || progress;
 
     const formatTime = (s: number) => {
         const min = Math.floor(s / 60);
@@ -119,6 +108,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     };
 
     const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (voice.speech) return;
         const newProgress = parseFloat(e.target.value);
         setVisualProgress(newProgress);
         const newTime = (newProgress / 100) * duration;
@@ -134,7 +124,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
     if (!currentSong) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center" data-nebula-player="sidebar">
                 <div className="w-32 h-32 rounded-2xl bg-neutral-300 dark:bg-white/5 flex items-center justify-center mb-6">
                     <ListMusic className="w-12 h-12 text-neutral-500 dark:text-white/50" />
                 </div>
@@ -147,13 +137,15 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     return (
         <div
             className="flex-1 flex flex-col h-full overflow-hidden relative justify-center"
+            data-nebula-player="sidebar"
             style={{ background: `linear-gradient(180deg, ${colors.primary}15 0%, transparent 50%)` }}
         >
+            <DjHaze speech={voice.speech} active={dj.state.active} />
             {/* Top Section: Media Controls (Scrollable if needed on small screens, but usually fixed) */}
-            <div className="flex-none flex flex-col items-center w-full pb-4 pt-4">
+            <div className="flex-none flex flex-col items-center w-full pb-4 pt-4" data-nebula-sidebar-player-main>
                 {/* Header with collapse button */}
-                <div className="w-full relative z-10 flex items-center justify-between px-4 mb-2">
-                    <span className="text-xs font-bold text-neutral-600 dark:text-white/50 uppercase tracking-wider">Now Playing</span>
+                <div className="w-full relative z-10 flex items-center justify-between px-4 mb-2" data-nebula-sidebar-player-header>
+                    <span className="text-xs font-bold text-neutral-600 dark:text-white/50 uppercase tracking-wider">Now Playing <DjBadge /></span>
                     <button
                         onClick={onCollapse}
                         className="p-2 rounded-lg hover:bg-neutral-300 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-all active:scale-95"
@@ -165,14 +157,13 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Album Art - Compact */}
-                <div className="relative w-full px-6 mb-6">
+                <div className="relative w-full px-6 mb-6" data-nebula-sidebar-player-art>
                     <div
                         className="relative w-full aspect-square max-w-[240px] mx-auto group cursor-pointer rounded-xl shadow-2xl overflow-hidden"
                         onClick={onExpand}
                     >
-                        <img
-                            src={coverArt}
-                            alt={currentSong.title}
+                        <PlayerCover src={coverArt}
+                            alt={voice.speech ? 'AI DJ' : currentSong.title}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                         />
 
@@ -186,28 +177,28 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Song Info */}
-                <div className="px-6 text-center w-full mb-2">
-                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white truncate" title={currentSong.title}>
-                        {currentSong.title}
+                <div className="px-6 text-center w-full mb-2" data-nebula-sidebar-player-info>
+                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white truncate" title={voice.speech ? 'AI DJ' : currentSong.title}>
+                        {voice.speech ? 'AI DJ' : currentSong.title}
                     </h2>
                     <p
                         className="text-sm text-neutral-700 dark:text-white/50 truncate cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
-                        title={currentSong.artist}
-                        onClick={() => setView('ARTIST_DETAIL', currentSong.artistId)}
+                        title={voice.speech ? voice.subtitle : currentSong.artist}
+                        onClick={() => { if (!voice.speech) setView('ARTIST_DETAIL', currentSong.artistId); }}
                     >
-                        {currentSong.artist}
+                        {voice.speech ? voice.subtitle : currentSong.artist}
                     </p>
                     <p
                         className="text-xs text-neutral-500 dark:text-white/50 truncate cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
-                        title={currentSong.album}
-                        onClick={() => setView('ALBUM_DETAIL', currentSong.albumId)}
+                        title={voice.speech ? '' : currentSong.album}
+                        onClick={() => { if (!voice.speech) setView('ALBUM_DETAIL', currentSong.albumId); }}
                     >
-                        {currentSong.album}
+                        {voice.speech ? '' : currentSong.album}
                     </p>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full px-6 mb-2">
+                <div className="w-full px-6 mb-2" data-nebula-sidebar-player-progress>
                     <div className="flex justify-end mb-1.5">
                         <button
                             onClick={toggleProgressMode}
@@ -223,10 +214,13 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         progress={displayProgress}
                         mode={progressMode}
                         accentColor={colors.primary}
+                        secondaryColor={colors.secondary}
                         baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
                         markerColor={colors.secondary || colors.primary}
                         waveform={waveform}
                         onScrub={handleScrub}
+                        scrubbable={!voice.speech}
+                        showHandle
                         trackStyle={{
                             boxShadow: progressMode === 'bar'
                                 ? `0 0 18px ${withAlpha(colors.primary, 0.16)}`
@@ -238,16 +232,16 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                             }`}
                     />
                     <div className="flex justify-between mt-1.5 text-[10px] text-neutral-600 dark:text-white/60 font-mono tabular-nums">
-                        <span>{formatTime(currentTime)}</span>
-                        <span>{formatTime(duration)}</span>
+                        <span>{formatTime(voice.speech ? voice.position : currentTime)}</span>
+                        <span>{formatTime(voice.speech ? voice.duration : duration)}</span>
                     </div>
                 </div>
 
                 {/* Main Controls */}
-                <div className="flex items-center justify-center gap-4 mb-2">
+                <div className="nebula-playback-controls flex items-center justify-center gap-4 mb-2" data-nebula-sidebar-player-transport>
                     <button
                         onClick={prevSong}
-                        className="p-2.5 text-neutral-700 dark:text-white/70 hover:text-neutral-900 dark:hover:text-white transition-all hover:scale-110 active:scale-95"
+                        className="nebula-playback-skip transition-all hover:scale-110 active:scale-95"
                         aria-label="Previous track"
                     >
                         <SkipBack className="w-5 h-5" fill="currentColor" />
@@ -255,11 +249,10 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
                     <button
                         onClick={togglePlay}
-                        className="w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl"
-                        style={{ backgroundColor: colors.primary }}
-                        aria-label={isPlaying ? 'Pause' : 'Play'}
+                        className="nebula-playback-toggle transition-all hover:scale-105 active:scale-95 shadow-xl"
+                        aria-label={voice.playing ? 'Pause' : 'Play'}
                     >
-                        {isPlaying ? (
+                        {voice.playing ? (
                             <Pause className="w-5 h-5 text-black" fill="black" />
                         ) : (
                             <Play className="w-5 h-5 ml-0.5 text-black" fill="black" />
@@ -268,7 +261,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
                     <button
                         onClick={nextSong}
-                        className="p-2.5 text-neutral-700 dark:text-white/70 hover:text-neutral-900 dark:hover:text-white transition-all hover:scale-110 active:scale-95"
+                        className="nebula-playback-skip transition-all hover:scale-110 active:scale-95"
                         aria-label="Next track"
                     >
                         <SkipForward className="w-5 h-5" fill="currentColor" />
@@ -276,8 +269,9 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 </div>
 
                 {/* Secondary Controls */}
-                <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center justify-center gap-3" data-nebula-sidebar-player-tools>
                     <button
+                        disabled={voice.speech}
                         onClick={() => toggleLike(currentSong)}
                         className={`p-2 transition-all active:scale-95 ${currentSong.starred ? 'text-red-500' : 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white'}`}
                         aria-label={currentSong.starred ? 'Unlike' : 'Like'}
@@ -286,145 +280,16 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                     </button>
                     <button
                         onClick={toggleRepeat}
+                        disabled={dj.state.active}
+                        title={dj.state.active ? "Repeat is unavailable during AI DJ" : undefined}
                         className={`p-2 transition-colors active:scale-95 ${repeatMode === 'OFF' ? 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white' : 'text-neutral-900 dark:text-white'}`}
-                        title={`Repeat: ${repeatMode}`}
                         aria-label={`Repeat mode: ${repeatMode}`}
                     >
                         {repeatMode === 'ONE' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
                     </button>
 
                     {/* Speed Control */}
-                    <div className="relative" ref={speedPitchPopoverRef}>
-                        <button
-                            onClick={() => setShowSpeedPitchModal(!showSpeedPitchModal)}
-                            className={`p-2 transition-colors active:scale-95 ${playbackRate !== 1.0 || pitch !== 0 ? 'text-neutral-900 dark:text-white' : 'text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white'}`}
-                            title={`Speed: ${playbackRate}x${pitch !== 0 ? ` / Pitch: ${pitch > 0 ? '+' : ''}${pitch}` : ''}`}
-                            aria-label="Open playback speed and pitch settings"
-                        >
-                            <Gauge className="w-5 h-5" />
-                        </button>
-
-                        {/* Speed & Pitch Modal */}
-                        {showSpeedPitchModal && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-950/95 z-50">
-                                <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
-                                    <div>
-                                        <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-white/45">Playback</p>
-                                        <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Speed & Pitch</h3>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowSpeedPitchModal(false)}
-                                        className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 transition-all dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10"
-                                        aria-label="Close playback settings"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4 p-4">
-                                    {/* Speed Control */}
-                                    <div>
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Speed</label>
-                                            <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">0.5x-2.0x</span>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                            <button
-                                                onClick={() => {
-                                                    const newSpeed = Math.max(0.5, Math.round((playbackRate - 0.1) * 10) / 10);
-                                                    setPlaybackRate(newSpeed);
-                                                    if (audioRef.current) audioRef.current.playbackRate = newSpeed;
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                aria-label="Decrease speed"
-                                            >
-                                                <Minus className="w-4 h-4" />
-                                            </button>
-                                            <span className="min-w-16 text-center text-base font-mono text-neutral-900 dark:text-white font-bold tabular-nums">{playbackRate.toFixed(1)}x</span>
-                                            <button
-                                                onClick={() => {
-                                                    const newSpeed = Math.min(2.0, Math.round((playbackRate + 0.1) * 10) / 10);
-                                                    setPlaybackRate(newSpeed);
-                                                    if (audioRef.current) audioRef.current.playbackRate = newSpeed;
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                aria-label="Increase speed"
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Pitch Control */}
-                                    <div>
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Pitch</label>
-                                            <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">semitones</span>
-                                        </div>
-                                        <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                            <button
-                                                onClick={() => setPitch(Math.max(-12, pitch - 1))}
-                                                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                aria-label="Decrease pitch"
-                                            >
-                                                <Minus className="w-4 h-4" />
-                                            </button>
-                                            <span className="min-w-16 text-center text-base font-mono text-neutral-900 dark:text-white font-bold tabular-nums">{pitch > 0 ? '+' : ''}{pitch}</span>
-                                            <button
-                                                onClick={() => setPitch(Math.min(12, pitch + 1))}
-                                                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                aria-label="Increase pitch"
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Mode Toggle */}
-                                    <div className="border-t border-neutral-200 pt-4 dark:border-white/10">
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Pitch Mode</label>
-                                            <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">{pitchCorrection ? 'locked' : 'linked'}</span>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-1 rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                            <button
-                                                onClick={() => setPitchCorrection(true)}
-                                                className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${pitchCorrection
-                                                    ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
-                                                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
-                                                    }`}
-                                            >
-                                                Digital
-                                            </button>
-                                            <button
-                                                onClick={() => setPitchCorrection(false)}
-                                                className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${!pitchCorrection
-                                                    ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
-                                                    : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
-                                                    }`}
-                                            >
-                                                Analogue
-                                            </button>
-                                        </div>
-                                        <p className="text-[10px] text-neutral-500 dark:text-white/50 mt-2 leading-snug">
-                                            {pitchCorrection ? 'Speed and pitch adjust independently.' : 'Speed changes pitch together.'}
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        onClick={() => {
-                                            setPlaybackRate(1.0);
-                                            setPitch(0);
-                                            if (audioRef.current) audioRef.current.playbackRate = 1.0;
-                                        }}
-                                        className="w-full py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 dark:text-white/60 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 rounded-lg transition-all"
-                                    >
-                                        Reset
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <SpeedPitchControls />
 
                     <button
                         onClick={onExpand}
@@ -438,6 +303,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
                 {/* Volume */}
                 <div
+                    data-nebula-sidebar-player-volume
                     className="flex items-center justify-center gap-1 shrink-0 mt-3"
                     onMouseEnter={() => setIsHoveringVolume(true)}
                     onMouseLeave={() => setIsHoveringVolume(false)}
@@ -459,6 +325,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                             />
                             <input
                                 type="range"
+                                aria-label="Volume"
                                 min="0"
                                 max="1"
                                 step="0.01"
@@ -472,8 +339,8 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
             </div>
 
             {/* Bottom Section: Queue Card */}
-            <div className={`flex flex-col px-4 pb-4 transition-all duration-300 ${isQueueCollapsed ? 'flex-none' : 'flex-1 min-h-0'}`}>
-                <div className="flex-1 bg-neutral-100 dark:bg-white/5 rounded-xl border border-neutral-200 dark:border-white/5 overflow-hidden flex flex-col shadow-inner">
+            <div className={`flex flex-col px-4 pb-4 transition-all duration-300 ${isQueueCollapsed ? 'flex-none' : 'flex-1 min-h-0'}`} data-nebula-sidebar-player-queue>
+                <div className="flex-1 bg-neutral-100 dark:bg-white/5 rounded-xl border border-neutral-200 dark:border-white/5 overflow-hidden flex flex-col shadow-inner" data-nebula-sidebar-player-queue-card>
                     <div
                         className="px-4 py-3 border-b border-neutral-200 dark:border-white/5 flex items-center justify-between bg-neutral-200/50 dark:bg-white/5 cursor-pointer hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors"
                         onClick={() => setIsQueueCollapsed(!isQueueCollapsed)}
@@ -497,7 +364,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                                     className="group flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-200 dark:hover:bg-white/5 cursor-pointer transition-colors"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        playSong(song, queue);
+                                        playQueueIndex(currentSongIndex + i + 1);
                                     }}
                                 >
                                     <div className="relative w-8 h-8 rounded overflow-hidden shrink-0 bg-neutral-300 dark:bg-white/10">

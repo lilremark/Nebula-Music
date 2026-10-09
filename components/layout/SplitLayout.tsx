@@ -1,6 +1,9 @@
 import React from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { PlayerSurface } from '../player/PlayerSurface';
 
 interface SplitLayoutProps {
+    leftPanel?: React.ReactNode;
     rightPanel: React.ReactNode | null;
     floatingPlayer?: React.ReactNode | null;
     children: React.ReactNode;
@@ -10,6 +13,7 @@ interface SplitLayoutProps {
 
 
 export const SplitLayout: React.FC<SplitLayoutProps> = ({
+    leftPanel,
     rightPanel,
     floatingPlayer,
     children,
@@ -19,31 +23,33 @@ export const SplitLayout: React.FC<SplitLayoutProps> = ({
     const showSidebar = isPlayerVisible && !isCollapsed && rightPanel !== null;
 
     return (
-        <div className="flex h-full w-full bg-neutral-200 dark:bg-black">
+        <div className="nebula-split-layout flex h-full w-full bg-neutral-200 dark:bg-black">
+            {leftPanel}
             {/* Left Panel - Content Area */}
-            <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+            <section data-nebula-content-shell className="relative isolate flex-1 flex flex-col min-w-0 h-full overflow-hidden">
                 {children}
-            </main>
+            </section>
 
             {/* Right Panel - Now Playing (Desktop, when not collapsed) */}
+            <AnimatePresence initial={false}>
             {showSidebar && (
-                <aside
+                <PlayerSurface kind="sidebar" key="sidebar-player"
                     className="
-                        hidden lg:flex flex-col
-                        w-[380px] min-w-[380px] max-w-[380px]
+                        nebula-side-player flex flex-col
+                        w-[340px] min-w-[340px] max-w-[340px]
                         h-full border-l border-neutral-300 dark:border-white/5
                         bg-gradient-to-b from-neutral-100 via-neutral-200 to-neutral-100
                         dark:from-black dark:via-neutral-950 dark:to-black
                     "
-                    style={{ animation: 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}
                 >
-                    {rightPanel}
-                </aside>
+                    <div className="nebula-side-player-content">{rightPanel}</div>
+                </PlayerSurface>
             )}
+            </AnimatePresence>
 
             {/* Floating Mini-Player (centered at bottom when collapsed) */}
-            {isPlayerVisible && isCollapsed && floatingPlayer && (
-                <div className="hidden lg:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+            {isPlayerVisible && floatingPlayer && (
+                <div className={`hidden lg:flex fixed bottom-6 left-1/2 -translate-x-1/2 z-50 ${isCollapsed ? '' : 'min-[1320px]:hidden'}`} data-nebula-floating-dock>
                     {floatingPlayer}
                 </div>
             )}

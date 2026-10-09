@@ -1,0 +1,66 @@
+.nebula-dj-cover { position: relative; width: 100%; height: 100%; overflow: hidden; background: #15101e; }
+.nebula-dj-cover > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.nebula-dj-cover[data-shader-ready="true"] > img { visibility: hidden; }
+.nebula-dj-cover > div { position: absolute !important; inset: 0; }
+.nebula-dj-haze { position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 1; opacity: 0; transition: opacity 300ms ease; background: radial-gradient(ellipse at 25% 30%, rgba(168,85,247,.19), transparent 65%), radial-gradient(ellipse at 80% 90%, rgba(126,34,206,.12), transparent 70%); }
+.nebula-dj-haze[data-session="true"] { opacity: .7; }
+.nebula-dj-haze[data-speaking="true"] { opacity: 1; }
+.dark .nebula-dj-haze { background: radial-gradient(ellipse at 25% 30%, rgba(168,85,247,.17), transparent 65%), radial-gradient(ellipse at 80% 90%, rgba(126,34,206,.13), transparent 70%); }
+.nebula-dj-badge { display: inline-flex; align-items: center; color: #7e22ce; background: rgba(168,85,247,.10); border: 1px solid rgba(168,85,247,.18); border-radius: 5px; padding: 1px 5px; font-size: 9px; line-height: 1.4; letter-spacing: .04em; font-weight: 700; vertical-align: middle; flex-shrink: 0; }
+.dark .nebula-dj-badge { color: #d8b4fe; }
+.nebula-transport { position: relative; }
+.nebula-transport-track-copy .nebula-dj-badge { width: max-content; font-size: 8px; }
+.nebula-dj-eyebrow { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; color: var(--next-muted, #737373); }
+.nebula-dj-view-status { font-size: 13px; font-weight: 600; padding-top: 20px; }
+.nebula-dj-empty { font-size: 14px; color: var(--next-muted); }
+.nebula-dj-caption { padding: 18px 20px; border-radius: 10px; border: 1px solid rgba(168,85,247,.12); background: rgba(168,85,247,.04); margin: 20px 0 28px; }
+.nebula-dj-caption h2 { font-size: 11px; font-weight: 700; color: #9333ea; margin-bottom: 8px; }
+.nebula-dj-caption blockquote { font-size: 14px; line-height: 1.7; margin: 0; }
+.nebula-dj-track-copy { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.nebula-dj-next-summary { margin-top: 18px; }
+@media (max-width: 767px) { .nebula-dj-track-album { display: none; } }
+@media (prefers-reduced-motion: reduce) { .nebula-dj-haze { transition: none; } }
+
+.nebula-dj-actions button:focus-visible, .nebula-dj-track-row:focus-visible { outline: 2px solid var(--next-accent); outline-offset: 3px; }
+.nebula-dj-queue-player { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--next-line); }
+.nebula-dj-queue-player > div:first-child { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.nebula-dj-queue-player-copy { flex: 1; min-width: 0; }
+.nebula-dj-queue-player-copy strong { display: block; font-size: 15px; }
+.nebula-dj-queue-player-copy > span { font-size: 12px; color: var(--next-muted); }
+.nebula-dj-queue-player button { padding: 12px; border-radius: 8px; }
+.nebula-dj-model-download progress { display: block; width: 100%; height: 6px; border: 0; border-radius: 999px; overflow: hidden; appearance: none; }
+.nebula-dj-model-download progress::-webkit-progress-bar { background: var(--next-line); }
+.nebula-dj-model-download progress::-webkit-progress-value { background: var(--next-accent); }
+.nebula-dj-model-download a { text-decoration: underline; }
+.nebula-dj-voice-level { height: 20px; cursor: pointer; accent-color: var(--next-accent); }
+.nebula-dj-voice-level:disabled { cursor: not-allowed; opacity: .5; }
+@container nebula-content (max-width: 620px) {
+  .nebula-dj-preference-row { flex-wrap: wrap; }
+  .nebula-dj-preference-control { width: 100%; }
+}
+
+.nebula-dj-track-row { color: var(--next-text); }
+.nebula-dj-track-art { width: 42px; height: 42px; border-radius: 5px; object-fit: cover; flex-shrink: 0; }
+.nebula-dj-track-number { color: var(--next-muted); }
+.nebula-dj-track-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nebula-dj-track-copy small { font-size: 12px; color: var(--next-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nebula-dj-track-album { width: 28%; font-size: 14px; color: var(--next-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nebula-dj-track-duration { color: var(--next-muted); }
+.nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] .nebula-dj-mix-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 14px; margin: 0; }
+@container nebula-content (max-width: 700px) {
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] { --collection-expanded-cover: clamp(110px, 25cqw, 180px); --collection-expanded-font: 28px; --collection-expanded-height: calc(var(--collection-expanded-cover) + 136px); }
+  .nebula-dj-track-album { display: none; }
+}
+@container nebula-content (max-width: 420px) {
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] { --collection-expanded-height: calc(var(--collection-expanded-cover) + 160px); }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] .nebula-collection-heading { padding-inline: 16px; gap: 16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] .nebula-collection-actions { padding-inline: 16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-album-options] { gap: 6px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-album-options] button:first-child { padding-inline: 12px; font-size: 12px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-album-options] svg { width: 16px; height: 16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-detail-content] { padding-inline: 16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-track-section] { margin-inline: -16px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] [data-nebula-track-row] { padding-inline: 16px; gap: 6px; }
+  .nebula-next .nebula-dj-view[data-nebula-view="ai-dj"] .nebula-dj-mix-heading { padding-inline: 16px; }
+  .nebula-dj-view [data-nebula-album-meta] { font-size: 13px; }
+}

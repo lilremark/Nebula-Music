@@ -3,42 +3,45 @@
 
   # Nebula Music
 
-  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser or the (experimental) desktop app.**
+  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser or the desktop app.**
 
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
-  a responsive interface built for desktop, mobile, and Windows.
+  a responsive interface built for desktop, mobile, Windows, and macOS.
 
-  [![Version](https://img.shields.io/badge/version-2.4.6-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/latest)
+  [![Version](https://img.shields.io/badge/version-3.0.0-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
-  [![Windows](https://img.shields.io/badge/Windows-Desktop-0078d6?style=flat-square&logo=windows&logoColor=white)](https://github.com/lilremark/Nebula-Music/releases/latest)
+  [![Windows](https://img.shields.io/badge/Windows-Desktop-0078d6?style=flat-square&logo=windows&logoColor=white)](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)
   [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](./docker/README.md)
   [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](./LICENSE.txt)
 
-  [Features](#features) · [Desktop App](#desktop-app-windows--macos) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
+  [Features](#features) · [AI DJ](#local-ai-dj-windows-experimental) · [Desktop App](#desktop-app-windows--macos) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
 </div>
 
 ---
 
 ## Screenshots
 
+Nebula **3.0**, captured with Computer Use from the real desktop app in an
+isolated **Demo Mode** session. These screenshots use the demo library only;
+no personal music server or account is shown.
+
 <p align="center">
-  <img src="./screenshots/Screenshot%202026-06-08%20225837.png" alt="Nebula Music home dashboard" width="100%">
+  <img src="./screenshots/v3-home-demo.png" alt="Nebula 3.0 Home in Demo Mode with Quick Picks, recommendations and the now-playing sidebar" width="100%">
 </p>
 
 <table>
   <tr>
-    <td width="50%">
-      <img src="./screenshots/Screenshot%202026-06-08%20225908.png" alt="Nebula Music home view with the now-playing sidebar">
-    </td>
-    <td width="50%">
-      <img src="./screenshots/Screenshot%202026-06-08%20225940.png" alt="Nebula Music full-screen player">
-    </td>
+    <td width="50%"><img src="./screenshots/v3-browse-demo.png" alt="Demo library Browse with generated mixes and daily album picks"></td>
+    <td width="50%"><img src="./screenshots/v3-library-light-demo.png" alt="Demo album library in the light theme with the sidebar player"></td>
   </tr>
   <tr>
-    <td align="center"><strong>Now-playing sidebar and queue</strong></td>
-    <td align="center"><strong>Full-screen player</strong></td>
+    <td align="center"><strong>Browse and discovery</strong></td>
+    <td align="center"><strong>Album library in light mode</strong></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="./screenshots/v3-player-demo.png" alt="Full-screen player with a demo track and playback controls" width="100%"></td>
   </tr>
 </table>
 
@@ -58,12 +61,11 @@ Windows and macOS. It includes everything in the web player plus:
 
 ### Windows
 
-Download the latest installer from the
-[**Nebula Releases page**](https://github.com/lilremark/Nebula-Music/releases/latest)
-(`Nebula-2.4.6-setup.exe`, NSIS installer) or sideload the unsigned
-`Nebula-2.4.6-setup.appx` package with Windows Developer Mode enabled. Once
-installed, Nebula checks GitHub Releases for updates and notifies you when a
-new version is available.
+Download **[v3.0.0](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)**
+(`Nebula-3.0.0-setup.exe`) or its unsigned `.appx` package. Windows builds are
+unsigned and may show SmartScreen warnings. Keep **Stable** selected in
+Settings → Updates to receive stable releases; choose **Beta** to opt into
+prereleases.
 
 ### macOS
 
@@ -82,11 +84,10 @@ features of the platform:
 - A floating **panel mini-player** that stays above other apps and is hidden
   from Cmd-Tab
 
-> **macOS builds ship unsigned.** On first launch, right-click the app and
-> choose **Open** (or allow it in System Settings → Privacy & Security) to
-> bypass Gatekeeper. Automatic updates require code signing; the update check,
-> download, and in-app banner work unsigned, but "Restart & Install" may not
-> complete until the app is signed with a Developer ID.
+Download the Apple Silicon **[v3.0.0 DMG or ZIP](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)**.
+macOS builds are unsigned and not notarized, and Gatekeeper may block first
+launch. Updates check for a new version and open the GitHub release for manual
+DMG installation. AI DJ is disabled and hidden on macOS and in the web player.
 
 ## Features
 
@@ -113,6 +114,51 @@ features of the platform:
 - Featured albums, random mixes, recent releases, and most-played statistics
 - Persistent sorting and filtering by genre, year, and library metadata
 - Demo mode for exploring the interface without connecting a server
+
+### Local AI DJ (Windows experimental)
+
+1. Open **Settings → AI DJ** and select **Download DJ models**. The optional
+   **2.01 GB** download comes from pinned upstream Hugging Face sources and is
+   verified before use. Models are excluded from the installer and stay in the
+   app's data folder across app updates. Cancel, retry and repair are available.
+2. Open **Discover → AI DJ** and select **Start AI DJ**. Opening the view alone
+   does not start playback. Connect your Subsonic library for your own music.
+3. Choose Familiar, Balanced or Discover, four or five tracks per set, Michael
+   or Heart, and speech between sets or over lowered music in Settings.
+
+The DJ learns from account-scoped listening time, likes, skips and play counts.
+Balanced aims for about 60% familiar and 40% less-played related tracks, adapting
+to your library. It greets once and speaks after **4 or 5 completed tracks**;
+skips do not advance that counter. Commentary uses verified track metadata and
+short phrases, with no invented artist trivia.
+
+Text and speech inference run locally using **SmolLM3-3B Q4_K_M** and
+**Kokoro-82M quantized ONNX**. No API key, Python, Ollama or external inference
+service is needed. Once downloaded, the models work offline; music still requires
+access to your server. Preference learning stays on this device. Settings can
+reset the DJ's learning without removing likes or existing play counts.
+
+Players show a small AI DJ label and the normal music queue. During speech, the
+main cover becomes a purple orb that responds to voice audio. Next skips speech;
+pause freezes it. Reduced motion or unavailable WebGPU uses a static cover.
+The Discover cover keeps moving while visible, including idle or paused sessions.
+Optional transcription appears only in Discover. Stop DJ keeps queued music
+playing; Return to previous queue restores your earlier queue and position.
+
+| Requirement | Local AI DJ |
+| --- | --- |
+| Operating system | Windows x64 desktop; unavailable in browser/macOS builds |
+| Memory | 16 GB RAM recommended |
+| Processing | CPU supported; no dedicated GPU required |
+| Disk | 5 GB free for initial model installation; 7 GB for repair |
+| Network | Initial 2.01 GB model download, then access to your music server |
+
+Slower hardware may miss an interlude; music continues immediately. Automated
+model checks used a 32 GB Ryzen 7 9800X3D. A 16 GB reference machine and long
+real-server listening remain experimental-feature acceptance items. See
+[behavior, resource security and validation](docs/ai-dj.md),
+[model notices](electron/aiDj/NOTICE.md) and
+[shadercn/XorDev visualization notices](electron/assets/shadercn-NOTICE.txt).
 
 ### Platform
 
@@ -160,12 +206,9 @@ correct CORS configuration are strongly recommended.
 
 ### Desktop (Windows & macOS)
 
-Download and run the latest installer from the
-[Nebula Releases page](https://github.com/lilremark/Nebula-Music/releases/latest).
-Windows ships an NSIS installer (`Nebula-2.4.6-setup.exe`); macOS ships a
-`.dmg` installer (`Nebula-2.4.6-arm64.dmg`). No setup beyond the installer is
-required — Nebula updates itself from GitHub Releases. To run the desktop app
-from source during development:
+Download and run the [Nebula 3.0 Windows installer or macOS DMG](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0).
+Nebula checks GitHub Releases for app updates. AI DJ is optional and needs the
+model download described above. To run the desktop app from source:
 
 ```bash
 npm install
@@ -176,7 +219,7 @@ npm run start:electron   # builds the renderer + main process and launches Elect
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20.19+ or 22.12+; Node.js 24 LTS is recommended
+- [Node.js](https://nodejs.org/) 22.22.2+, 24.15.0+, or 26+; use Node.js 24 LTS for development and CI
 - npm
 - A reachable Subsonic-compatible server, unless using demo mode
 
@@ -374,6 +417,37 @@ permitted by the music server's CORS policy.
 
 ## Changelog
 
+### v3.0.0 — October 9, 2026
+
+- Promote the beta design, playback reliability, search and mini-player improvements to stable.
+- Update every direct dependency to its latest stable version and remove known npm audit findings.
+- Disable and hide AI DJ on web and macOS while retaining optional experimental Windows support.
+- Refresh README screenshots using the real app and an isolated demo library.
+- Publish Windows x64 and macOS Apple Silicon builds together.
+
+
+### v2.5.0-beta.26 — October 5, 2026
+
+- Smoother bottom/sidebar player switching and closing, with coordinated content resizing.
+- Continuous playback, keyboard focus transfer and reduced-motion support during switches.
+- Rounded, contained search focus highlights and a visible close button in compact layouts.
+
+### v2.5.0-beta.25 — October 4, 2026
+
+- AI DJ Discover now shares the Album and Playlist header, actions and track-row styling.
+- Its cover keeps moving while visible, including idle and paused sessions, and responds to speech.
+- Compact layouts, live reduced-motion preferences and static visualization fallbacks remain supported.
+
+### v2.5.0-beta.23 — October 3, 2026
+
+- Added local AI DJ in Discover with personalized sets, two English voices,
+  4/5-track cadence, two interlude styles and optional transcription.
+- Added verified optional model downloads in Settings, keeping models out of the installer.
+- Added the speech-reactive purple cover to every player and DJ session gradients.
+- Kept content visible with both sidebars open, separated Home slideshow controls
+  from album actions, and simplified the top bar.
+- Updated the beta screenshots and documented model setup and system requirements.
+
 ### v2.4.6 - August 19, 2026
 
 - Added a dedicated Windows title bar with the Nebula wordmark and window controls above the app, matching the macOS layout.
@@ -487,6 +561,14 @@ Security vulnerabilities must not be reported publicly. Email
 
 ## License
 
-Distributed under the [MIT License](./LICENSE.txt).
+Nebula code is distributed under the [MIT License](./LICENSE.txt). Third-party
+models and phonemizer use their [respective licenses](electron/aiDj/NOTICE.md).
+The vendored shadercn renderer is MIT; its ORB-21 shader is non-commercial only
+with XorDev attribution. See the [visualization notice](electron/assets/shadercn-NOTICE.txt).
 
+
+
+## Design system
+
+Run `npm run design-system` and open <http://localhost:3100> for the current-design gallery: theme tokens, live shared components, and music-player pattern references. See [the design system guide](docs/design-system.md) for usage, ownership, and the refinement queue. Build the standalone reference with `npm run design-system:build`.
 

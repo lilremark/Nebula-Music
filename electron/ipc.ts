@@ -34,11 +34,14 @@ export const IPC = {
   playback: {
     command: 'nebula:playback:command',
     snapshot: 'nebula:playback:snapshot',
+    djEnergy: 'nebula:playback:dj-energy',
+    djEnergyToClient: 'nebula:playback:dj-energy-to-client',
     snapshotToClient: 'nebula:playback:snapshot-to-client',
     clientCommand: 'nebula:playback:client-command',
   },
   miniPlayer: {
     toggle: 'nebula:mini-player:toggle',
+    visibility: 'nebula:mini-player:visibility',
     showMain: 'nebula:mini-player:show-main',
   },
   power: {
@@ -50,6 +53,16 @@ export const IPC = {
     installAndRestart: 'nebula:updater:install-and-restart',
     openDownloadPage: 'nebula:updater:open-download-page',
     status: 'nebula:updater:status',
+  },
+  aiDj: {
+    modelsStatus: 'nebula:aiDj:modelsStatus',
+    downloadModels: 'nebula:aiDj:downloadModels',
+    cancelDownload: 'nebula:aiDj:cancelDownload',
+    modelsChanged: 'nebula:aiDj:modelsChanged',
+    readiness: 'nebula:aiDj:readiness',
+    prepare: 'nebula:aiDj:prepare',
+    preview: 'nebula:aiDj:preview',
+    cancel: 'nebula:aiDj:cancel',
   },
 } as const;
 

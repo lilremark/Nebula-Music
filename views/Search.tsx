@@ -1,4 +1,5 @@
 import React from 'react';
+import { Arc } from 'loading-dev';
 import { useStore } from '../context/Store';
 import { Mic2, Disc, Music, Play, MoreVertical, ListPlus, Search as SearchIcon, Clock, BarChart2, Heart, ArrowRight } from 'lucide-react';
 
@@ -7,8 +8,8 @@ export const SearchView: React.FC = () => {
 
     if (isSearching) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in text-neutral-500">
-                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div data-nebula-view="search" data-nebula-search-state="loading" className="flex flex-col items-center justify-center h-[60vh] animate-fade-in text-neutral-500">
+                <Arc size={44} className="mb-4 text-primary" />
                 <p className="font-bold tracking-widest text-xs uppercase">Searching Library...</p>
             </div>
         );
@@ -18,9 +19,9 @@ export const SearchView: React.FC = () => {
 
     if (!hasResults && lastSearchQuery) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center text-neutral-400 animate-fade-in">
+            <div data-nebula-view="search" data-nebula-search-state="empty-results" className="flex flex-col items-center justify-center h-[60vh] text-center text-neutral-400 animate-fade-in">
                 <SearchIcon className="w-16 h-16 mb-6 opacity-20" />
-                <h2 className="text-3xl font-bold text-neutral-900 dark:text-white mb-3">No results found</h2>
+                <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-3">No results found</h1>
                 <p className="text-lg">We couldn't find anything matching <span className="text-neutral-900 dark:text-white font-bold">"{lastSearchQuery}"</span></p>
                 <button
                     onClick={openSearchModal}
@@ -34,22 +35,21 @@ export const SearchView: React.FC = () => {
 
     if (!lastSearchQuery) {
         return (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center text-neutral-400 animate-fade-in">
+            <div data-nebula-view="search" data-nebula-search-state="idle" className="flex flex-col items-center justify-center h-[60vh] text-center text-neutral-400 animate-fade-in">
                 <div className="w-20 h-20 bg-neutral-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-8 border border-neutral-200 dark:border-white/5">
                     <SearchIcon className="w-8 h-8 text-neutral-500" />
                 </div>
-                <h2 className="text-3xl font-bold text-neutral-900 dark:text-white mb-3">Search your library</h2>
-                <p className="max-w-md mx-auto leading-relaxed">Find your favorite artists, albums, and songs. Just start typing to explore your collection.</p>
+                <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-3">Search your library</h1>
             </div>
         );
     }
 
     return (
-        <div className="p-8 md:p-12 pb-32 max-w-[1800px] mx-auto animate-fade-in">
-            <div className="flex items-center justify-between mb-10 border-b border-neutral-200 dark:border-white/5 pb-8">
-                <h2 className="text-4xl font-black tracking-tight text-neutral-900 dark:text-white">
+        <div data-nebula-view="search" data-nebula-search-state="results" className="p-8 md:p-12 pb-32 max-w-[1800px] mx-auto animate-fade-in">
+            <div data-nebula-view-header className="flex items-center justify-between mb-10 border-b border-neutral-200 dark:border-white/5 pb-8">
+                <h1 className="text-4xl font-black tracking-tight text-neutral-900 dark:text-white">
                     Results for <span className="text-primary">"{lastSearchQuery}"</span>
-                </h2>
+                </h1>
                 <span className="text-sm font-bold text-neutral-500 uppercase tracking-widest bg-neutral-100 dark:bg-white/5 px-4 py-1.5 rounded-full border border-neutral-200 dark:border-white/5">
                     {searchResults.songs.length + searchResults.albums.length + searchResults.artists.length} Matches
                 </span>
@@ -63,6 +63,7 @@ export const SearchView: React.FC = () => {
                         {searchResults.artists.map((artist, i) => (
                             <div
                                 key={artist.id}
+                                data-nebula-artist-card
                                 className={`group cursor-pointer floating-card-1 bg-white/80 dark:bg-neutral-900/40 rounded-[2rem] p-5 border border-neutral-200 dark:border-white/5 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-white/10 transition-all duration-300 hover:-translate-y-2 hover:shadow-glow-secondary stagger-${Math.min(i + 1, 6)}`}
                                 onClick={() => setView('ARTIST_DETAIL', artist.id)}
                             >
@@ -92,6 +93,7 @@ export const SearchView: React.FC = () => {
                         {searchResults.albums.map((album, i) => (
                             <div
                                 key={album.id}
+                                data-nebula-collection-card
                                 className={`group cursor-pointer floating-card-1 bg-white/80 dark:bg-neutral-900/40 rounded-[1.5rem] p-4 border border-neutral-200 dark:border-white/5 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:border-neutral-300 dark:hover:border-white/10 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl stagger-${Math.min(i + 1, 6)}`}
                                 onClick={() => setView('ALBUM_DETAIL', album.id)}
                             >
@@ -115,7 +117,7 @@ export const SearchView: React.FC = () => {
             {searchResults.songs.length > 0 && (
                 <section className="animate-slide-up stagger-2">
                     <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6 flex items-center"><Music className="w-6 h-6 mr-3 text-neutral-400" /> Songs</h3>
-                    <div className="floating-card-1 bg-white/80 dark:bg-neutral-900/30 rounded-[2rem] border border-neutral-200 dark:border-white/5 overflow-hidden backdrop-blur-md">
+                    <div data-nebula-track-ledger className="floating-card-1 bg-white/80 dark:bg-neutral-900/30 rounded-[2rem] border border-neutral-200 dark:border-white/5 overflow-hidden backdrop-blur-md">
                         <table className="w-full text-left text-sm text-neutral-700 dark:text-neutral-400">
                             <thead className="bg-neutral-100 dark:bg-black/20 text-neutral-600 dark:text-neutral-500 uppercase tracking-widest text-[10px] font-bold border-b border-neutral-200 dark:border-white/5">
                                 <tr>

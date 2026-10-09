@@ -193,12 +193,21 @@ describe('createUpdater', () => {
     harness.emit('update-downloaded', { version: '3.0.0' });
     expect(harness.getState().newVersion).toBe('3.0.0');
     expect(harness.getState().progress).toBe(100);
-    harness.checkForUpdates.mockRejectedValueOnce(new Error('boom'));
-    await harness.updater.check();
+    harness.emit('error', new Error('boom'));
     const state = harness.getState();
     expect(state.phase).toBe('error');
     expect(state.newVersion).toBeNull();
     expect(state.progress).toBeNull();
+  });
+
+  it('preserves a downloaded installer and restart action when checking again', async () => {
+    const harness = makeHarness();
+    harness.emit('update-downloaded', { version: '3.0.0' });
+    expect(await harness.updater.check()).toBe(false);
+    expect(harness.checkForUpdates).not.toHaveBeenCalled();
+    expect(harness.getState()).toMatchObject({ phase: 'downloaded', newVersion: '3.0.0', progress: 100 });
+    harness.updater.installAndRestart();
+    expect(harness.quitAndInstall).toHaveBeenCalledOnce();
   });
 
   it('only installs after the update is downloaded', () => {

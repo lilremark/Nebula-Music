@@ -30,6 +30,7 @@ LABEL org.opencontainers.image.title="Nebula Music" \
   org.opencontainers.image.licenses="MIT"
 
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker/security-headers.conf /etc/nginx/nebula-security-headers.conf
 COPY --from=build --chown=101:101 /app/dist /usr/share/nginx/html
 
 EXPOSE 8080

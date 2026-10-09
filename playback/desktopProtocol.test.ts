@@ -307,3 +307,13 @@ describe('buildUpcomingList', () => {
     expect(upcoming[0]?.coverArtUrl).toBe('data:image/jpeg;base64,AAAA');
   });
 });
+
+it('validates bounded DJ presentation while excluding transcripts and preserving legacy snapshots', () => {
+  const base = { v: DESKTOP_PROTOCOL_VERSION, ownerId: 'owner', epoch: 0, playing: true, track: null, positionSeconds: 0, durationSeconds: 0, volume: 0.5, muted: false, playbackRate: 1, repeatMode: 'OFF', updatedAt: 1 };
+  expect(desktopSnapshotSchema.safeParse(base).success).toBe(true);
+  const dj = { sessionId: 'session', active: true, speech: true, preview: false, playing: true, position: 2, duration: 12, transcript: 'Private commentary' };
+  const parsed = desktopSnapshotSchema.parse({ ...base, dj });
+  expect(parsed.dj).not.toHaveProperty('transcript');
+  expect(desktopSnapshotSchema.safeParse({ ...base, dj: { ...dj, position: -1 } }).success).toBe(false);
+  expect(desktopSnapshotSchema.safeParse({ ...base, dj: { ...dj, duration: Infinity } }).success).toBe(false);
+});

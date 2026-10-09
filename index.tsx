@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from './context/ThemeContext';
 import { PlatformProvider } from './platform/PlatformContext';
+import './next-ui.css';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;

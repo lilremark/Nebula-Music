@@ -50,6 +50,7 @@ const isSubsonicCredentials = (value: unknown): value is SubsonicCredentials => 
 export class CredentialVault {
   private records = new Map<string, SubsonicCredentials>();
   private secrets = new Map<string, string>();
+  private writeChain: Promise<void> = Promise.resolve();
 
   private constructor(
     private readonly filePath: string,
@@ -162,7 +163,14 @@ export class CredentialVault {
     await this.persist();
   }
 
-  private async persist(): Promise<void> {
+  private persist(): Promise<void> {
+    const write = this.writeChain.then(() => this.atomicWrite());
+    // A failed write must not permanently disable future saves.
+    this.writeChain = write.catch(() => undefined);
+    return write;
+  }
+
+  private async atomicWrite(): Promise<void> {
     await mkdir(path.dirname(this.filePath), { recursive: true });
     if (!this.cipher.isEncryptionAvailable()) {
       throw new Error('Secure credential storage is unavailable on this device.');

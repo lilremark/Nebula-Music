@@ -2,10 +2,11 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import typegpu from 'unplugin-typegpu/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [typegpu({ include: /components\/vendor\/shadercn\/.*\.[jt]sx?$/ }), react()],
   test: {
     coverage: {
       provider: 'v8',
@@ -39,8 +40,8 @@ export default defineConfig({
     // are emitted side-by-side and served by the custom app:// protocol.
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        miniPlayer: resolve(__dirname, 'mini-player.html'),
+        main: resolve(import.meta.dirname, 'index.html'),
+        miniPlayer: resolve(import.meta.dirname, 'mini-player.html'),
       },
     },
     // hls.js is lazy-loaded only for browser-managed .m3u8 radio streams.

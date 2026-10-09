@@ -1,3 +1,4 @@
+@import "./dj-ui.css";
 @import "tailwindcss";
 @config "./tailwind.config.js";
 
@@ -16,17 +17,17 @@
   --mono-950: #0a0a0a;
 
   /* Theme variables (set by ThemeContext) */
-  --theme-bg: #e8e8e8;
-  --theme-bgSecondary: #d4d4d4;
-  --theme-bgTertiary: #c0c0c0;
-  --theme-text: #0a0a0a;
-  --theme-textSecondary: #404040;
-  --theme-textTertiary: #737373;
-  --theme-border: #b0b0b0;
-  --theme-borderHover: #909090;
-  --theme-hover: #d0d0d0;
-  --theme-active: #b8b8b8;
-  --theme-muted: #888888;
+  --theme-bg: #f3f4f8;
+  --theme-bgSecondary: #e8eaf1;
+  --theme-bgTertiary: #d9dce7;
+  --theme-text: #191b27;
+  --theme-textSecondary: #515667;
+  --theme-textTertiary: #626778;
+  --theme-border: #d8dbe5;
+  --theme-borderHover: #b8bdca;
+  --theme-hover: #e8eaf1;
+  --theme-active: #d9dce7;
+  --theme-muted: #626778;
 
   /* Adaptive colors (set by useAdaptiveColors hook) */
   --adaptive-primary: #ffffff;
@@ -48,17 +49,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --theme-bg: #0a0a0a;
-    --theme-bgSecondary: #171717;
-    --theme-bgTertiary: #262626;
-    --theme-text: #fafafa;
-    --theme-textSecondary: #a3a3a3;
-    --theme-textTertiary: #525252;
-    --theme-border: #404040;
-    --theme-borderHover: #525252;
-    --theme-hover: #262626;
-    --theme-active: #404040;
-    --theme-muted: #525252;
+    --theme-bg: #000000;
+    --theme-bgSecondary: #080808;
+    --theme-bgTertiary: #181818;
+    --theme-text: #f5f5f5;
+    --theme-textSecondary: #bcbcbc;
+    --theme-textTertiary: #a8a8a8;
+    --theme-border: #303030;
+    --theme-borderHover: #484848;
+    --theme-hover: #181818;
+    --theme-active: #242424;
+    --theme-muted: #a8a8a8;
   }
 }
 
@@ -755,3 +756,34 @@ input[type="color"]::-webkit-color-swatch {
 * {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* AI DJ uses the beta theme and shared playback owner. */
+.nebula-dj-panel { padding: 18px; color: inherit; min-width: 0; }
+.nebula-dj-heading, .nebula-dj-heading > span { display: flex; align-items: center; gap: 8px; }
+.nebula-dj-heading { justify-content: space-between; font-size: 14px; font-weight: 700; }
+.nebula-dj-heading small { font-weight: 400; font-size: 11px; opacity: .65; }
+.nebula-dj-status, .nebula-dj-taste { font-size: 12px; line-height: 1.6; margin: 12px 0; opacity: .8; }
+.nebula-dj-waveform { width: 100%; height: 48px; color: rgb(var(--color-primary)); }
+.nebula-dj-transcript { margin: 12px 0; padding: 12px 0; border-block: 1px solid color-mix(in srgb, currentColor 12%, transparent); font-size: 13px; line-height: 1.6; }
+.nebula-dj-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.nebula-dj-actions button, .nebula-dj-reset button, .nebula-dj-launch, .nebula-dj-tabs > button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 8px 12px; border-radius: 9px; border: 1px solid color-mix(in srgb, currentColor 15%, transparent); font-size: 12px; background: transparent; }
+.nebula-dj-primary, .nebula-dj-launch.is-active { background: color-mix(in srgb, rgb(var(--color-primary)) 18%, transparent) !important; }
+.nebula-dj-actions button:disabled, .nebula-dj-settings:disabled { opacity: .5; }
+.nebula-dj-panel button:focus-visible, .nebula-dj-settings :focus-visible, .nebula-dj-launch:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.nebula-dj-next h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin: 20px 0 8px; opacity: .7; }
+.nebula-dj-next > div { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.nebula-dj-next img { height: 40px; width: 40px; border-radius: 6px; object-fit: cover; }
+.nebula-dj-next span { min-width: 0; }
+.nebula-dj-next strong, .nebula-dj-next small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.nebula-dj-next small { opacity: .65; margin-top: 3px; }
+.nebula-dj-error, .nebula-dj-settings-status { font-size: 12px; line-height: 1.6; padding: 12px 18px; }
+.nebula-dj-error { border-left: 2px solid currentColor; }
+.nebula-dj-tabs { display: flex; gap: 8px; padding: 0 18px 10px; }
+.nebula-dj-sidebar { overflow: auto; min-height: 0; flex: 1; }
+.nebula-dj-expanded { width: min(560px, 100%); margin: auto; overflow-y: auto; max-height: calc(100vh - 160px); }
+.nebula-dj-settings { margin: 0; border: 0; padding: 0 18px 18px; }
+.nebula-dj-settings label { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; padding: 14px 0; border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent); }
+.nebula-dj-settings select { background: var(--next-surface, #171717); color: var(--next-text, #fafafa); min-height: 44px; border-radius: 9px; padding: 8px 12px; border: 1px solid color-mix(in srgb, currentColor 15%, transparent); max-width: 60%; }
+.nebula-dj-settings input { max-width: 50%; accent-color: rgb(var(--color-primary)); }
+.nebula-dj-reset { font-size: 12px; padding: 12px 0; }
+@media (max-width: 620px) { .nebula-dj-settings label { flex-wrap: wrap; } .nebula-dj-expanded { margin-top: 64px; } .nebula-dj-launch span { display: none; } }

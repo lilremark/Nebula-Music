@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStore } from '../context/Store';
 import { ISong, IAlbum, IPlaylist } from '../types';
-import { Play, Music, RefreshCw, Heart, Radio, Zap, Calendar, Sparkles, Loader2 } from 'lucide-react';
+import { Play, Pause, ChevronLeft, ChevronRight, Music, RefreshCw, Heart, Radio, Zap, Calendar, Sparkles, Loader2 } from 'lucide-react';
 
 // Mix Card Component
 const MixCard: React.FC<{
-    mix: IPlaylist & { icon: any; desc: string };
+    mix: IPlaylist & { icon: any };
     onOpen: () => void;
     onPlay: () => void;
 }> = ({ mix, onOpen, onPlay }) => {
@@ -14,6 +14,7 @@ const MixCard: React.FC<{
 
     return (
         <div
+            data-nebula-mix-card
             className="group cursor-pointer bg-neutral-100 dark:bg-neutral-900/50 rounded-lg overflow-hidden transition-all duration-300 hover:bg-neutral-200 dark:hover:bg-neutral-800"
             onClick={onOpen}
         >
@@ -55,7 +56,6 @@ const MixCard: React.FC<{
             {/* Info */}
             <div className="p-4">
                 <h3 className="font-bold text-neutral-900 dark:text-white text-base mb-1">{mix.name}</h3>
-                <p className="text-xs text-neutral-600 dark:text-white/70">{mix.desc}</p>
             </div>
         </div>
     );
@@ -71,6 +71,7 @@ const AlbumCard: React.FC<{
 
     return (
         <div
+            data-nebula-collection-card
             className="group cursor-pointer"
             onClick={onClick}
         >
@@ -115,6 +116,103 @@ const SectionHeader: React.FC<{
         <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h2>
     </div>
 );
+
+const FeaturedCarousel: React.FC<{
+    songs: ISong[];
+    onPlay: (song: ISong) => void;
+}> = ({ songs, onPlay }) => {
+    const { service } = useStore();
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+    const [isInteracting, setIsInteracting] = useState(false);
+
+    const slideCount = songs.length;
+    const activeSong = songs[activeIndex % Math.max(slideCount, 1)];
+
+    useEffect(() => {
+        if (slideCount < 2 || isPaused || isInteracting) return;
+        const timer = window.setInterval(() => {
+            setActiveIndex(index => (index + 1) % slideCount);
+        }, 6500);
+        return () => window.clearInterval(timer);
+    }, [isInteracting, isPaused, slideCount]);
+
+    useEffect(() => {
+        if (activeIndex < slideCount) return;
+        setActiveIndex(0);
+    }, [activeIndex, slideCount]);
+
+    if (!activeSong) return null;
+
+    const goPrevious = () => setActiveIndex(index => (index - 1 + slideCount) % slideCount);
+    const goNext = () => setActiveIndex(index => (index + 1) % slideCount);
+
+    return (
+        <section
+            data-nebula-featured-carousel
+            className="hidden"
+            aria-label="Featured tracks"
+            aria-roledescription="carousel"
+            onMouseEnter={() => setIsInteracting(true)}
+            onMouseLeave={() => setIsInteracting(false)}
+            onFocusCapture={() => setIsInteracting(true)}
+            onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsInteracting(false);
+            }}
+            onKeyDown={(event) => {
+                if (event.key === 'ArrowLeft') goPrevious();
+                if (event.key === 'ArrowRight') goNext();
+            }}
+        >
+            <img
+                key={activeSong.id}
+                data-nebula-featured-art
+                src={service.getCoverArtUrl(activeSong.coverArt || activeSong.id, 900)}
+                alt=""
+            />
+            <div data-nebula-featured-shade aria-hidden="true" />
+            <div data-nebula-featured-copy>
+                <p data-nebula-featured-context>
+                    {activeSong.genre || activeSong.album}
+                </p>
+                <h2>{activeSong.title}</h2>
+                <p data-nebula-featured-artist>{activeSong.artist}</p>
+                <button type="button" onClick={() => onPlay(activeSong)} data-nebula-featured-play>
+                    <Play className="h-5 w-5 fill-current" />
+                    Play
+                </button>
+            </div>
+
+            <button type="button" onClick={goPrevious} data-nebula-featured-previous aria-label="Previous featured track">
+                <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={goNext} data-nebula-featured-next aria-label="Next featured track">
+                <ChevronRight className="h-5 w-5" />
+            </button>
+
+            <div data-nebula-featured-pagination>
+                {songs.map((song, index) => (
+                    <button
+                        key={song.id}
+                        type="button"
+                        onClick={() => setActiveIndex(index)}
+                        aria-label={`Show featured track ${index + 1} of ${slideCount}: ${song.title}`}
+                        aria-current={index === activeIndex ? 'true' : undefined}
+                    />
+                ))}
+            </div>
+            <button
+                type="button"
+                onClick={() => setIsPaused(value => !value)}
+                data-nebula-featured-rotation
+                aria-label={isPaused ? 'Resume featured track rotation' : 'Pause featured track rotation'}
+                aria-pressed={isPaused}
+            >
+                {isPaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
+            </button>
+        </section>
+    );
+};
 
 const shuffle = <T,>(items: T[]) => {
     const copy = [...items];
@@ -171,7 +269,9 @@ const pickRandomGenre = (songs: ISong[]) => {
 
 export const BrowseView: React.FC = () => {
     const { service, playSong, setView, getMostPlayedSongs, playInstantMix } = useStore();
-    const [generatedMixes, setGeneratedMixes] = useState<(IPlaylist & { icon: any; desc: string })[]>([]);
+    const isStudioPreview = typeof document !== 'undefined' && document.body.classList.contains('studio-preview');
+    const [generatedMixes, setGeneratedMixes] = useState<(IPlaylist & { icon: any })[]>([]);
+    const [featuredSongs, setFeaturedSongs] = useState<ISong[]>([]);
     const [dailyAlbums, setDailyAlbums] = useState<IAlbum[]>([]);
     const [recommendedAlbums, setRecommendedAlbums] = useState<IAlbum[]>([]);
     const [newAlbums, setNewAlbums] = useState<IAlbum[]>([]);
@@ -181,8 +281,8 @@ export const BrowseView: React.FC = () => {
 
     const loadData = useCallback(async (force = false) => {
         setIsLoading(true);
-        const CACHE_KEY = 'nebula_browse_cache_v3';
-        const TS_KEY = 'nebula_browse_ts_v3';
+        const CACHE_KEY = isStudioPreview ? 'nebula_browse_cache_v4_studio' : 'nebula_browse_cache_v3';
+        const TS_KEY = isStudioPreview ? 'nebula_browse_ts_v4_studio' : 'nebula_browse_ts_v3';
         const ONE_DAY = 24 * 60 * 60 * 1000;
         const cached = localStorage.getItem(CACHE_KEY);
         const ts = localStorage.getItem(TS_KEY);
@@ -199,6 +299,7 @@ export const BrowseView: React.FC = () => {
                         return { ...m, icon: Icon };
                     });
                     setGeneratedMixes(mixes);
+                    setFeaturedSongs(isStudioPreview ? data.featured || [] : []);
                     setDailyAlbums(data.daily);
                     setNewAlbums(data.new);
                     setRecommendedAlbums(data.recommended);
@@ -275,10 +376,9 @@ export const BrowseView: React.FC = () => {
             },
         );
 
-        const createMix = (idSuffix: string, title: string, desc: string, icon: any, songs: ISong[]) => ({
+        const createMix = (idSuffix: string, title: string, icon: any, songs: ISong[]) => ({
             id: `generated-${idSuffix}-${Date.now()}`,
             name: title,
-            desc,
             icon,
             songCount: songs.length,
             duration: songs.reduce((acc, s) => acc + s.duration, 0),
@@ -288,10 +388,22 @@ export const BrowseView: React.FC = () => {
         });
 
         const mixes = [
-            createMix('flow', 'Flow State', topGenre ? `Focus for ${topGenre} fans` : 'Focus generated for you', Zap, flowSongs),
-            createMix('oldies', 'Nostalgia Trip', 'Timeless favorites from the past', Radio, oldiesSongs),
-            createMix('daily', 'Daily Mix', 'Fresh tracks to start your day', Music, dailySongs),
+            createMix('flow', 'Flow State', Zap, flowSongs),
+            createMix('oldies', 'Nostalgia Trip', Radio, oldiesSongs),
+            createMix('daily', 'Daily Mix', Music, dailySongs),
         ];
+
+        const featured = isStudioPreview
+            ? weightedSongSample(
+                [...flowSongs, ...dailySongs, ...oldiesSongs, ...libraryPool],
+                5,
+                song => {
+                    const artworkFit = song.coverArt ? 1.6 : 1;
+                    const familiarity = song.playCount ? Math.min(2.2, 1 + song.playCount / 24) : 1;
+                    return artworkFit * familiarity;
+                },
+            )
+            : [];
 
         const albumOffset = () => Math.floor(Math.random() * 35);
         const [dailyRandom, dailyGenre, dailyFresh, recGenre, recFrequent, recRandom, newRes] = await Promise.all([
@@ -317,15 +429,18 @@ export const BrowseView: React.FC = () => {
         ])).slice(0, 10);
 
         setGeneratedMixes(mixes);
+        setFeaturedSongs(featured);
         setDailyAlbums(daily);
         setNewAlbums(newRes);
         setRecommendedAlbums(recRes);
 
         const cacheMixes = mixes.map(({ icon, ...rest }) => rest);
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ mixes: cacheMixes, daily, new: newRes, recommended: recRes }));
+        localStorage.setItem(CACHE_KEY, JSON.stringify(isStudioPreview
+            ? { mixes: cacheMixes, featured, daily, new: newRes, recommended: recRes }
+            : { mixes: cacheMixes, daily, new: newRes, recommended: recRes }));
         localStorage.setItem(TS_KEY, Date.now().toString());
         setIsLoading(false);
-    }, [service, getMostPlayedSongs]);
+    }, [service, getMostPlayedSongs, isStudioPreview]);
 
     useEffect(() => {
         loadData();
@@ -354,25 +469,54 @@ export const BrowseView: React.FC = () => {
     }
 
     return (
-        <div className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
+        <div data-nebula-view="browse" className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-                <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">Browse</h1>
-                <button
-                    onClick={() => loadData(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-neutral-900 transition text-sm font-medium dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/70 dark:hover:text-white"
-                >
-                    <RefreshCw className="w-4 h-4" /> Refresh
-                </button>
+            <div data-nebula-view-header className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">Browse</h1>
+                </div>
+                <div className="flex items-center gap-2">
+                    {isStudioPreview && (
+                        <button
+                            type="button"
+                            onClick={handleInstantMix}
+                            disabled={isInstantMixLoading}
+                            data-nebula-instant-mix-trigger
+                            className="hidden items-center gap-2 px-4 py-2 text-sm font-medium"
+                        >
+                            {isInstantMixLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            Instant Mix
+                        </button>
+                    )}
+                    <button
+                        onClick={() => loadData(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-neutral-900 transition text-sm font-medium dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/70 dark:hover:text-white"
+                    >
+                        <RefreshCw className="w-4 h-4" /> Refresh
+                    </button>
+                </div>
             </div>
 
-            {/* Generated Mixes */}
-            <SectionHeader icon={Sparkles} title="Generated For You" iconColor="text-yellow-500" />
+            {isStudioPreview && instantMixError && <p data-nebula-instant-mix-error className="mb-4 text-sm text-red-500 dark:text-red-400">{instantMixError}</p>}
 
-            <div className="mb-4 flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-100 p-4 dark:border-white/10 dark:bg-neutral-900/60 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-neutral-700 dark:text-white/70">
-                    Builds a mix based off your listening history.
-                </p>
+            {isStudioPreview && (
+                <>
+                    <div data-nebula-featured-heading>
+                        <SectionHeader icon={Sparkles} title="Featured" />
+                    </div>
+                    <FeaturedCarousel
+                        songs={featuredSongs}
+                        onPlay={(song) => playSong(song, featuredSongs)}
+                    />
+                </>
+            )}
+
+            {/* Generated Mixes */}
+            <div data-nebula-generated-heading>
+                <SectionHeader icon={Sparkles} title="Generated For You" iconColor="text-yellow-500" />
+            </div>
+
+            <div data-nebula-browse-intro className="mb-4 flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-100 p-4 dark:border-white/10 dark:bg-neutral-900/60 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     {instantMixError && (
                         <span className="text-sm text-red-500 dark:text-red-400">{instantMixError}</span>
@@ -388,7 +532,7 @@ export const BrowseView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+            <div data-nebula-mix-grid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
                 {generatedMixes.map((mix) => (
                     <MixCard
                         key={mix.id}

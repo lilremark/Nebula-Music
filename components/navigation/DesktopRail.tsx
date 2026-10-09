@@ -1,0 +1,107 @@
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Compass, Headphones, Disc3, Heart, Home, ListMusic, Mic2, Music2, PanelLeftClose, PanelLeftOpen, Radio, Search, Settings } from 'lucide-react';
+import { useStore } from '../../context/Store';
+import logo from '../../logo.svg';
+import { ServerConnectionStatus } from './ServerConnectionStatus';
+import type { View } from '../../types';
+import { usePlatform } from '../../platform/PlatformContext';
+import { isLocalDjPlatform } from '../../platform/aiDjAvailability';
+
+const sections = [
+  { title: 'Your Library', items: [
+    { view: 'ARTISTS', label: 'Artists', icon: Mic2, flag: 'showArtists' },
+    { view: 'ALBUMS', label: 'Albums', icon: Disc3, flag: 'showAlbums' },
+    { view: 'SONGS', label: 'Songs', icon: Music2, flag: 'showSongs' },
+    { view: 'PLAYLISTS', label: 'Playlists', icon: ListMusic, flag: 'showPlaylists' },
+    { view: 'LIKED_SONGS', label: 'Liked Songs', icon: Heart },
+    { view: 'LIKED_ALBUMS', label: 'Liked Albums', icon: Disc3 },
+  ] },
+] as const;
+
+const parentView = (view: View): View => {
+  if (view === 'ARTIST_DETAIL') return 'ARTISTS';
+  if (view === 'ALBUM_DETAIL') return 'ALBUMS';
+  if (view === 'PLAYLIST_DETAIL') return 'PLAYLISTS';
+  return view;
+};
+
+export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
+  const { currentView, setView, openSearchModal, settings, service, playlists } = useStore();
+  const platform = usePlatform();
+  const reducedMotion = useReducedMotion();
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const coreRef = useRef<HTMLDivElement>(null);
+  const [playlistLimit, setPlaylistLimit] = useState(0);
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    const core = coreRef.current;
+    if (!body || !core) return;
+    const measure = () => {
+      // Reserve body padding, the playlist heading and the section gap.
+      const slots = Math.floor((body.clientHeight - core.offsetHeight - (collapsed ? 30 : 62)) / (collapsed ? 44 : 32));
+      setPlaylistLimit(Math.max(0, Math.min(4, slots)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(body);
+    observer.observe(core);
+    return () => observer.disconnect();
+  }, [collapsed]);
+  const visibleSections = sections.map(section => ({
+    ...section,
+    items: section.items.filter(item => !('flag' in item) || settings.sidebar[item.flag]),
+  })).filter(section => section.items.length);
+  const listenItems = [
+    { view: 'HOME', label: 'Home', icon: Home, flag: settings.sidebar.showHome },
+    { view: 'BROWSE', label: 'Browse', icon: Compass, flag: settings.sidebar.showBrowse },
+    { view: 'AI_DJ', label: 'AI DJ', icon: Headphones, flag: isLocalDjPlatform(platform?.info) },
+    { view: 'RADIO', label: 'Internet Radio', icon: Radio, flag: settings.sidebar.showRadio },
+  ] as const;
+
+  const navButton = (item: { view: View; label: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number; 'aria-hidden'?: boolean }> }) => {
+    const Icon = item.icon;
+    const active = parentView(currentView) === item.view;
+    return <button key={item.view} type="button" className="nebula-rail-item" aria-label={item.label} title={collapsed ? item.label : undefined} data-active={active} aria-current={active ? 'page' : undefined} onClick={() => setView(item.view)}>
+      {active && <motion.span className="nebula-rail-active" layoutId="nebula-rail-active" transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 38 }} />}
+      <Icon size={19} strokeWidth={1.9} aria-hidden />
+      <span>{item.label}</span>
+    </button>;
+  };
+
+  return <aside className="nebula-rail" data-collapsed={collapsed} aria-label="Music navigation">
+    <div className="nebula-rail-header" data-nebula-rail-divider="brand">
+    <button type="button" className="nebula-rail-brand" onClick={() => setView('HOME')} aria-label="Nebula Home">
+      <img className="nebula-brand-mark" src={logo} alt="" />
+      <strong>Nebula</strong>
+    </button>
+    <button type="button" className="nebula-rail-toggle" onClick={event => { onToggle(); if (!event.currentTarget.matches(':focus-visible')) event.currentTarget.blur(); }} aria-label={collapsed ? 'Expand navigation sidebar' : 'Collapse navigation sidebar'} aria-expanded={!collapsed} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+      {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+    </button>
+    </div>
+    <div className="nebula-rail-body" ref={bodyRef}>
+      <div className="nebula-rail-core" ref={coreRef}>
+        <nav aria-label="Discover" className="nebula-rail-section">
+          <h2>Discover</h2>
+          {listenItems.filter(item => item.flag).map(navButton)}
+          <button type="button" className="nebula-rail-item" aria-label="Search" title={collapsed ? 'Search' : undefined} onClick={openSearchModal}><Search size={19} strokeWidth={1.9} aria-hidden /><span>Search</span></button>
+        </nav>
+        {visibleSections.map(section => <nav key={section.title} data-nebula-rail-divider="library" aria-label={section.title} className="nebula-rail-section">
+          <h2>{section.title}</h2>
+          {section.items.map(navButton)}
+        </nav>)}
+      </div>
+      {settings.sidebar.showPlaylists && playlists.length > 0 && <nav data-nebula-rail-divider="playlists" aria-label="Your playlists" className="nebula-rail-section nebula-rail-playlists">
+        {playlistLimit > 0 && <h2>Playlists</h2>}
+        {playlists.slice(0, playlistLimit).map(playlist => <button key={playlist.id} type="button" className="nebula-rail-playlist" aria-label={playlist.name} title={collapsed ? playlist.name : undefined} onClick={() => setView('PLAYLIST_DETAIL', playlist.id)}>
+          {playlist.coverArt ? <img src={service.getCoverArtUrl(playlist.coverArt, 48)} alt="" /> : <span><ListMusic size={15} aria-hidden /></span>}
+          <span title={playlist.name}>{playlist.name}</span>
+        </button>)}
+      </nav>}
+    </div>
+    <div className="nebula-rail-footer">
+      <button type="button" className="nebula-rail-item" aria-label="Settings" title={collapsed ? 'Settings' : undefined} data-active={currentView === 'SETTINGS'} onClick={() => setView('SETTINGS')}>{currentView === 'SETTINGS' && <motion.span className="nebula-rail-active" layoutId="nebula-rail-active" transition={reducedMotion ? { duration: 0 } : { duration: 0.18 }} />}<Settings size={19} strokeWidth={1.9} aria-hidden="true" /><span>Settings</span></button>
+      <ServerConnectionStatus />
+    </div>
+  </aside>;
+};

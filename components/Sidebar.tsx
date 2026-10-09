@@ -1,13 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { Home, Disc, Mic2, Music, ListMusic, Settings, Compass, Search, Heart, Star, ChevronLeft, Radio } from 'lucide-react';
+import { Headphones, Home, Disc, Mic2, Music, ListMusic, Settings, Compass, Search, Heart, Star, ChevronLeft, Radio } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { View } from '../types';
 import { Tooltip } from './ui/Tooltip';
+import { usePlatform } from '../platform/PlatformContext';
+import { isLocalDjPlatform } from '../platform/aiDjAvailability';
 
 const STORAGE_KEY = 'nebula-sidebar-collapsed';
 
 export const Sidebar: React.FC = () => {
+  const platform = usePlatform();
   const { currentView, setView, isDemoMode, settings, openSearchModal } = useStore();
   const s = settings.sidebar;
 
@@ -174,7 +177,8 @@ export const Sidebar: React.FC = () => {
           <SectionHeader title="Discover" />
           {s.showHome && <NavItem icon={Home} label="Home" view="HOME" />}
           {s.showBrowse && <NavItem icon={Compass} label="Browse" view="BROWSE" />}
-          {s.showRadio && <NavItem icon={Radio} label="Internet Radio" view="RADIO" />}
+          {isLocalDjPlatform(platform?.info) && <NavItem icon={Headphones} label="AI DJ" view="AI_DJ" />}
+                        {s.showRadio && <NavItem icon={Radio} label="Internet Radio" view="RADIO" />}
         </div>
 
         {(s.showArtists || s.showAlbums || s.showSongs) && (

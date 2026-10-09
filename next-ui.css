@@ -1,0 +1,502 @@
+@property --nebula-rail-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 234px;
+}
+@property --nebula-player-width {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.nebula-next {
+  --nebula-rail-width: 234px;
+  --nebula-player-width: 0px;
+  --nebula-player-expanded-width: clamp(260px, 28vw, 340px);
+  transition: --nebula-rail-width 260ms cubic-bezier(.2, .8, .2, 1), --nebula-player-width 280ms cubic-bezier(.22, 1, .36, 1);
+  --next-canvas: #f3f4f8;
+  --next-rail: #e8eaf1;
+  --next-surface: #ffffff;
+  --next-raised: #f9f9fc;
+  --next-text: #191b27;
+  --next-muted: #626778;
+  --next-line: rgba(32, 40, 72, .1);
+  --next-accent: rgb(var(--color-primary));
+  color: var(--next-text);
+  background: var(--next-canvas);
+  font-family: 'Manrope', 'Inter', sans-serif;
+}
+.nebula-next[data-nebula-sidebar-player-open="true"] {
+  --nebula-player-width: var(--nebula-player-expanded-width);
+  transition-duration: 260ms, 360ms;
+}
+
+html.dark .nebula-next {
+  --next-canvas: #000000;
+  --next-rail: #080808;
+  --next-surface: #101010;
+  --next-raised: #181818;
+  --next-text: #f5f5f5;
+  --next-muted: #a8a8a8;
+  --next-line: rgba(255, 255, 255, .1);
+}
+
+.nebula-next .nebula-split-layout,
+.nebula-next main.custom-scrollbar,
+.nebula-next [data-nebula-view="settings"] {
+  background: var(--next-canvas);
+  color: var(--next-text);
+}
+
+.nebula-rail {
+  container: nebula-rail / size;
+  overflow: hidden;
+  display: none;
+  width: var(--nebula-rail-width);
+  min-width: var(--nebula-rail-width);
+  height: 100%;
+  flex-direction: column;
+  background: var(--next-rail);
+  border-right: 1px solid var(--next-line);
+  color: var(--next-text);
+}
+
+@media (min-width: 1024px) {
+  .nebula-rail { display: flex; }
+  .nebula-next .nebula-topbar-menu { display: none; }
+  .nebula-next .nebula-topbar-heading [data-nebula-topbar-mark] { display: none; }
+}
+
+.nebula-rail-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  height: 72px;
+  padding: 0 16px;
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.nebula-brand-mark {
+  width: 39px;
+  height: 39px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.nebula-rail-brand strong { display: block; font-size: 19px; line-height: 1.1; letter-spacing: -.04em; }
+.nebula-rail-body { flex: 1; min-height: 0; overflow: hidden; padding: 4px 12px 8px; }
+.nebula-rail-core { display: flex; flex-direction: column; flex-shrink: 0; }
+.nebula-rail-section + .nebula-rail-section { margin-top: 18px; }
+.nebula-rail-section h2 { padding: 12px 15px 8px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--next-muted); }
+.nebula-rail-item { position: relative; display: flex; align-items: center; gap: 13px; width: 100%; min-height: 38px; padding: 0 14px; border-radius: 11px; color: var(--next-muted); text-align: left; font-size: 13px; font-weight: 650; transition: color .18s ease, transform .18s ease; }
+.nebula-rail-item > svg, .nebula-rail-item > span:not(.nebula-rail-active) { position: relative; z-index: 1; }
+.nebula-rail-item:hover { color: var(--next-text); transform: translateX(2px); }
+.nebula-rail-item[data-active="true"] { color: var(--next-text); }
+.nebula-rail-item[data-active="true"] svg { color: var(--next-accent); }
+.nebula-rail-active { position: absolute; inset: 3px 4px; border-radius: 8px; background: var(--next-surface); }
+.nebula-rail-footer { padding: 12px; border-top: 1px solid var(--next-line); }
+.nebula-rail-current { display: flex; align-items: center; gap: 10px; margin: 0 2px 10px; padding: 9px; background: var(--next-surface); border-radius: 12px; }
+.nebula-rail-current img { width: 36px; height: 36px; border-radius: 7px; object-fit: cover; }
+.nebula-rail-current span { min-width: 0; }
+.nebula-rail-current strong, .nebula-rail-current small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.nebula-rail-current strong { font-size: 11px; }
+.nebula-rail-current small { color: var(--next-muted); font-size: 10px; margin-top: 2px; }
+.nebula-rail-status { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 12px; border: 1px solid var(--next-line); border-radius: 10px; background: var(--next-surface); }
+.nebula-rail-status-dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: #65a78b; }
+.nebula-rail-status[data-state="demo"] .nebula-rail-status-dot { background: #d3a957; }
+.nebula-rail-status[data-state="offline"] .nebula-rail-status-dot { background: var(--next-muted); }
+.nebula-rail-status > div { min-width: 0; }
+.nebula-rail-status strong { display: block; color: var(--next-text); font-size: 13px; font-weight: 650; line-height: 1.4; }
+.nebula-rail-server { display: block; margin-top: 4px; color: var(--next-muted); font-size: 12px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nebula-rail-playlists { margin-top: 14px; }
+.nebula-rail-playlists h2 { height: 32px; padding: 8px 12px; line-height: 16px; }
+.nebula-rail-playlist { display: flex; align-items: center; gap: 9px; width: 100%; height: 32px; padding: 2px 12px; color: var(--next-muted); text-align: left; font-size: 12px; border-radius: 9px; }
+.nebula-rail-playlist:hover { color: var(--next-text); background: var(--next-surface); }
+.nebula-rail-playlist img, .nebula-rail-playlist > span:first-child { width: 24px; height: 24px; flex: none; border-radius: 6px; object-fit: cover; }
+.nebula-rail-playlist > span:first-child { display: grid; place-items: center; background: var(--next-surface); }
+.nebula-rail-playlist > span:last-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.nebula-next #app-navigation { background: var(--next-surface); border-color: var(--next-line); color: var(--next-text); }
+.nebula-next #app-navigation > div:first-child, .nebula-next #app-navigation > div:last-child { border-color: var(--next-line); }
+.nebula-next #app-navigation button[aria-current="page"] { color: var(--next-text); background: var(--next-raised); }
+.nebula-next #app-navigation button[aria-current="page"] svg { color: var(--next-accent); }
+.nebula-drawer-playlist { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 42px; padding: 5px 15px; border-radius: 9px; color: var(--next-muted); text-align: left; font-size: 12px; }
+.nebula-drawer-playlist:hover { background: var(--next-raised); color: var(--next-text); }
+.nebula-drawer-playlist img, .nebula-drawer-playlist > span:first-child { width: 31px; height: 31px; flex: none; border-radius: 6px; object-fit: cover; }
+.nebula-drawer-playlist > span:first-child { display: grid; place-items: center; background: var(--next-raised); }
+.nebula-drawer-playlist > span:last-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.nebula-next .nebula-topbar { height: 76px; min-height: 76px; padding-inline: 31px; border-color: var(--next-line); }
+.nebula-topbar-surface { background: var(--next-canvas); }
+.nebula-next [data-nebula-topbar-title] { color: var(--next-text); font-size: 22px; font-weight: 800; letter-spacing: -.035em; }
+.nebula-next [data-nebula-topbar-actions] { gap: 8px; }
+.nebula-next .nebula-search-trigger { display: flex; align-items: center; gap: 10px; min-width: 245px; padding: 9px 11px; border: 1px solid var(--next-line); border-radius: 12px; color: var(--next-muted); background: var(--next-surface); text-align: left; }
+.nebula-search-trigger span { flex: 1; font-size: 12px; }
+.nebula-search-trigger kbd { border: 1px solid var(--next-line); border-radius: 5px; padding: 2px 5px; color: var(--next-muted); font-family: inherit; font-size: 9px; }
+.nebula-topbar-theme { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 11px; color: var(--next-muted); }
+.nebula-topbar-theme:hover { background: var(--next-surface); color: var(--next-text); }
+.nebula-topbar-back { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border: 1px solid var(--next-line); border-radius: 9px; color: var(--next-muted); background: var(--next-surface); }
+.nebula-topbar-back:hover { color: var(--next-text); }
+
+.nebula-next [data-nebula-view] { color: var(--next-text); }
+.nebula-next [data-nebula-view="home"] { padding-top: 27px; }
+.nebula-home-intro { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 25px; }
+.nebula-home-intro h1 { color: var(--next-text); font-size: clamp(29px, 3vw, 39px); font-weight: 850; letter-spacing: -.05em; line-height: 1.12; }
+.nebula-quick-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.nebula-quick-song { display: flex; align-items: center; min-width: 0; height: 72px; border: 1px solid var(--next-line); border-radius: 12px; background: var(--next-surface); transition: transform .2s ease, border-color .2s ease, background-color .2s ease; }
+.nebula-quick-song:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--next-accent) 35%, var(--next-line)); background: var(--next-raised); }
+.nebula-quick-song-art { width: 70px; height: 70px; flex: none; object-fit: cover; }
+.nebula-quick-song-copy { flex: 1; min-width: 0; padding: 0 11px; }
+.nebula-quick-song-copy h3 { overflow: hidden; color: var(--next-text); font-size: 12px; font-weight: 750; white-space: nowrap; text-overflow: ellipsis; }
+.nebula-quick-song-copy p { overflow: hidden; margin-top: 3px; color: var(--next-muted); font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
+.nebula-quick-song-play, .nebula-quick-song-add { position: relative; z-index: 11; flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-right: 7px; border-radius: 8px; color: var(--next-text); }
+.nebula-quick-song-play { background: var(--next-raised); }
+.nebula-quick-song-play:hover, .nebula-quick-song-add:hover { background: var(--next-accent); color: white; }
+.nebula-quick-song-add { width: 25px; height: 25px; color: var(--next-muted); opacity: 0; margin-right: 6px; }
+.nebula-quick-song:hover .nebula-quick-song-add, .nebula-quick-song:focus-within .nebula-quick-song-add { opacity: 1; }
+[data-nebula-home-picks] > * { min-width: 0; }
+.nebula-next [data-nebula-home-picks] .nebula-quick-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
+.nebula-home-rotation { overflow: clip; border: 1px solid var(--next-line); border-radius: 15px; background: var(--next-surface); }
+.nebula-home-rotation-heading { display: flex; align-items: end; justify-content: space-between; gap: 12px; padding: 18px 19px 11px; }
+.nebula-home-rotation-heading h2 { margin-top: 3px; color: var(--next-text); font-size: 18px; font-weight: 800; }
+#nebula-home-rotation-tracks:has(+ .nebula-home-rotation-pagination) { min-height: 380px; }
+.nebula-home-rotation-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 15px; border-top: 1px solid var(--next-line); color: var(--next-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.nebula-home-rotation-pagination > div { display: flex; gap: 6px; }
+.nebula-home-rotation-pagination button { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--next-line); border-radius: 8px; color: var(--next-text); background: var(--next-raised); }
+.nebula-home-rotation-pagination button:hover:not(:disabled) { border-color: var(--next-accent); }
+.nebula-home-rotation-pagination button:disabled { opacity: .35; cursor: default; }
+.nebula-home-rotation button:focus-visible { outline: 2px solid var(--next-accent); outline-offset: -2px; }
+.nebula-split-layout:has([data-nebula-panel="now-playing"]) .nebula-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.nebula-next [data-nebula-home-hero] { min-height: 365px; border-radius: 22px; background: var(--next-surface); box-shadow: 0 24px 55px -45px #141829a8; }
+.nebula-next [data-nebula-home-hero] > .relative.flex { min-height: 365px; }
+.nebula-next [data-nebula-home-hero] > .relative.flex > div:first-child { border-radius: 16px; }
+.nebula-next [data-nebula-home-hero] h2 { letter-spacing: -.045em; line-height: 1.04; }
+.nebula-next [data-nebula-home-hero] .bg-primary\/20 { background: color-mix(in srgb, var(--next-accent) 14%, transparent); }
+.nebula-next [data-nebula-home-hero] button { transition: transform .22s cubic-bezier(.2,.8,.2,1), background-color .2s ease; }
+.nebula-next [data-nebula-home-hero] button:hover { transform: translateY(-2px); }
+.nebula-next .nebula-featured-steps { position: absolute; z-index: 2; bottom: 16px; left: 50%; transform: translateX(-50%); }
+.nebula-next [data-nebula-home-hero] > .relative.flex { padding-bottom: 76px; }
+.nebula-next .nebula-featured-steps [data-slot="step-player-track"] { background: color-mix(in srgb, var(--next-surface) 88%, transparent); }
+.nebula-next [data-nebula-view="home"] h2 { letter-spacing: -.025em; }
+.nebula-next [data-nebula-view="home"] .group.cursor-pointer { transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+.nebula-next [data-nebula-view="home"] .group.cursor-pointer:hover { transform: translateY(-4px); }
+.nebula-next [data-nebula-view="home"] .group.cursor-pointer .aspect-square { border-radius: 16px; box-shadow: none; }
+.nebula-next [data-nebula-home-picks] > div:last-child { border-color: var(--next-line); background: var(--next-surface); border-radius: 16px; }
+.nebula-next .nebula-home-tabs { padding: 10px 12px; gap: 5px; border-bottom: 1px solid var(--next-line); }
+.nebula-next .nebula-home-tab { border-radius: 9px; padding: 9px 15px; font-size: 12px; font-weight: 750; }
+.nebula-next .nebula-home-tab span { color: var(--next-muted); }
+.nebula-next .nebula-home-tab:has(.nebula-home-tab-active) span { color: var(--next-text); }
+.nebula-next .nebula-home-tab-active { background: var(--next-raised); border-radius: 9px; }
+
+.nebula-next [data-nebula-view="settings"] { background: var(--next-canvas); }
+.nebula-next [data-nebula-settings-panel] { border-color: var(--next-line); background: var(--next-surface); border-radius: 16px; box-shadow: none; }
+.nebula-next [data-nebula-settings-panel-heading] { border-color: var(--next-line); background: var(--next-raised); }
+.nebula-next [data-nebula-settings-panel-heading] h2 { letter-spacing: -.01em; text-transform: none; }
+.nebula-next .nebula-setting-switch[aria-checked="true"] { background: var(--next-accent); }
+.nebula-next [data-nebula-settings-jumps] { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; padding: 6px; border: 1px solid var(--next-line); border-radius: 13px; background: var(--next-surface); }
+.nebula-next [data-nebula-settings-jumps] button { min-height: 40px; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 650; color: var(--next-muted); white-space: nowrap; }
+.nebula-next [data-nebula-settings-jumps] button:hover, .nebula-next [data-nebula-settings-jumps] button[aria-current="true"] { color: var(--next-text); background: var(--next-raised); }
+.nebula-next [data-nebula-settings-jumps] button:focus-visible { outline: 2px solid var(--next-accent); outline-offset: 2px; }
+.nebula-next [data-nebula-http-consent] { border-color: var(--next-line); background: var(--next-raised); }
+.nebula-next [data-nebula-player="sidebar"] { color: var(--next-text); }
+.nebula-next [data-nebula-panel="now-playing"] { border-color: var(--next-line); background: var(--next-surface); }
+.nebula-next [data-nebula-player="floating"] { background: var(--next-surface); border: 1px solid var(--next-line); box-shadow: 0 20px 45px -25px #0a0e23c4 !important; }
+.nebula-next [data-nebula-floating-dock] { left: calc(50% + var(--nebula-rail-width) / 2); }
+
+.nebula-content-with-dock { padding-bottom: 228px; }
+.nebula-next .nebula-transport { left: calc(50% + var(--nebula-rail-width) / 2 - var(--nebula-player-width) / 2); width: min(1040px, calc(100% - var(--nebula-rail-width) - var(--nebula-player-width) - 40px)); }
+.nebula-player-content-space { transition: padding-bottom 360ms cubic-bezier(.22, 1, .36, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .nebula-player-content-space { transition: none; }
+}
+.nebula-transport { position: fixed; left: calc(50% + var(--nebula-rail-width) / 2); bottom: 16px; transform: translateX(-50%); z-index: 45; display: grid; grid-template-columns: minmax(0, 1fr) 160px minmax(0, 1fr); align-items: center; column-gap: 20px; row-gap: 10px; width: min(1040px, calc(100% - var(--nebula-rail-width) - 40px)); padding: 12px 18px 14px; border: 1px solid var(--next-line); border-radius: 20px; box-shadow: 0 16px 48px rgb(0 0 0 / 35%); background: var(--next-surface); color: var(--next-text); }
+.nebula-transport-track { display: flex; align-items: center; min-width: 0; gap: 11px; }
+.nebula-transport-art { width: 55px; height: 55px; flex: none; border-radius: 8px; object-fit: cover; }
+.nebula-transport-art-empty { display: grid; place-items: center; background: var(--next-raised); }
+.nebula-transport-track-copy { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.nebula-transport-track-copy button { overflow: hidden; color: var(--next-text); text-align: left; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 800; }
+.nebula-transport-track-copy button:hover:not(:disabled) { text-decoration: underline; }
+.nebula-transport-track-copy span { overflow: hidden; color: var(--next-muted); text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.nebula-transport-like { margin-left: 5px; }
+.nebula-transport-like.is-liked { color: var(--next-accent); }
+.nebula-transport-center { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.nebula-transport-buttons { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.nebula-transport-icon { display: grid; place-items: center; width: 29px; height: 29px; flex: none; border-radius: 7px; color: var(--next-muted); }
+.nebula-transport-icon:hover, .nebula-transport-icon[aria-pressed="true"] { color: var(--next-text); background: var(--next-raised); }
+.nebula-transport-play { display: grid; place-items: center; width: 33px; height: 33px; border-radius: 50%; color: var(--next-surface); background: var(--next-text); }
+.nebula-transport-play:hover { transform: scale(1.06); }
+/* Match the large player's square white play button and outlined skip controls. */
+.nebula-playback-controls { --transport-play-size: 64px; --transport-play-icon: 28px; --transport-skip-icon: 28px; }
+.nebula-transport-buttons { --transport-play-size: 48px; --transport-play-icon: 24px; --transport-skip-icon: 24px; gap: 12px; }
+.nebula-playback-controls .nebula-playback-toggle { width: var(--transport-play-size); height: var(--transport-play-size); padding: 0; display: grid; place-items: center; border-radius: 8px; background: #fff; color: #000; box-shadow: 0 6px 20px #0003; }
+.nebula-playback-controls .nebula-playback-toggle svg { width: var(--transport-play-icon); height: var(--transport-play-icon); fill: #000; stroke: #000; }
+.nebula-playback-controls .nebula-playback-toggle svg.lucide-play { margin-left: 2px; }
+.nebula-playback-controls .nebula-playback-skip { width: 36px; height: 44px; padding: 0; display: grid; place-items: center; color: var(--next-muted); }
+.nebula-playback-controls .nebula-playback-skip svg { width: var(--transport-skip-icon); height: var(--transport-skip-icon); stroke: var(--next-text); fill: var(--next-muted); stroke-opacity: .85; }
+.nebula-playback-controls .nebula-playback-skip:hover svg { fill: var(--next-text); }
+.nebula-playback-controls button:focus-visible { outline: 2px solid var(--next-accent); outline-offset: 3px; }
+
+.nebula-transport :is(button, input):focus-visible { outline: 2px solid var(--next-accent); outline-offset: 3px; }
+.nebula-transport-progress { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; padding-bottom: 8px; border-bottom: 1px solid var(--next-line); }
+.nebula-transport-progress > span { min-width: 30px; color: var(--next-muted); font-size: 11px; text-align: left; font-variant-numeric: tabular-nums; }
+.nebula-transport-progress > span:last-child { text-align: right; }
+.nebula-transport-waveform { grid-column: 1 / -1; min-width: 0; height: 80px; }
+.nebula-transport-waveform.has-progress-bar { height: 12px; margin-block: 8px; border-radius: 4px; }
+.nebula-transport { --next-waveform: #424242; }
+html:not(.dark) .nebula-transport { --next-waveform: #b8b8b8; }
+.nebula-transport-waveform:focus-within { outline: 2px solid var(--next-accent); outline-offset: 3px; border-radius: 3px; }
+.nebula-transport-tools input { width: 100%; height: 4px; appearance: none; border-radius: 99px; outline: none; background: linear-gradient(to right, var(--next-accent) var(--progress), var(--next-line) var(--progress)); }
+.nebula-transport-tools input::-webkit-slider-thumb { width: 10px; height: 10px; appearance: none; border-radius: 50%; background: var(--next-text); cursor: pointer; }
+.nebula-transport-live { flex: 1; height: 4px; border-radius: 99px; background: var(--next-accent); }
+.nebula-transport-tools { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-width: 0; }
+.nebula-transport-tools input { width: min(100%, 100px); margin: 0 6px; }
+
+@media (max-width: 1320px) {
+  .nebula-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1180px) {
+  .nebula-transport { grid-template-columns: minmax(0, 1fr) 152px minmax(0, 1fr); column-gap: 14px; }
+  .nebula-next .nebula-transport { width: min(920px, calc(100% - var(--nebula-rail-width) - var(--nebula-player-width) - 32px)); }
+  .nebula-transport-tools input { width: 80px; }
+}
+
+@media (max-width: 1023px) {
+  .nebula-next .nebula-transport { left: calc(50% - var(--nebula-player-width) / 2); width: calc(100% - var(--nebula-player-width) - 32px); }
+  .nebula-next .nebula-topbar { padding-inline: 18px; }
+  .nebula-next .nebula-search-trigger { min-width: 0; width: 40px; height: 40px; justify-content: center; padding: 0; }
+  .nebula-next .nebula-search-trigger span, .nebula-next .nebula-search-trigger kbd { display: none; }
+  .nebula-next [data-nebula-floating-dock] { left: 50%; }
+  .nebula-home-intro { align-items: start; flex-direction: column; }
+}
+
+@media (max-width: 640px) {
+  .nebula-transport { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 12px; }
+  .nebula-transport-track { grid-column: 1; }
+  .nebula-transport-center { grid-column: 2; }
+  .nebula-transport-tools { grid-column: 1 / -1; justify-content: center; }
+  .nebula-transport-waveform { height: 60px; }
+  .nebula-transport-buttons { --transport-play-size: 44px; --transport-play-icon: 22px; --transport-skip-icon: 22px; gap: 6px; }
+  .nebula-transport-buttons .nebula-playback-skip { width: 28px; }
+  .nebula-content-with-dock { padding-bottom: 258px; }
+  .nebula-next .nebula-topbar { height: 61px; min-height: 61px; }
+  .nebula-next [data-nebula-topbar-title] { font-size: 18px; }
+  .nebula-next [data-nebula-home-hero] { min-height: 440px; }
+  .nebula-next [data-nebula-home-hero] > .relative.flex { min-height: 440px; }
+  .nebula-next .nebula-featured-steps { bottom: 13px; }
+  .nebula-next .nebula-featured-steps [data-slot="step-player-control"] { display: none; }
+  .nebula-next [data-nebula-view="home"] { padding-inline: 17px; }
+  .nebula-quick-grid { grid-template-columns: 1fr; }
+  .nebula-home-rotation-heading { align-items: start; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nebula-next { transition: none !important; }
+  .nebula-next, .nebula-next *, .nebula-next *::before, .nebula-next *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
+.nebula-next-setup { background: #f3f4f8; color: #191b27; font-family: 'Manrope', 'Inter', sans-serif; }
+html.dark .nebula-next-setup { background: #000000; color: #f5f5f5; }
+.nebula-next-setup .nebula-setup-card { border: 1px solid #d8dbe5; background: #fff; box-shadow: 0 25px 50px -32px #151b3f4d; }
+html.dark .nebula-next-setup .nebula-setup-card { border-color: #303030; background: #101010; }
+.nebula-next-setup h1 { letter-spacing: -.035em; }
+
+/* Modal overlays follow the content pane, leaving navigation and transport clear. */
+.nebula-content-modal { position: absolute; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; overflow: hidden; }
+.nebula-content-backdrop { position: absolute; inset: 0; background: rgb(0 0 0 / 25%); backdrop-filter: blur(4px); }
+.nebula-content-modal[data-nebula-content-modal="search"] { align-items: flex-start; padding-top: 48px; }
+.nebula-content-modal[data-nebula-content-modal="search"] .nebula-content-backdrop { background: rgb(0 0 0 / 20%); backdrop-filter: blur(2px); }
+.nebula-next .nebula-search-dialog, .nebula-next [data-nebula-radio-modal] { max-height: 100%; background: var(--next-surface); border: 1px solid var(--next-line); box-shadow: 0 24px 70px rgb(0 0 0 / 35%); backdrop-filter: none; }
+.nebula-next [data-nebula-radio-modal] { overflow-y: auto; }
+.nebula-search-dialog [data-nebula-search-input]:focus-visible { outline: 2px solid rgb(var(--color-primary)); outline-offset: -2px; }
+
+/* Shared collection header contracts without changing the document height. */
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) { --album-line: color-mix(in srgb, var(--album-color) 24%, var(--next-line)); --collection-expanded-cover: clamp(280px, 25vw, 360px); --collection-expanded-font: clamp(36px, 4vw, 64px); --collection-expanded-height: calc(var(--collection-expanded-cover) + 136px); --collection-compact-height: 124px; background: linear-gradient(180deg, color-mix(in srgb, var(--album-color) 42%, var(--next-canvas)) 0px, color-mix(in srgb, var(--album-color) 18%, var(--next-canvas)) 520px, var(--next-canvas) 1150px); }
+.nebula-collection-header { --collection-collapse: 0; position: sticky; top: 0; z-index: 20; height: calc(var(--collection-expanded-height) - (var(--collection-expanded-height) - var(--collection-compact-height)) * var(--collection-collapse)); background: color-mix(in srgb, var(--album-color) 38%, var(--next-canvas)); }
+.nebula-collection-spacer { --collection-collapse: 0; height: calc((var(--collection-expanded-height) - var(--collection-compact-height)) * var(--collection-collapse)); pointer-events: none; }
+.nebula-collection-heading { display: flex; align-items: center; gap: calc(36px - 20px * var(--collection-collapse)); height: calc(var(--collection-expanded-height) - 72px - (var(--collection-expanded-height) - 144px) * var(--collection-collapse)); padding: calc(32px - 20px * var(--collection-collapse)) 32px; overflow: hidden; }
+.nebula-collection-cover { flex: none; width: calc(var(--collection-expanded-cover) - (var(--collection-expanded-cover) - 48px) * var(--collection-collapse)); height: calc(var(--collection-expanded-cover) - (var(--collection-expanded-cover) - 48px) * var(--collection-collapse)); border-radius: calc(18px - 10px * var(--collection-collapse)); overflow: hidden; background: var(--next-raised); }
+.nebula-collection-cover img { width: 100%; height: 100%; object-fit: cover; }
+.nebula-collection-cover > div > svg { width: 50%; height: 50%; }
+.nebula-collection-info { flex: 1; min-width: 0; max-height: 100%; overflow: hidden; }
+.nebula-collection-info h1 { color: var(--next-text); font-size: calc(var(--collection-expanded-font) - (var(--collection-expanded-font) - 22px) * var(--collection-collapse)); font-weight: 800; line-height: 1.12; letter-spacing: -.035em; margin-bottom: calc(18px * (1 - var(--collection-collapse))); overflow-wrap: anywhere; }
+.nebula-collection-header[data-compact="true"] h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nebula-collection-meta { max-height: calc(110px * (1 - var(--collection-collapse))); opacity: calc(1 - var(--collection-collapse)); overflow: hidden; }
+.nebula-next [data-nebula-album-meta] { font-size: 16px; line-height: 1.6; margin-bottom: 0; }
+.nebula-collection-actions { display: flex; align-items: center; height: calc(72px - 20px * var(--collection-collapse)); padding: 0 32px; border-top: 1px solid var(--album-line); border-bottom: 1px solid var(--album-line); }
+.nebula-next [data-nebula-album-options] { gap: 10px; }
+.nebula-next [data-nebula-album-options] button { min-width: 40px; min-height: 40px; padding: 10px; font-size: 15px; }
+.nebula-next [data-nebula-album-options] button:first-child { padding-inline: 20px; }
+.nebula-next [data-nebula-album-options] svg { width: 20px; height: 20px; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-detail-content] { padding: 0 32px; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-section] { margin-inline: -32px; background: none; border: 0; border-radius: 0; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-section-inner] { padding: 0; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-section-inner] > h2 { font-size: 13px; padding: 20px 32px 0; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-list] { padding: 0; border: 0; border-radius: 0; background: none; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-row] { min-height: 76px; padding: 12px 32px; margin: 0; border: 0; border-bottom: 1px solid var(--album-line); border-radius: 0; background: transparent; transition: background-color .18s ease; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-row]:hover, .nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-row]:focus-within { background: color-mix(in srgb, var(--album-color) 12%, var(--next-surface)); }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-row][data-current="true"] { background: color-mix(in srgb, var(--album-color) 10%, var(--next-surface)); }
+.nebula-next [data-nebula-track-title] { font-size: 16px; font-weight: 600; }
+.nebula-next [data-nebula-track-duration] { font-size: 14px; width: 48px; }
+.nebula-next [data-nebula-track-play] { width: 40px; height: 40px; border-radius: 8px; }
+.nebula-next [data-nebula-track-play] > span { font-size: 13px; }
+.nebula-next [data-nebula-track-play] > svg { width: 18px; height: 18px; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-actions] button { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-actions] svg { width: 18px; height: 18px; }
+.nebula-next [data-nebula-track-quality] { font-size: 11px; padding: 3px 6px; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) button:focus-visible { outline: 2px solid var(--next-accent); outline-offset: 2px; }
+
+@container nebula-rail (max-height: 720px) {
+  .nebula-rail-brand { height: 56px; }
+  .nebula-brand-mark { width: 32px; height: 32px; }
+  .nebula-rail-body { padding: 0 10px 4px; }
+  .nebula-rail-core .nebula-rail-section { display: flex; flex-direction: column; gap: 0; }
+  .nebula-rail-core .nebula-rail-section h2 { padding: 6px 8px; }
+  .nebula-rail-section + .nebula-rail-section { margin-top: 8px; }
+  .nebula-rail-core .nebula-rail-item { min-height: 30px; padding: 0 6px; gap: 6px; font-size: 11.5px; line-height: 1.2; }
+  .nebula-rail-core .nebula-rail-item > svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nebula-rail-footer { padding: 6px; }
+  .nebula-rail-status { margin-top: 4px; padding: 8px; }
+}
+@container nebula-rail (max-height: 500px) {
+  .nebula-rail-brand { height: 40px; }
+  .nebula-brand-mark { width: 26px; height: 26px; }
+  .nebula-rail-core .nebula-rail-item { min-height: 25px; }
+  .nebula-rail-core .nebula-rail-section h2 { padding-block: 3px; font-size: 9px; }
+  .nebula-rail-section + .nebula-rail-section { margin-top: 4px; }
+  .nebula-rail-footer .nebula-rail-item { min-height: 28px; }
+  .nebula-rail-status { padding: 5px; }
+}
+@media (max-width: 767px) {
+  .nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) { --collection-expanded-cover: clamp(110px, 30vw, 180px); --collection-expanded-font: 28px; --collection-expanded-height: calc(var(--collection-expanded-cover) + 200px); }
+  .nebula-collection-heading { padding-inline: 16px; gap: 16px; }
+  .nebula-collection-actions { padding-inline: 16px; }
+  .nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-detail-content] { padding-inline: 16px; }
+  .nebula-next [data-nebula-album-meta] { font-size: 13px; }
+  .nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-row] { padding: 10px 16px; gap: 6px; }
+  .nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-section] { margin-inline: -16px; }
+  .nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-track-section-inner] > h2 { padding-inline: 16px; }
+  .nebula-next [data-nebula-track-quality] { display: none; }
+  .nebula-next [data-nebula-track-duration] { font-size: 12px; width: 38px; }
+  .nebula-content-modal { padding: 12px; }
+}
+
+/* One animated width keeps the rail, content pane, and dock in sync. */
+.nebula-next[data-nebula-rail-collapsed="true"] { --nebula-rail-width: 72px; }
+.nebula-rail-header { position: relative; display: flex; align-items: center; flex-shrink: 0; padding-right: 44px; border-bottom: 1px solid var(--next-line); }
+.nebula-rail-header .nebula-rail-brand { flex: 1; min-width: 0; overflow: hidden; }
+.nebula-rail-brand strong { white-space: nowrap; }
+.nebula-rail-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 28px; height: 28px; color: var(--next-muted); border-radius: 6px; transition: opacity 160ms ease, background-color 160ms ease; }
+.nebula-rail-toggle:hover { color: var(--next-text); background: var(--next-surface); }
+.nebula-rail :is(button, a):focus-visible { outline: 2px solid var(--next-accent); outline-offset: 2px; }
+.nebula-rail-core > .nebula-rail-section + .nebula-rail-section, .nebula-rail-playlists { border-top: 1px solid var(--next-line); margin-top: 8px; padding-top: 8px; }
+.nebula-rail-item > svg { flex: none; }
+.nebula-rail-item > span:not(.nebula-rail-active), .nebula-rail-brand strong, .nebula-rail-playlist > span:last-child { white-space: nowrap; transition: opacity 160ms ease; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-header { padding-right: 0; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-brand { width: 100%; padding: 0 16px; gap: 0; }
+.nebula-rail[data-collapsed="true"] .nebula-brand-mark { transition: opacity 160ms ease; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-toggle { left: 50%; right: auto; transform: translate(-50%, -50%); width: 40px; height: 40px; opacity: 0; pointer-events: none; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-header:is(:hover, :has(.nebula-rail-toggle:focus-visible)) .nebula-rail-toggle { opacity: 1; pointer-events: auto; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-header:is(:hover, :has(.nebula-rail-toggle:focus-visible)) .nebula-brand-mark { opacity: 0; }
+.nebula-rail[data-collapsed="true"] :is(.nebula-rail-brand strong, .nebula-rail-item > span:not(.nebula-rail-active), .nebula-rail-playlist > span:last-child) { opacity: 0; max-width: 0; overflow: hidden; }
+.nebula-rail[data-collapsed="true"] :is(.nebula-rail-section h2, .nebula-rail-status > div) { display: none; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-body { padding: 4px 12px 8px; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-item { justify-content: flex-start; height: 40px; padding: 0 14px; gap: 0; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-item:hover { transform: none; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-playlist { height: 44px; padding: 4px 0; justify-content: center; gap: 0; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-playlist :is(img, span:first-child) { width: 32px; height: 32px; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-footer { padding: 12px; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-core .nebula-rail-item > svg { width: 19px; height: 19px; }
+.nebula-rail[data-collapsed="true"] .nebula-rail-status { justify-content: center; height: 28px; padding: 0; margin-top: 4px; }
+@container nebula-rail (max-height: 720px) {
+  .nebula-rail[data-collapsed="true"] .nebula-rail-brand { padding-inline: 19.5px; }
+  .nebula-rail[data-collapsed="true"] .nebula-rail-item { height: 32px; min-height: 32px; }
+}
+@container nebula-rail (max-height: 500px) {
+  .nebula-rail[data-collapsed="true"] .nebula-rail-brand { padding-inline: 22.5px; }
+  .nebula-rail[data-collapsed="true"] .nebula-rail-item { height: 25px; min-height: 25px; }
+}
+
+.nebula-split-layout { position: relative; }
+.nebula-next .nebula-side-player { overflow: hidden; flex: 0 0 auto; width: var(--nebula-player-width); min-width: 0; max-width: 340px; }
+.nebula-side-player-content { display: flex; flex-direction: column; width: var(--nebula-player-expanded-width); min-width: var(--nebula-player-expanded-width); height: 100%; }
+[data-nebula-player-surface][data-player-exiting] { pointer-events: none; }
+.nebula-next [data-nebula-content-shell] { container: nebula-content / inline-size; }
+@media (max-height: 740px) {
+  .nebula-side-player [data-nebula-sidebar-player-art] > div { max-width: 160px; }
+  .nebula-side-player [data-nebula-sidebar-player-art] { margin-bottom: 12px; }
+}
+.nebula-speed-pitch-panel { position: fixed; z-index: 150; width: min(300px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; padding: 18px; border: 1px solid var(--next-line); border-radius: 14px; background: var(--next-surface); color: var(--next-text); box-shadow: 0 8px 32px #0006; display: grid; gap: 16px; font-size: 13px; }
+.nebula-speed-pitch-heading { display: flex; align-items: center; justify-content: space-between; }
+.nebula-speed-pitch-panel label { display: block; margin-bottom: 10px; }
+.nebula-speed-pitch-panel output { float: right; font-variant-numeric: tabular-nums; }
+.nebula-speed-pitch-panel button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; padding: 8px; border-radius: 6px; background: var(--next-raised); }
+.nebula-speed-pitch-panel button:disabled { opacity: .35; }
+.nebula-speed-pitch-panel button[aria-pressed="true"] { outline: 1px solid var(--next-muted); }
+.nebula-speed-pitch-stepper { display: grid; grid-template-columns: 34px minmax(0, 1fr) 34px; align-items: center; gap: 10px; }
+.nebula-speed-pitch-stepper input { width: 100%; min-width: 0; accent-color: var(--next-accent); }
+.nebula-speed-pitch-trigger.has-label { display: flex; height: auto; width: auto; padding: 8px 12px; gap: 8px; }
+.nebula-speed-pitch-panel :is(button, input):focus-visible { outline: 2px solid var(--next-accent); outline-offset: 2px; }
+.nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) [data-nebula-detail-content] { padding-top: 0; }
+.nebula-next [data-nebula-library] [data-nebula-view-header] { flex-direction: row; gap: 16px; align-items: center; }
+.nebula-next [data-nebula-library] [data-nebula-view-header] > h1 { font-size: clamp(28px, 3vw, 44px); flex: none; }
+.nebula-next [data-nebula-library] [data-nebula-view-header] > div { flex: 1; width: auto; min-width: 0; }
+.nebula-next [data-nebula-library-filters] { flex-wrap: nowrap; width: 100%; min-width: 0; gap: 8px; }
+.nebula-next [data-nebula-library-filters] > div { min-width: 0; }
+.nebula-next [data-nebula-library-filters] > div:first-child { flex: 1 1 150px; }
+.nebula-next [data-nebula-library-filters] > [data-nebula-dropdown] { flex: 0 1 130px; min-width: 90px; }
+.nebula-next [data-nebula-library-filters] > [data-nebula-year-picker] { flex: 0 1 100px; min-width: 88px; }
+.nebula-next [data-nebula-library-filters] [data-nebula-dropdown] > button { min-width: 0; padding-inline: 10px; }
+.nebula-song-list { margin-inline: -48px; }
+.nebula-song-row { display: flex; align-items: center; gap: 16px; min-height: 80px; padding: 12px 48px; border-bottom: 1px solid var(--next-line); transition: background-color 160ms ease; }
+.nebula-song-row:hover, .nebula-song-row[data-active="true"] { background: var(--next-raised); box-shadow: inset 3px 0 var(--next-accent); }
+.nebula-song-play { position: relative; width: 32px; height: 40px; flex: none; display: grid; place-items: center; color: var(--next-muted); }
+.nebula-song-play svg { display: none; }
+.nebula-song-row:hover .nebula-song-play svg, .nebula-song-row[data-active="true"] .nebula-song-play svg { display: block; }
+.nebula-song-row:hover .nebula-song-play span, .nebula-song-row[data-active="true"] .nebula-song-play span { display: none; }
+.nebula-song-art { width: 48px; height: 48px; border-radius: 6px; object-fit: cover; flex: none; }
+.nebula-song-copy { flex: 1; min-width: 0; }
+.nebula-song-copy > button { display: block; width: 100%; text-align: left; font-size: 16px; font-weight: 650; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.nebula-song-copy > div { color: var(--next-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+.nebula-song-copy > div button:hover { color: var(--next-text); }
+.nebula-song-row [data-nebula-track-duration] { flex: none; color: var(--next-muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+.nebula-song-actions { display: flex; align-items: center; gap: 8px; color: var(--next-muted); }
+.nebula-song-actions button { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; }
+.nebula-song-actions button:hover { color: var(--next-text); background: var(--next-surface); }
+.nebula-song-actions button[aria-pressed="true"] { color: #ef4444; }
+.nebula-song-actions [data-nebula-track-quality] { background: var(--next-surface); border-radius: 4px; }
+@media (max-width: 767px) {
+  .nebula-song-list { margin-inline: -24px; }
+  .nebula-song-row { padding-inline: 24px; gap: 8px; }
+  .nebula-song-actions { gap: 2px; }
+  .nebula-song-actions [data-nebula-track-quality] { display: none; }
+  .nebula-song-actions button { width: 30px; }
+  .nebula-song-art { width: 36px; height: 36px; }
+  .nebula-next [data-nebula-library-filters] { gap: 4px; }
+  .nebula-next [data-nebula-library-filters] > [data-nebula-dropdown] { min-width: 72px; }
+  .nebula-next [data-nebula-library-filters] [data-nebula-dropdown] > button { padding-inline: 7px; font-size: 12px; }
+  .nebula-next [data-nebula-library-filters] [data-nebula-dropdown] > button > div > span:first-child:not(:last-child) { display: none; }
+}
+
+.nebula-next [data-nebula-year-picker] input { padding-left: 30px; padding-right: 22px; }
+
+/* The available view width includes both sidebars, rather than the window alone. */
+@container nebula-content (min-width: 860px) {
+  [data-nebula-home-picks] { grid-template-columns: minmax(0, 1fr) minmax(300px, 34%); }
+  .nebula-next [data-nebula-home-picks] .nebula-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container nebula-content (max-width: 740px) {
+  .nebula-next .nebula-topbar { padding-inline: 18px; }
+  .nebula-next .nebula-search-trigger { min-width: 0; width: 40px; height: 40px; justify-content: center; padding: 0; }
+  .nebula-next .nebula-search-trigger span, .nebula-next .nebula-search-trigger kbd { display: none; }
+  .nebula-home-intro, .nebula-home-rotation-heading { align-items: flex-start; flex-direction: column; }
+  .nebula-next [data-nebula-home-hero] > .relative.flex { flex-direction: column; align-items: flex-start; gap: 20px; padding: 24px 24px 76px; }
+  .nebula-next [data-nebula-home-hero] > .relative.flex > div:first-child { width: 160px; height: 160px; }
+  .nebula-next [data-nebula-library] [data-nebula-view-header] { flex-wrap: wrap; }
+  .nebula-next [data-nebula-library-filters] { flex-wrap: wrap; }
+  .nebula-next [data-nebula-library-filters] > div:first-child { min-width: 160px; }
+  .nebula-next [data-nebula-collection-grid], .nebula-next [data-nebula-mix-grid] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container nebula-content (max-width: 460px) {
+  .nebula-next .nebula-topbar { padding-inline: 12px; }
+  .nebula-next [data-nebula-topbar-title] { font-size: 18px; }
+  .nebula-next .nebula-quick-grid, .nebula-next [data-nebula-mix-grid] { grid-template-columns: minmax(0, 1fr); }
+}

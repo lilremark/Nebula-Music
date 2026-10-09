@@ -9,6 +9,8 @@ interface CustomDropdownProps {
     icon?: React.ReactNode;
     className?: string;
     disabled?: boolean;
+    ariaLabel?: string;
+    clearable?: boolean;
 }
 
 export const CustomDropdown: React.FC<CustomDropdownProps> = ({
@@ -19,6 +21,8 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     icon,
     className = '',
     disabled = false,
+    ariaLabel,
+    clearable = true,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -67,12 +71,14 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     const displayText = selectedOption ? selectedOption.label : placeholder;
 
     return (
-        <div className={`relative ${className}`} ref={dropdownRef}>
+        <div data-nebula-dropdown className={`relative ${className}`} ref={dropdownRef}>
             {/* Trigger button */}
             <button
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
+                aria-label={ariaLabel}
+                aria-expanded={isOpen}
                 className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:border-primary/60 focus:outline-hidden transition-all flex items-center justify-between gap-2
                     bg-neutral-100 border-neutral-300 text-neutral-900 hover:bg-neutral-50
                     dark:bg-neutral-900 dark:border-white/10 dark:text-white dark:hover:bg-neutral-800
@@ -93,6 +99,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
             {/* Dropdown menu */}
             {isOpen && (
                 <div
+                    data-nebula-dropdown-menu
                     className="absolute w-full min-w-[200px] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-white/10 rounded-2xl shadow-float-3 z-50 overflow-hidden animate-scale-in"
                     style={dropdownStyle}
                 >
@@ -116,7 +123,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
                     </div>
 
                     {/* Clear button (optional, only if value is set) */}
-                    {value && (
+                    {value && clearable && (
                         <div className="border-t border-neutral-200 dark:border-white/5 p-2">
                             <button
                                 type="button"

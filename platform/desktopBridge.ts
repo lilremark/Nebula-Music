@@ -44,12 +44,15 @@ export interface DesktopBridge {
   playback: {
     onCommand(handler: (envelope: DesktopCommandEnvelope) => void): () => void;
     publishSnapshot(snapshot: DesktopSnapshot): void;
+    publishDjEnergy?(energy: number): void;
+    onDjEnergy?(handler: (energy: number) => void): () => void;
     onSnapshot(handler: (snapshot: DesktopSnapshot) => void): () => void;
     sendCommand(envelope: DesktopCommandEnvelope): void;
   };
   miniPlayer: {
     toggle(): Promise<void>;
     showMain(): Promise<void>;
+    onVisibility?(handler: (visible: boolean) => void): () => void;
   };
   power: {
     onResumed(handler: () => void): () => void;
@@ -61,6 +64,7 @@ export interface DesktopBridge {
     openDownloadPage(): Promise<boolean>;
     onStatus(handler: (state: UpdaterState) => void): () => void;
   };
+  aiDj?: import('./types').AiDjApi;
 }
 
 declare global {

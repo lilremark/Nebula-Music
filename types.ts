@@ -127,6 +127,7 @@ export interface AutoEqProfileSelection {
   name: string;
   source: string;
   path: string;
+  /** Gain in dB before the EQ filters; applied only while custom EQ is enabled. */
   preamp?: number;
   appliedAt: number;
 }
@@ -138,6 +139,7 @@ export interface AppSettings {
     backgroundColor: string; // hex - for background tint
   };
   sidebar: {
+    collapsed: boolean;
     showHome: boolean;
     showBrowse: boolean;
     showRadio: boolean;
@@ -165,7 +167,7 @@ export interface AppSettings {
       '16k': number;
     };
   };
-  miniPlayerMode: 'floating' | 'sidebar'; // which mini-player style to show
+  miniPlayerMode: 'floating' | 'sidebar'; // sidebar layout uses the bottom bar only while the side panel is closed
   progressVisualization: 'bar' | 'waveform';
   magicCrossfade: boolean;
   streamDeck: {
@@ -178,7 +180,7 @@ export type PlaybackMode = 'normal' | 'shuffle';
 export type RepeatMode = 'OFF' | 'ALL' | 'ONE';
 export const VISUALIZER_MODES = ['BARS', 'WAVE', 'CIRCLE', 'MIRROR', 'SPECTRUM'] as const;
 export type VisualizerMode = typeof VISUALIZER_MODES[number];
-export type View = 'HOME' | 'BROWSE' | 'RADIO' | 'ARTISTS' | 'ALBUMS' | 'SONGS' | 'PLAYLISTS' | 'SETTINGS' | 'PLAYLIST_DETAIL' | 'ARTIST_DETAIL' | 'ALBUM_DETAIL' | 'SEARCH' | 'LIKED_SONGS' | 'LIKED_ALBUMS';
+export type View = 'HOME' | 'AI_DJ' | 'BROWSE' | 'RADIO' | 'ARTISTS' | 'ALBUMS' | 'SONGS' | 'PLAYLISTS' | 'SETTINGS' | 'PLAYLIST_DETAIL' | 'ARTIST_DETAIL' | 'ALBUM_DETAIL' | 'SEARCH' | 'LIKED_SONGS' | 'LIKED_ALBUMS';
 export interface NavigationTarget {
   view: View;
   data?: any;

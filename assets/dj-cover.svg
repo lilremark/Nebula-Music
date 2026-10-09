@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg"><stop stop-color="#322345"/><stop offset="1" stop-color="#15101e"/></radialGradient>
+    <radialGradient id="orb" cx="38%" cy="30%" r="70%"><stop stop-color="#f3e8ff"/><stop offset=".26" stop-color="#dbb7f2"/><stop offset=".58" stop-color="#9565ba"/><stop offset=".83" stop-color="#59328a"/><stop offset="1" stop-color="#2e184b"/></radialGradient>
+    <filter id="cloud"><feTurbulence type="fractalNoise" baseFrequency=".014" numOctaves="3" seed="21"/><feColorMatrix values="0 0 0 0 .65 0 0 0 0 .42 0 0 0 0 .86 0 0 0 .55 0"/><feGaussianBlur stdDeviation="5"/></filter>
+    <clipPath id="sphere"><circle cx="256" cy="256" r="165"/></clipPath>
+    <filter id="glow"><feGaussianBlur stdDeviation="22"/></filter>
+  </defs>
+  <path fill="url(#bg)" d="M0 0h512v512H0z"/>
+  <circle cx="256" cy="260" r="173" fill="#a855f7" opacity=".2" filter="url(#glow)"/>
+  <circle cx="256" cy="256" r="165" fill="url(#orb)"/>
+  <g clip-path="url(#sphere)"><path d="M0 0h512v512H0z" filter="url(#cloud)" opacity=".55"/></g>
+</svg>

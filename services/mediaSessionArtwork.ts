@@ -1,3 +1,5 @@
+import { fetchAndRead, readLimitedBlob } from './httpRequest';
+
 export interface MediaArtworkEntry {
   src: string;
   sizes: string;
@@ -21,9 +23,14 @@ export const toDataUrlArtwork = async (
   const results = await Promise.all(
     entries.map(async (entry) => {
       try {
-        const response = await fetch(entry.src, { credentials: 'same-origin' });
-        if (!response.ok) return null;
-        const blob = await response.blob();
+        const blob = await fetchAndRead(entry.src, async response => {
+          if (!response.ok) {
+            await response.body?.cancel();
+            return null;
+          }
+          return readLimitedBlob(response, 8 * 1024 * 1024);
+        });
+        if (!blob) return null;
         if (!blob.type.startsWith('image/')) return null;
         const dataUrl = await readBlobAsDataUrl(blob);
         return { src: dataUrl, sizes: entry.sizes, type: blob.type };

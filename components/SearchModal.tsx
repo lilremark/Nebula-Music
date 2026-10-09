@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useStore } from '../context/Store';
 import { Search, X, Disc, Mic2, Music, Play, ArrowRight, Command } from 'lucide-react';
 import { ISong, IAlbum, IArtist } from '../types';
+import { ContentModal } from './ContentModal';
 
 export const SearchModal: React.FC = () => {
     const { isSearchModalOpen, closeSearchModal, service, setView, playSong, openSearchModal, performSearch } = useStore();
@@ -33,32 +34,42 @@ export const SearchModal: React.FC = () => {
     useEffect(() => {
         if (isSearchModalOpen) {
             // Small delay to ensure render
-            setTimeout(() => {
+            const focusTimer = setTimeout(() => {
                 inputRef.current?.focus();
             }, 50);
+            return () => clearTimeout(focusTimer);
         }
     }, [isSearchModalOpen]);
 
     // Debounced Search
     useEffect(() => {
+        let cancelled = false;
+        if (!isSearchModalOpen || query.trim().length <= 1) {
+            setResults({ artists: [], albums: [], songs: [] });
+            setLoading(false);
+            return;
+        }
         const delayDebounceFn = setTimeout(async () => {
             if (query.trim().length > 1) {
                 setLoading(true);
                 try {
                     const res = await service.search(query);
-                    setResults(res);
+                    if (!cancelled) setResults(res);
                 } catch (e) {
-                    console.error(e);
+                    if (!cancelled) console.error(e);
                 } finally {
-                    setLoading(false);
+                    if (!cancelled) setLoading(false);
                 }
             } else {
                 setResults({ artists: [], albums: [], songs: [] });
             }
         }, 300);
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [query, service]);
+        return () => {
+            cancelled = true;
+            clearTimeout(delayDebounceFn);
+        };
+    }, [query, service, isSearchModalOpen]);
 
     const handleClose = () => {
         setQuery('');
@@ -71,18 +82,15 @@ export const SearchModal: React.FC = () => {
     const hasResults = results.artists.length > 0 || results.albums.length > 0 || results.songs.length > 0;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-20 px-4 animate-fade-in">
-            {/* Enhanced Backdrop */}
-            <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/20 via-neutral-900/30 to-neutral-900/40 dark:from-black/60 dark:via-black/80 dark:to-black/90 backdrop-blur-extra" onClick={handleClose} />
-
+        <ContentModal kind="search" onDismiss={handleClose}>
             {/* Command Palette Modal */}
-            <div className="relative w-full max-w-3xl floating-card-3 rounded-3xl shadow-float-3 overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+            <div role="dialog" aria-modal="true" aria-label="Search music" className="nebula-search-dialog relative w-full max-w-3xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
                 {/* Search Input Header */}
                 <div className="relative flex items-center p-5 border-b border-neutral-200 dark:border-white/10 bg-gradient-to-r from-primary/[0.03] to-secondary/[0.03]">
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent dark:from-white/5 pointer-events-none" />
 
-                    <div className={`relative p-2.5 rounded-xl border transition-all duration-300 ${query.length > 0 ? 'bg-primary/20 border-primary/40 shadow-glow-sm' : 'bg-neutral-100 border-neutral-200 dark:bg-white/5 dark:border-white/10'
+                    <div className={`relative shrink-0 p-2.5 rounded-xl border transition-all duration-300 ${query.length > 0 ? 'bg-primary/20 border-primary/40 shadow-glow-sm' : 'bg-neutral-100 border-neutral-200 dark:bg-white/5 dark:border-white/10'
                         }`}>
                         <Search className={`w-5 h-5 transition-colors duration-300 ${query.length > 0 ? 'text-primary' : 'text-neutral-400'
                             }`} />
@@ -90,20 +98,22 @@ export const SearchModal: React.FC = () => {
 
                     <input
                         ref={inputRef}
+                        data-nebula-search-input
+                        aria-label="Search music"
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search artists, albums, songs..."
-                        className="flex-1 bg-transparent border-none outline-hidden text-xl font-medium text-neutral-900 dark:text-white px-4 py-2 placeholder-neutral-500 dark:placeholder-neutral-600"
+                        className="relative flex-1 min-w-0 rounded-xl ml-3 mr-2 bg-transparent border-none text-xl font-medium text-neutral-900 dark:text-white px-4 py-2 placeholder-neutral-500 dark:placeholder-neutral-600"
                     />
 
                     {loading && (
-                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-3" />
+                        <div className="shrink-0 w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mr-3" />
                     )}
 
                     <button
                         onClick={handleClose}
-                        className="p-2 rounded-xl hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 transition-all duration-200 interactive-scale dark:hover:bg-white/10 dark:hover:text-white"
+                        className="shrink-0 p-2 rounded-xl hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 transition-all duration-200 interactive-scale dark:hover:bg-white/10 dark:hover:text-white"
                         aria-label="Close search"
                     >
                         <X className="w-5 h-5" />
@@ -126,7 +136,6 @@ export const SearchModal: React.FC = () => {
                                 <Command className="w-4 h-4 text-neutral-500" />
                                 <span className="text-sm text-neutral-600 dark:text-neutral-400 font-medium">Start typing to search</span>
                             </div>
-                            <p className="text-xs text-neutral-600 dark:text-neutral-500 mt-3">Search your entire music library</p>
                         </div>
                     )}
 
@@ -244,7 +253,6 @@ export const SearchModal: React.FC = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </ContentModal>
     );
 };
-

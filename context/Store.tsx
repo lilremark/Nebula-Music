@@ -1,3 +1,5 @@
+import { useDjSession } from './useDjSession';
+import { useListeningEvents } from './useListeningEvents';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { AppState, ISong, View, SubsonicCredentials, AppSettings, IPlaylist, VisualizerMode, RepeatMode, IArtist, IAlbum, HomeData, NavigationTarget, IRadioStation, IRadioMetadata } from '../types';
@@ -10,8 +12,11 @@ import { computeNextPlaybackIndex, pushNavigationStack, popNavigationStack } fro
 import { db } from '../services/db';
 import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
+import { defaultAccent } from '../design-system/tokens';
+import { applyEqPreamp, getEqPreampGain } from '../services/eqPreamp';
 
 interface StoreContextType extends AppState {
+  dj: ReturnType<typeof useDjSession>;
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
   goBack: (fallbackView?: View, fallbackData?: any) => void;
   canGoBack: boolean;
@@ -78,12 +83,9 @@ interface StoreContextType extends AppState {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 const DEFAULT_SETTINGS: AppSettings = {
-  theme: {
-    primaryColor: '#06b6d4',
-    secondaryColor: '#8b5cf6',
-    backgroundColor: '#0a0a0a',
-  },
+  theme: { ...defaultAccent },
   sidebar: {
+    collapsed: false,
     showHome: true,
     showBrowse: true,
     showRadio: true,
@@ -285,7 +287,11 @@ const loadDesktopCredentials = async (platform: Platform): Promise<SubsonicCrede
   return platform.vault.get(canonicalServerUrl(lastServerUrl));
 };
 
-export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const StoreProvider: React.FC<{
+  children: React.ReactNode;
+  /** Optional, isolated persistence for a fixture-only host such as Studio. */
+  previewPlaylistStorageKey?: string;
+}> = ({ children, previewPlaylistStorageKey }) => {
   const platform = usePlatform();
   const [service] = useState(() => new SubsonicService(null));
   useEffect(() => {
@@ -352,6 +358,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isZenMode, setZenMode] = useState(false);
 
   const [playlists, setPlaylists] = useState<IPlaylist[]>([]);
+  const hasRestoredPreviewPlaylists = useRef(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [songToAddToPlaylist, setSongToAddToPlaylist] = useState<ISong | null>(null);
 
@@ -359,6 +366,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isSearching, setIsSearching] = useState(false);
   const [lastSearchQuery, setLastSearchQuery] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const searchRequestRef = useRef(0);
 
   const [playHistory, setPlayHistory] = useState<Record<string, { count: number, song: ISong }>>({});
   const [history, setHistory] = useState<ISong[]>([]);
@@ -379,12 +387,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
   const [cachedArtists, setCachedArtists] = useState<IArtist[]>([]);
 
+  const djRef = useRef<ReturnType<typeof useDjSession> | null>(null);
+  const listeningRef = useRef<ReturnType<typeof useListeningEvents> | null>(null);
+  const restorePositionRef = useRef<number | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const radioAudioRef = useRef<HTMLAudioElement>(null);
   const crossfadeAudioRef = useRef<HTMLAudioElement>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const dspInputRef = useRef<GainNode | null>(null);
+  const eqPreampRef = useRef<GainNode | null>(null);
   const eqFiltersRef = useRef<Array<{ key: EqBandKey; filter: BiquadFilterNode }>>([]);
   const compressorRef = useRef<DynamicsCompressorNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -679,6 +691,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         service.getPlaylists().then(setPlaylists);
         fetchArtists();
       }
+      if (previewPlaylistStorageKey) {
+        try {
+          const storedPlaylists = localStorage.getItem(previewPlaylistStorageKey);
+          const parsedPlaylists = storedPlaylists ? JSON.parse(storedPlaylists) : null;
+          if (Array.isArray(parsedPlaylists)) {
+            hasRestoredPreviewPlaylists.current = true;
+            setPlaylists(parsedPlaylists);
+          }
+        } catch {
+          // Ignore malformed preview data; Studio falls back to the fixtures.
+        }
+      }
       const savedSettings = await db.get('settings', 'user_settings');
       if (savedSettings) {
         // Migration: Convert old flat EQ to new nested structure
@@ -749,7 +773,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setIsInitialized(true);
     };
     init();
-  }, [service, platform]);
+  }, [service, platform, previewPlaylistStorageKey]);
 
   useEffect(() => {
     if (isPlaying && currentSongIndex >= 0 && queue[currentSongIndex]) {
@@ -777,12 +801,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const ctx = audioContextRef.current;
     const now = ctx?.currentTime ?? 0;
 
+    if (eqPreampRef.current) applyEqPreamp(eqPreampRef.current, settings.eq, now);
+
     eqFiltersRef.current.forEach(({ key, filter }) => {
       const targetGain = settings.eq.enabled ? settings.eq.bands[key] || 0 : 0;
       filter.gain.cancelScheduledValues(now);
       filter.gain.setTargetAtTime(targetGain, now, 0.015);
     });
-  }, [settings.eq.bands, settings.eq.enabled]);
+  }, [settings.eq.bands, settings.eq.enabled, settings.eq.autoEq, settings.eq.preset]);
 
   const ensureDspGraph = useCallback((ctx: AudioContext) => {
     if (dspInputRef.current && analyserRef.current) {
@@ -794,7 +820,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     input.gain.value = 1;
     dspInputRef.current = input;
 
-    let currentNode: AudioNode = input;
+    const preamp = ctx.createGain();
+    // Start at the saved gain, rather than briefly playing boosted EQ at unity.
+    preamp.gain.value = getEqPreampGain(settings.eq);
+    input.connect(preamp);
+    eqPreampRef.current = preamp;
+
+    let currentNode: AudioNode = preamp;
     eqFiltersRef.current = EQ_BAND_KEYS.map((key, index) => {
       const filter = ctx.createBiquadFilter();
       filter.type = index === 0 ? 'lowshelf' : index === EQ_BAND_KEYS.length - 1 ? 'highshelf' : 'peaking';
@@ -824,7 +856,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     analyserRef.current = ana;
     setAnalyser(ana);
     applyEqToGraph();
-  }, [applyEqToGraph]);
+  }, [applyEqToGraph, settings.eq]);
 
   const ensureRadioPitchNode = useCallback(async (ctx: AudioContext) => {
     if (!('audioWorklet' in ctx)) return null;
@@ -904,6 +936,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } catch (e) { console.warn("Audio Context init error:", e); }
   }, [ensureDspGraph, ensureRadioPitchNode]);
+
+  const profile = credentials ? credentials.serverUrl.replace(/\/$/, '') + ':' + credentials.username : isDemoMode ? 'demo' : null;
+  const listening = useListeningEvents({ profile, song: currentSong, playing: isPlaying,
+    owner: () => crossfadeHandoffRef.current?.songId === stateRef.current.queue[stateRef.current.currentSongIndex]?.id && crossfadeAudioRef.current && !crossfadeAudioRef.current.paused ? crossfadeAudioRef.current : audioRef.current,
+    onQualified: song => {
+      if (!profile) return;
+      void service.scrobble(song.id, true);
+      void db.incrementPlayCount(song, profile).then(() => refreshMostPlayed()).catch(error => console.warn('Play statistics could not be saved', error));
+    },
+  });
+  listeningRef.current = listening;
+  const dj = useDjSession({ platform, profile, service, queue, index: currentSongIndex, playing: isPlaying, volume, repeat: repeatMode,
+    setQueue, setIndex: setCurrentSongIndex, setPlaying: setIsPlaying, setRepeat: setRepeatMode,
+    initAudio: () => initAudioContext(), context: () => audioContextRef.current, musicGain: () => dspInputRef.current,
+    stopRadio: () => { radioAudioRef.current?.pause(); setIsRadioPlaying(false); setCurrentRadioStation(null); },
+    cancelCrossfade: () => { cancelCrossfade(); },
+    finishListening: () => { listeningRef.current?.finish(); },
+    getPosition: () => crossfadeHandoffRef.current?.songId === stateRef.current.queue[stateRef.current.currentSongIndex]?.id && crossfadeAudioRef.current && !crossfadeAudioRef.current.paused ? crossfadeAudioRef.current.currentTime : audioRef.current?.currentTime || 0, restorePosition: time => { restorePositionRef.current = time; },
+  });
+  djRef.current = dj;
 
   useEffect(() => {
     const ctx = audioContextRef.current;
@@ -994,6 +1046,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     initAudioContext('crossfade');
 
     const commitHandoff = () => {
+      const completed = listeningRef.current?.finish(true) ?? false;
+      if (djRef.current?.boundary(completed, () => { setCurrentSongIndex(nextIndex); setIsPlaying(true); })) return;
       crossfadeHandoffRef.current = {
         songId: nextSong.id,
         currentTime: Number.isFinite(nextAudio.currentTime) ? nextAudio.currentTime : 0,
@@ -1022,6 +1076,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const nextSong = queue[nextIndex];
 
     if (!audio || !nextAudio || !nextSong || isCrossfadingRef.current || isCrossfadeStartingRef.current || !magicCrossfade) return;
+    const dj = djRef.current;
+    if (dj?.state.active && dj.state.completed >= dj.config.interval - 1) return;
 
     prepareCrossfadeTrack(nextIndex);
     isCrossfadeStartingRef.current = true;
@@ -1188,6 +1244,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     mix = shuffle(mix);
     rememberMixIds(mix);
+    listeningRef.current?.finish(false, true); djRef.current?.stop(false);
     setQueue(mix);
     setCurrentSongIndex(0);
     setIsPlaying(mix.length > 0);
@@ -1209,14 +1266,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Report Now Playing every 30 seconds or on start (if needed, but usually once per track is enough for some servers, 
       // though Subsonic often likes periodic updates. optimizing for once per track start for now)
 
-      // Scrobble at 50% or 4 minutes, whichever is sooner
-      if (!hasScrobbled && duration > 30) {
-        const threshold = Math.min(duration / 2, 240);
-        if (current >= threshold) {
-          service.scrobble(queue[currentSongIndex].id, true);
-          hasScrobbled = true;
-        }
-      }
+
     };
 
     const handlePlay = () => {
@@ -1239,6 +1289,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Audio Event Listeners
   useEffect(() => {
     const audio = audioRef.current;
+    const crossfadeAudio = crossfadeAudioRef.current;
     if (!audio) return;
 
     const clearEndAdvanceTimer = () => {
@@ -1280,7 +1331,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     };
 
-    const advanceAfterTrackEnd = (reason: string) => {
+    const advanceAfterTrackEnd = (reason: string, afterInterlude = false) => {
+      if (djRef.current?.isHolding() && !afterInterlude) return;
+      if (!afterInterlude) {
+        const completed = listeningRef.current?.finish(true) ?? false;
+        if (djRef.current?.boundary(completed, () => advanceAfterTrackEnd('DJ interlude', true))) return;
+      }
       clearEndAdvanceTimer();
       const { repeatMode, queue, currentSongIndex } = stateRef.current;
 
@@ -1294,7 +1350,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (queue.length === 0) return;
       const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
       if (nextIndex >= 0) {
-        if (activatePreparedTrack(nextIndex)) return;
+        if (stateRef.current.magicCrossfade && activatePreparedTrack(nextIndex)) return;
         if (isCrossfadeStartingRef.current || isCrossfadingRef.current) cancelCrossfade();
         if (reason !== 'ended') console.warn(`Advancing after ${reason} near track end.`);
         setCurrentSongIndex(nextIndex);
@@ -1343,12 +1399,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } catch (e) { }
       }
 
-      if (isPlaying && dur > 0 && cTime > 0 && !hasScrobbledRef.current && queue[currentSongIndex]) {
-        if (cTime > 30 || cTime > dur / 2) {
-          service.scrobble(queue[currentSongIndex].id);
-          hasScrobbledRef.current = true;
-        }
-      }
 
       if (
         isPlaying &&
@@ -1368,6 +1418,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const onEnded = () => {
       advanceAfterTrackEnd('ended');
+    };
+
+    const onCrossfadeEnded = () => {
+      const handoff = crossfadeHandoffRef.current;
+      const { queue, currentSongIndex, isPlaying, magicCrossfade } = stateRef.current;
+      if (
+        !handoff ||
+        !isPlaying ||
+        !magicCrossfade ||
+        queue[currentSongIndex]?.id !== handoff.songId
+      ) return;
+
+      advanceAfterTrackEnd('crossfade ended');
     };
 
     const onError = (e: any) => {
@@ -1405,6 +1468,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audio.addEventListener('waiting', onLoadingTrouble);
     audio.addEventListener('stalled', onLoadingTrouble);
     audio.addEventListener('suspend', onLoadingTrouble);
+    crossfadeAudio?.addEventListener('ended', onCrossfadeEnded);
 
     return () => {
       clearEndAdvanceTimer();
@@ -1419,6 +1483,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audio.removeEventListener('waiting', onLoadingTrouble);
       audio.removeEventListener('stalled', onLoadingTrouble);
       audio.removeEventListener('suspend', onLoadingTrouble);
+      crossfadeAudio?.removeEventListener('ended', onCrossfadeEnded);
     };
   }, [activatePreparedTrack, cancelCrossfade, getMagicFadeSeconds, getNextPlaybackIndex, initAudioContext, startCrossfade]);
 
@@ -1544,6 +1609,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (isRadioPlaying) {
         initAudioContext('radio');
         audio.play().catch(e => {
+          if (cancelled) return;
           if (e.name !== 'AbortError') console.warn("Radio play failed", e);
           audio.pause();
           audio.load();
@@ -1560,6 +1626,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       cancelled = true;
     };
   }, [currentRadioStation, initAudioContext, isRadioPlaying, volume]);
+
+  useEffect(() => () => {
+    radioHlsRef.current?.destroy();
+    radioHlsRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (!currentRadioStation) {
@@ -1663,6 +1734,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (error?.name !== 'AbortError') console.warn('Radio metadata unavailable', error);
       } finally {
         window.clearTimeout(timeoutId);
+        // Even a response without ICY headers can be an endless live stream.
+        // Release its connection as soon as this metadata probe finishes.
+        controller.abort();
         if (!cancelled) setIsRadioMetadataLoading(false);
       }
     };
@@ -1706,7 +1780,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     if (isCrossfadingRef.current || isCrossfadeStartingRef.current) return;
 
-    if (!isPlaying || repeatMode === 'ONE') {
+    if (!isPlaying || repeatMode === 'ONE' || !settings.magicCrossfade) {
       stopCrossfadeAudio();
       return;
     }
@@ -1714,42 +1788,50 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const nextIndex = getNextPlaybackIndex(currentSongIndex, queue, repeatMode);
     if (nextIndex >= 0) prepareCrossfadeTrack(nextIndex);
     else stopCrossfadeAudio();
-  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, stopCrossfadeAudio]);
+  }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, settings.magicCrossfade, stopCrossfadeAudio]);
 
   // Handle Playback State
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    let cancelled = false;
+    let handoffTimer: number | undefined;
+    let metadataListener: (() => void) | undefined;
 
     const song = queue[currentSongIndex];
+    if (dj.holdMusic) { audio.pause(); return; }
 
     if (song) {
       const url = service.getStreamUrl(song.id, song.suffix);
 
-      if (audio.src !== url) {
-        const handoff = crossfadeHandoffRef.current?.songId === song.id
-          ? crossfadeHandoffRef.current
-          : null;
-
+      const handoff = crossfadeHandoffRef.current?.songId === song.id
+        ? crossfadeHandoffRef.current
+        : null;
+      const sourceChanged = audio.src !== url;
+      if (sourceChanged) {
         audio.src = url;
         audio.volume = volume;
         audio.load();
 
         applyPlaybackAttributes(audio);
+      }
 
+      if (sourceChanged || handoff || restorePositionRef.current !== null) {
         if (isPlaying) {
           const finishCrossfadeHandoff = () => {
+            if (cancelled || crossfadeHandoffRef.current !== handoff) return;
             stopCrossfadeAudio();
             crossfadeHandoffRef.current = null;
             isCrossfadingRef.current = false;
 
             const nextIndex = getNextPlaybackIndex(currentSongIndex, stateRef.current.queue, stateRef.current.repeatMode);
-            if (stateRef.current.isPlaying && nextIndex >= 0) {
+            if (stateRef.current.isPlaying && stateRef.current.magicCrossfade && nextIndex >= 0) {
               prepareCrossfadeTrack(nextIndex);
             }
           };
 
           const startPlayback = () => {
+            if (cancelled) return;
             if (handoff && Number.isFinite(handoff.currentTime)) {
               try {
                 const handoffAudio = crossfadeAudioRef.current;
@@ -1760,24 +1842,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               } catch (e) { }
             }
 
+            if (restorePositionRef.current !== null) {
+              audio.currentTime = restorePositionRef.current; restorePositionRef.current = null;
+            }
             const playPromise = audio.play();
             if (playPromise !== undefined) {
               playPromise
                 .then(() => {
-                  if (handoff) {
-                    window.setTimeout(finishCrossfadeHandoff, 180);
+                  if (handoff && !cancelled) {
+                    handoffTimer = window.setTimeout(finishCrossfadeHandoff, 180);
                   }
                 })
                 .catch(e => {
                   if (e.name !== 'AbortError') console.warn("Play failed", e);
                 });
             } else if (handoff) {
-              window.setTimeout(finishCrossfadeHandoff, 180);
+              handoffTimer = window.setTimeout(finishCrossfadeHandoff, 180);
             }
             initAudioContext(); // Ensure context is ready
           };
 
-          if (handoff && audio.readyState < 1) {
+          if ((handoff || restorePositionRef.current !== null) && audio.readyState < 1) {
+            metadataListener = startPlayback;
             audio.addEventListener('loadedmetadata', startPlayback, { once: true });
           } else {
             startPlayback();
@@ -1796,9 +1882,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       audio.removeAttribute('src');
       audio.load();
     }
-  }, [applyPlaybackAttributes, cancelCrossfade, currentSongIndex, getNextPlaybackIndex, initAudioContext, isPlaying, pitch, pitchCorrection, playbackRate, prepareCrossfadeTrack, queue, service, stopCrossfadeAudio, volume]);
+    return () => {
+      cancelled = true;
+      if (handoffTimer !== undefined) window.clearTimeout(handoffTimer);
+      if (metadataListener) audio.removeEventListener('loadedmetadata', metadataListener);
+    };
+  }, [applyPlaybackAttributes, cancelCrossfade, currentSongIndex, getNextPlaybackIndex, initAudioContext, isPlaying, pitch, pitchCorrection, playbackRate, prepareCrossfadeTrack, queue, service, stopCrossfadeAudio, volume, dj.holdMusic]);
 
   const playSong = (song: ISong, contextQueue?: ISong[]) => {
+    listeningRef.current?.finish(false, true); djRef.current?.stop(false);
     cancelCrossfade();
     if (radioAudioRef.current) radioAudioRef.current.pause();
     setIsRadioPlaying(false);
@@ -1816,6 +1908,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const togglePlay = () => {
+    if (djRef.current?.togglePreview()) return;
     if (currentRadioStation) {
       setIsRadioPlaying(!isRadioPlaying);
       return;
@@ -1824,6 +1917,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const nextSong = () => {
+    if (djRef.current?.skipInterlude()) return;
+    listeningRef.current?.finish(false, true);
     cancelCrossfade();
     if (queue.length === 0) return;
     if (currentSongIndex < queue.length - 1) {
@@ -1841,18 +1936,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const prevSong = () => {
+    if (djRef.current?.skipInterlude()) return;
     cancelCrossfade();
     if (audioRef.current && audioRef.current.currentTime > 3) {
       audioRef.current.currentTime = 0;
       return;
     }
     if (currentSongIndex > 0) {
+      listeningRef.current?.finish(false, true);
       setCurrentSongIndex(currentSongIndex - 1);
       setIsPlaying(true);
     }
   };
 
   const playQueueIndex = (index: number) => {
+    if (djRef.current?.skipInterlude()) return;
+    listeningRef.current?.finish(false, true);
     if (index < 0 || index >= queue.length) return;
     cancelCrossfade();
     if (radioAudioRef.current) radioAudioRef.current.pause();
@@ -1905,6 +2004,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [isPlaying]);
 
   const toggleRepeat = () => {
+    if (djRef.current?.state.active) return;
     const modes: RepeatMode[] = ['OFF', 'ALL', 'ONE'];
     const idx = modes.indexOf(repeatMode);
     setRepeatMode(modes[(idx + 1) % modes.length]);
@@ -1952,10 +2052,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
   const performSearch = async (query: string) => {
+    const requestId = ++searchRequestRef.current;
     setLastSearchQuery(query); setIsSearching(true);
-    const results = await service.search(query);
-    setSearchResults(results); setIsSearching(false);
     setView('SEARCH');
+    try {
+      const results = await service.search(query);
+      if (requestId === searchRequestRef.current) setSearchResults(results);
+    } catch (error) {
+      if (requestId === searchRequestRef.current) {
+        console.warn('Library search failed', error);
+        setSearchResults({ artists: [], albums: [], songs: [] });
+      }
+    } finally {
+      if (requestId === searchRequestRef.current) setIsSearching(false);
+    }
   };
   const openSearchModal = () => setIsSearchModalOpen(true);
   const closeSearchModal = () => setIsSearchModalOpen(false);
@@ -1970,6 +2080,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updatedEQ = {
           ...prev.eq,
           ...newSettings.eq,
+          autoEq: newSettings.eq.preset && newSettings.eq.preset !== 'custom'
+            ? null
+            : newSettings.eq.autoEq === undefined ? prev.eq.autoEq : newSettings.eq.autoEq,
           bands: {
             ...prev.eq.bands,
             ...(newSettings.eq.bands || {})
@@ -2002,6 +2115,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 
   const connectToSubsonic = async (url: string, user: string, secret: string, authMode: 'password' | 'apiKey' = 'password') => {
+    djRef.current?.stop(false); listeningRef.current?.finish();
     const serverUrl = url.trim();
     const creds: SubsonicCredentials = authMode === 'apiKey'
       ? { authType: 'apiKey', serverUrl, apiKey: secret.trim() }
@@ -2009,6 +2123,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     service.setCredentials(creds);
     const success = await service.getPing();
     if (success) {
+      searchRequestRef.current += 1;
+      setIsSearching(false);
       setCredentialsState(creds);
       setIsDemoMode(false);
       // Clear any demo mode data to prevent mixing
@@ -2040,6 +2156,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const disconnect = async () => {
+    djRef.current?.stop(false); listeningRef.current?.finish();
+    searchRequestRef.current += 1;
+    setIsSearching(false);
     cancelCrossfade();
     service.setCredentials(null as any); setCredentialsState(null);
     await clearCredentials(); await db.clear('api_cache');
@@ -2054,7 +2173,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMostPlayed([]);
   };
 
-  const enableDemoMode = () => { setIsDemoMode(true); setPlaylists(MOCK_PLAYLISTS); };
+  const enableDemoMode = () => {
+    searchRequestRef.current += 1;
+    setIsSearching(false);
+    setIsDemoMode(true);
+    if (!hasRestoredPreviewPlaylists.current) setPlaylists(MOCK_PLAYLISTS);
+  };
   const openPlaylistModal = (song: ISong) => { setSongToAddToPlaylist(song); setModalOpen(true); };
   const closePlaylistModal = () => { setModalOpen(false); setSongToAddToPlaylist(null); };
 
@@ -2114,40 +2238,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
       }
 
-      // Report now playing if not already done
-      if (currentSong && isPlaying && !hasScrobbledRef.current) {
-        // Optionally report "Now Playing" status to server repeatedly or once
-      }
 
-      // Scrobble at 50% or 4 minutes
-      if (currentSong && !hasScrobbledRef.current) {
-        const timeScrobble = audio.currentTime > durationErr;
-        const percentScrobble = progress > 50;
-
-        if (timeScrobble || percentScrobble) {
-          console.warn(`Scrobbling and updating stats for: ${currentSong.title}`);
-          hasScrobbledRef.current = true;
-
-          service.scrobble(currentSong.id, true);
-
-          let creds = credentials;
-          if (!creds && service.getCredentials()) {
-            creds = service.getCredentials();
-            setCredentialsState(creds);
-          }
-
-          if (creds) {
-            const normalizedUrl = creds.serverUrl.replace(/\/$/, '');
-            const serverId = `${normalizedUrl}:${creds.username}`;
-
-            db.incrementPlayCount(currentSong, serverId).then(() => {
-              refreshMostPlayed();
-            }).catch(err => console.error('DB Increment Failed:', err));
-          } else {
-            console.error('CRITICAL: No credentials found for local stats.');
-          }
-        }
-      }
     };
 
     // Reset scrobble flag on play (new song logic is handled in playSong)
@@ -2170,11 +2261,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   useEffect(() => {
+    if (!previewPlaylistStorageKey || !isInitialized || !isDemoMode) return;
+    try {
+      localStorage.setItem(previewPlaylistStorageKey, JSON.stringify(playlists));
+    } catch {
+      // Preview persistence is non-essential; playlist editing still works.
+    }
+  }, [isDemoMode, isInitialized, playlists, previewPlaylistStorageKey]);
+
+  useEffect(() => {
     if (!isInitialized) return;
     safeLocalStorageSetItem(RADIO_STATIONS_KEY, JSON.stringify(radioStations));
   }, [radioStations, isInitialized]);
 
   const playRadioStation = (station: IRadioStation) => {
+    listeningRef.current?.finish(false, true); djRef.current?.stop(false);
     cancelCrossfade();
     if (audioRef.current) audioRef.current.pause();
     setIsPlaying(false);
@@ -2223,14 +2324,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <StoreContext.Provider value={{
+      dj,
       currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, radioPitch, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
       credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
       playSong, playRadioStation, toggleRadioPlay, stopRadio, setRadioPitch, togglePlay, nextSong, prevSong, playQueueIndex, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
-      setRepeatMode,
+      setRepeatMode: mode => { if (!djRef.current?.state.active) setRepeatMode(mode); },
       connectToSubsonic, disconnect, enableDemoMode, addToQueue, updateSettings,
       openPlaylistModal, closePlaylistModal, createPlaylist, savePlaylist, addSongToPlaylist, deletePlaylist, reorderPlaylist, addRadioStation, updateRadioStation, deleteRadioStation,
       performSearch, searchResults, isSearching, lastSearchQuery, isSearchModalOpen, openSearchModal, closeSearchModal,
-      getMostPlayedSongs: () => mostPlayed, refreshMostPlayed, playInstantMix, history: [], service, audioRef, radioAudioRef, analyser, isZenMode, setZenMode,
+      getMostPlayedSongs: () => mostPlayed, refreshMostPlayed, playInstantMix, history, service, audioRef, radioAudioRef, analyser, isZenMode, setZenMode,
       homeData, cachedArtists, refreshHomeData, refreshQuickPicks, refreshDiscovery, fetchArtists
     }}>
       {children}
@@ -2249,6 +2351,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         crossOrigin="anonymous"
         preload="none"
       />
+      <audio ref={dj.speechRef} preload="auto" />
     </StoreContext.Provider>
   );
 };

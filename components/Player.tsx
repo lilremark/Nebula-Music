@@ -1,9 +1,10 @@
+import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './player/DjPresentation';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Volume2, Volume1, VolumeX, ChevronDown,
-    Heart, Repeat, Repeat1, Activity, Eye, EyeOff, Disc3, Minus, Plus, Sliders, X, AudioWaveform
+    Heart, Repeat, Repeat1, Activity, Eye, EyeOff, Disc3, AudioWaveform
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { Visualizer } from './Visualizer';
@@ -11,6 +12,7 @@ import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { useArtistImage } from '../hooks/useArtistImage';
 import { useTrackWaveform } from '../hooks/useTrackWaveform';
 import { PlaybackProgress } from './player/PlaybackProgress';
+import { SpeedPitchControls } from './player/SpeedPitchControls';
 import { VISUALIZER_MODES } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { WindowControls } from './window/WindowControls';
@@ -56,19 +58,18 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         visualizerMode, setVisualizerMode,
         repeatMode, toggleRepeat, toggleLike,
         isZenMode, setZenMode,
-        playbackRate, setPlaybackRate, pitch, setPitch, pitchCorrection, setPitchCorrection,
         settings, updateSettings
     } = useStore();
 
+    const { dj, playQueueIndex } = useStore();
+    const voice = useDjPlayback();
     const [activeTab, setActiveTab] = useState<'playing' | 'queue' | 'lyrics'>('playing');
+    useEffect(() => { if (dj.state.active && activeTab === 'lyrics') setActiveTab('queue'); }, [dj.state.active, activeTab]);
     const [lyrics, setLyrics] = useState('');
     const [syncedLyrics, setSyncedLyrics] = useState<SyncedLine[]>([]);
     const [loadingLyrics, setLoadingLyrics] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
-    const [showSpeedPitchModal, setShowSpeedPitchModal] = useState(false);
-    const speedPitchButtonRef = useRef<HTMLButtonElement>(null);
-    const [speedPitchPos, setSpeedPitchPos] = useState<{ left: number; bottom: number } | null>(null);
     const [visualProgress, setVisualProgress] = useState(0); // For immediate visual feedback
     const [showZenControls, setShowZenControls] = useState(false);
 
@@ -78,8 +79,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const currentSong = queue[currentSongIndex];
     const coverArt = currentSong ? service.getCoverArtUrl(currentSong.id, 800) : '';
     const streamUrl = currentSong ? service.getStreamUrl(currentSong.id, currentSong.suffix) : null;
-    const waveform = useTrackWaveform(currentSong?.id, streamUrl);
-    const progressMode = settings.progressVisualization;
+    const progressMode = voice.speech ? 'bar' : settings.progressVisualization;
+    const waveform = useTrackWaveform(currentSong?.id, progressMode === 'waveform' ? streamUrl : null);
     const { colors } = useAdaptiveColors(coverArt);
     const { image: artistImage } = useArtistImage(currentSong?.artistId, currentSong?.artist);
     const isLightMode = mode === 'light';
@@ -159,18 +160,6 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
         setVisualizerMode(VISUALIZER_MODES[nextIndex]);
     }, [visualizerMode, setVisualizerMode]);
 
-    const renderQualityBadge = (suffix?: string, bitrate?: number) => {
-        if (!suffix) return null;
-        const s = suffix.toUpperCase();
-        const isLossless = s === 'FLAC' || s === 'ALAC' || s === 'WAV' || s === 'AIFF' || s === 'AIF';
-        return (
-            <span className={`px-2.5 py-1 rounded text-[10px] font-bold tracking-wider ${isLossless ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-neutral-200 text-neutral-600 border border-neutral-200 dark:bg-white/10 dark:text-white/60 dark:border-white/10'
-                }`}>
-                {s} {bitrate && `${bitrate}k`}
-            </span>
-        );
-    };
-
     useEffect(() => {
         setShowZenControls(isZenMode);
     }, [isZenMode]);
@@ -178,7 +167,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     if (!currentSong) return null;
 
     const progress = duration ? (currentTime / duration) * 100 : 0;
-    const displayProgress = visualProgress || progress; // Use visual progress if actively seeking
+    const displayProgress = voice.speech ? voice.progress : visualProgress || progress; // Use visual progress if actively seeking
     const formatTime = (s: number) => {
         const min = Math.floor(s / 60);
         const sec = Math.floor(s % 60);
@@ -186,6 +175,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     };
 
     const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (voice.speech) return;
         const newProgress = parseFloat(e.target.value);
         setVisualProgress(newProgress); // Immediate visual update
         const newTime = (newProgress / 100) * duration;
@@ -198,19 +188,6 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
     const toggleProgressMode = () => {
         updateSettings({ progressVisualization: progressMode === 'waveform' ? 'bar' : 'waveform' });
-    };
-
-    const toggleSpeedPitch = () => {
-        if (showSpeedPitchModal) {
-            setShowSpeedPitchModal(false);
-            setSpeedPitchPos(null);
-            return;
-        }
-        const r = speedPitchButtonRef.current?.getBoundingClientRect();
-        if (r) {
-            setSpeedPitchPos({ left: r.left + r.width / 2, bottom: window.innerHeight - r.top + 12 });
-        }
-        setShowSpeedPitchModal(true);
     };
 
     const playerBackground = isLightMode
@@ -229,8 +206,12 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
     return (
         <div className={`fixed inset-0 z-[60] flex flex-col bg-neutral-200 dark:bg-[#0a0a0a] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${isExpanded || isZenMode ? 'translate-y-0' : 'translate-y-full'}`}
+            data-nebula-player="fullscreen"
+            inert={!isExpanded && !isZenMode}
+            aria-hidden={!isExpanded && !isZenMode}
             style={playerBackground}
         >
+            <DjHaze speech={voice.speech} />
             {isWindows && (
                 <div
                     className="relative z-20 h-8 flex items-center justify-between px-3 border-b border-white/10"
@@ -249,6 +230,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             {/* Dot pattern background */}
             <div
                 className={`absolute inset-0 pointer-events-none ${isLightMode ? 'opacity-45' : 'opacity-30'}`}
+                data-nebula-player-atmosphere="dots"
                 style={{
                     backgroundImage: `radial-gradient(circle, ${withAlpha(colors.primary, isLightMode ? 0.14 : 0.18)} 1px, transparent 1px)`,
                     backgroundSize: '24px 24px'
@@ -262,29 +244,31 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             {/* Subtle album color orbs */}
             <div
                 className={`absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full blur-[180px] pointer-events-none ${isLightMode ? 'opacity-[0.16]' : 'opacity-[0.05]'}`}
+                data-nebula-player-atmosphere="primary"
                 style={{ backgroundColor: colors.primary }}
             />
             <div
                 className={`absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full blur-[160px] pointer-events-none ${isLightMode ? 'opacity-[0.12]' : 'opacity-[0.04]'}`}
+                data-nebula-player-atmosphere="secondary"
                 style={{ backgroundColor: colors.secondary || colors.primary }}
             />
 
             {/* Ambient Visualizer with gaussian blur */}
-            {isPlaying && !isZenMode && (
+            {isPlaying && !voice.speech && !isZenMode && (
                 <div className="absolute inset-0 z-0 pointer-events-none" style={{ filter: 'blur(8px)' }}>
                     <Visualizer className={`w-full h-full ${isLightMode ? 'opacity-10' : 'opacity-15'}`} primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
                 </div>
             )}
 
             {/* Zen Mode Visualizer */}
-            {isZenMode && (
+            {isZenMode && !voice.speech && (
                 <div className="absolute inset-0 z-0">
                     <Visualizer className="w-full h-full opacity-80" primaryColor={colors.primary} secondaryColor={colors.secondary || colors.primary} />
                 </div>
             )}
 
             {/* Top Navigation */}
-            <header className={`relative z-20 flex items-center justify-between p-4 md:p-6 transition-opacity duration-500 ${isZenMode ? 'opacity-0 hover:opacity-100' : ''}`}>
+            <header className={`relative z-20 flex items-center justify-between p-4 md:p-6 transition-opacity duration-500 ${isZenMode ? 'opacity-0 hover:opacity-100' : ''}`} data-nebula-fullscreen-header>
                 <button
                     onClick={onClose}
                     className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-white/10 flex items-center justify-center hover:bg-neutral-300 dark:hover:bg-white/20 transition-all active:scale-95"
@@ -298,9 +282,10 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                 {!isZenMode && (
                     <div
                         className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-neutral-200 dark:bg-white/5 rounded-lg p-1"
+                        data-nebula-fullscreen-tabs
                         style={appRegion('no-drag')}
                     >
-                        {(['playing', 'lyrics', 'queue'] as const).map(tab => (
+                        {(dj.state.active ? ['playing', 'queue'] as const : ['playing', 'lyrics', 'queue'] as const).map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -335,18 +320,17 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
             </header>
 
             {/* Main Content Area */}
-            <div className={`relative z-10 flex-1 flex flex-col overflow-hidden ${isZenMode ? 'opacity-0 hover:opacity-100 transition-opacity duration-700' : ''}`}>
+            <div className={`relative z-10 flex-1 flex flex-col overflow-hidden ${isZenMode ? 'opacity-0 hover:opacity-100 transition-opacity duration-700' : ''}`} data-nebula-fullscreen-main>
 
                 {/* Now Playing Tab */}
                 {activeTab === 'playing' && !isZenMode && (
                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                        <div className="flex min-h-full w-full flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 px-6 md:px-12 pb-8">
+                        <div className="flex min-h-full w-full flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 px-6 md:px-12 pb-8" data-nebula-fullscreen-playing>
                         {/* Album Art */}
-                        <div className="relative w-full max-w-[380px] lg:max-w-[480px] shrink-0">
+                        <div className="relative w-full max-w-[380px] lg:max-w-[480px] shrink-0" data-nebula-fullscreen-art>
                             <div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 w-full max-w-[min(55vh,480px)] ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
-                                <img
-                                    src={coverArt}
-                                    alt={currentSong.title}
+                                <PlayerCover src={coverArt}
+                                    alt={voice.speech ? 'AI DJ' : currentSong.title}
                                     className="w-full h-full object-cover"
                                 />
                                 {/* Vinyl spinning indicator */}
@@ -359,27 +343,30 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         </div>
 
                         {/* Song Info & Controls */}
-                        <div className="relative flex-1 flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-lg">
-                            {/* Quality Badge */}
-                            <div className="mb-4">
-                                {renderQualityBadge(currentSong.suffix, currentSong.bitRate)}
-                            </div>
-
+                        <div className="relative flex-1 flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-lg" data-nebula-fullscreen-info>
                             {/* Title & Artist */}
+                            <DjBadge />
                             <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-neutral-900 dark:text-white mb-2 leading-tight">
-                                {currentSong.title}
+                                {voice.speech ? 'AI DJ' : currentSong.title}
                             </h1>
                             <p
                                 className="text-lg md:text-xl text-neutral-600 dark:text-white/50 font-medium mb-2 cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
-                                onClick={() => { setView('ARTIST_DETAIL', currentSong.artistId); onClose(); }}
+                                onClick={() => { if (voice.speech) return; setView('ARTIST_DETAIL', currentSong.artistId); onClose(); }}
                             >
-                                {currentSong.artist}
+                                {voice.speech ? voice.subtitle : currentSong.artist}
                             </p>
                             <p
                                 className="text-sm text-neutral-500 dark:text-white/50 mb-8 cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
-                                onClick={() => { setView('ALBUM_DETAIL', currentSong.albumId); onClose(); }}
+                                onClick={() => { if (voice.speech) return; setView('ALBUM_DETAIL', currentSong.albumId); onClose(); }}
                             >
-                                {currentSong.album}
+                                {voice.speech ? '' : currentSong.album}
+                                {!voice.speech && currentSong.suffix && (
+                                    <>
+                                        <span aria-hidden="true"> · </span>
+                                        {currentSong.suffix.toUpperCase()}
+                                        {currentSong.bitRate ? ` · ${currentSong.bitRate} kbps` : ''}
+                                    </>
+                                )}
                             </p>
 
                             {/* Progress Bar */}
@@ -399,25 +386,29 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     progress={displayProgress}
                                     mode={progressMode}
                                     accentColor={colors.primary}
+                                    secondaryColor={colors.secondary}
                                     baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.24 : 0.16)}
                                     markerColor={colors.secondary || colors.primary}
                                     waveform={waveform}
                                     onScrub={handleScrub}
+                                    scrubbable={!voice.speech}
                                     trackClassName={`cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
                                         ? 'h-28 bg-transparent rounded-none'
                                         : 'h-2 bg-neutral-300 dark:bg-white/10 rounded'
                                         }`}
                                 />
                                 <div className="flex justify-between mt-2 text-xs font-mono text-neutral-600 dark:text-white/60">
-                                    <span>{formatTime(currentTime)}</span>
-                                    <span>{formatTime(duration)}</span>
+                                    <span>{formatTime(voice.speech ? voice.position : currentTime)}</span>
+                                    <span>{formatTime(voice.speech ? voice.duration : duration)}</span>
                                 </div>
                             </div>
 
                             {/* Main Controls */}
-                            <div className="flex items-center justify-center gap-6 mb-8 w-full">
+                            <div className="flex items-center justify-center gap-6 mb-8 w-full" data-nebula-fullscreen-transport>
                                 <button
                                     onClick={toggleRepeat}
+                                    disabled={dj.state.active}
+                                    title={dj.state.active ? "Repeat is unavailable during AI DJ" : undefined}
                                     className={`p-3 rounded-lg transition-all ${repeatMode === 'OFF' ? 'text-neutral-500 dark:text-white/50 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-white/5' : 'text-neutral-900 dark:text-white bg-neutral-200 dark:bg-white/10'}`}
                                     aria-label={`Repeat mode: ${repeatMode}`}
                                 >
@@ -435,9 +426,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 <button
                                     onClick={togglePlay}
                                     className="w-20 h-20 rounded-lg bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
-                                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                                    aria-label={voice.playing ? 'Pause' : 'Play'}
                                 >
-                                    {isPlaying ? (
+                                    {voice.playing ? (
                                         <Pause className="w-8 h-8" fill="currentColor" />
                                     ) : (
                                         <Play className="w-8 h-8 ml-1" fill="currentColor" />
@@ -453,6 +444,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 </button>
 
                                 <button
+                                    disabled={voice.speech}
                                     onClick={() => toggleLike(currentSong)}
                                     className={`p-3 rounded-lg transition-all ${currentSong.starred ? 'text-red-500 bg-red-500/10' : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/5'}`}
                                     aria-label={currentSong.starred ? 'Unlike' : 'Like'}
@@ -479,6 +471,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     />
                                     <input
                                         type="range"
+                                        aria-label="Volume"
                                         min="0"
                                         max="1"
                                         step="0.01"
@@ -489,160 +482,15 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 </div>
                             </div>
 
-                            {/* Speed & Pitch Toggle Button */}
-                            <button
-                                onClick={toggleSpeedPitch}
-                                ref={speedPitchButtonRef}
-                                aria-expanded={showSpeedPitchModal}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all ${showSpeedPitchModal || playbackRate !== 1.0 || pitch !== 0 || settings.magicCrossfade
-                                    ? 'bg-neutral-100 text-neutral-900 dark:bg-white/10 dark:text-white'
-                                    : 'bg-neutral-50 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 dark:bg-white/5 dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
-                                    }`}
-                            >
-                                <Sliders className="w-4 h-4" />
-                                <span className="text-sm font-medium">Speed & Pitch</span>
-                                {(playbackRate !== 1.0 || pitch !== 0 || settings.magicCrossfade) && (
-                                    <span className="text-xs font-mono bg-white/10 px-1.5 py-0.5 rounded">
-                                        {playbackRate !== 1.0 && `${playbackRate.toFixed(1)}x`}
-                                        {playbackRate !== 1.0 && (pitch !== 0 || settings.magicCrossfade) && ' / '}
-                                        {pitch !== 0 && `${pitch > 0 ? '+' : ''}${pitch}`}
-                                        {pitch !== 0 && settings.magicCrossfade && ' / '}
-                                        {settings.magicCrossfade && 'Magic XF'}
-                                    </span>
-                                )}
-                            </button>
-
-                            {showSpeedPitchModal && speedPitchPos && (
-                                <>
-                                    <div
-                                        className="fixed inset-0 z-[100]"
-                                        aria-hidden="true"
-                                        onClick={() => {
-                                            setShowSpeedPitchModal(false);
-                                            setSpeedPitchPos(null);
-                                        }}
-                                    />
-                                    <div
-                                        className="fixed z-[100] w-72 -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-200 bg-white/95 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-950/95"
-                                        style={{ left: speedPitchPos.left, bottom: speedPitchPos.bottom }}
-                                    >
-                                        <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
-                                            <div>
-                                                <p className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 dark:text-white/45">Playback</p>
-                                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Speed & Pitch</h3>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setShowSpeedPitchModal(false);
-                                                    setSpeedPitchPos(null);
-                                                }}
-                                                className="p-1.5 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 transition-all dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10"
-                                                aria-label="Close playback settings"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-
-                                        <div className="space-y-4 p-4">
-                                            {/* Speed Control */}
-                                            <div>
-                                                <div className="mb-2 flex items-center justify-between">
-                                                    <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Speed</label>
-                                                    <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">{playbackRate.toFixed(1)}x</span>
-                                                </div>
-                                                <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                                    <button
-                                                        onClick={() => { setPlaybackRate(Math.max(0.5, Math.round((playbackRate - 0.1) * 10) / 10)); }}
-                                                        className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                        aria-label="Decrease speed"
-                                                    >
-                                                        <Minus className="w-4 h-4" />
-                                                    </button>
-                                                    <span className="min-w-16 text-center text-base font-mono text-neutral-900 dark:text-white font-bold tabular-nums">{playbackRate.toFixed(1)}x</span>
-                                                    <button
-                                                        onClick={() => { setPlaybackRate(Math.min(2.0, Math.round((playbackRate + 0.1) * 10) / 10)); }}
-                                                        className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                        aria-label="Increase speed"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Pitch Control */}
-                                            <div>
-                                                <div className="mb-2 flex items-center justify-between">
-                                                    <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Pitch</label>
-                                                    <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">semitones</span>
-                                                </div>
-                                                <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                                    <button
-                                                        onClick={() => setPitch(Math.max(-12, pitch - 1))}
-                                                        className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                        aria-label="Decrease pitch"
-                                                    >
-                                                        <Minus className="w-4 h-4" />
-                                                    </button>
-                                                    <span className="min-w-16 text-center text-base font-mono text-neutral-900 dark:text-white font-bold tabular-nums">{pitch > 0 ? '+' : ''}{pitch}</span>
-                                                    <button
-                                                        onClick={() => setPitch(Math.min(12, pitch + 1))}
-                                                        className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/55 dark:hover:text-white dark:hover:bg-white/10 rounded-md transition-all"
-                                                        aria-label="Increase pitch"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            {/* Mode Toggle */}
-                                            <div className="border-t border-neutral-200 pt-4 dark:border-white/10">
-                                                <div className="mb-2 flex items-center justify-between">
-                                                    <label className="text-[10px] font-semibold text-neutral-500 dark:text-white/55 uppercase tracking-wide">Pitch Mode</label>
-                                                    <span className="font-mono text-[11px] font-semibold text-neutral-500 dark:text-white/50">{pitchCorrection ? 'locked' : 'linked'}</span>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-1 rounded-lg border border-neutral-200 bg-neutral-100 p-1 dark:border-white/10 dark:bg-white/[0.04]">
-                                                    <button
-                                                        onClick={() => setPitchCorrection(true)}
-                                                        className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${pitchCorrection
-                                                            ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
-                                                            : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
-                                                            }`}
-                                                    >
-                                                        Digital
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setPitchCorrection(false)}
-                                                        className={`py-2 px-3 rounded-md text-xs font-bold transition-all ${!pitchCorrection
-                                                            ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
-                                                            : 'text-neutral-600 hover:text-neutral-900 hover:bg-white dark:text-white/50 dark:hover:text-white dark:hover:bg-white/10'
-                                                            }`}
-                                                    >
-                                                        Analogue
-                                                    </button>
-                                                </div>
-                                                <p className="text-[10px] text-neutral-500 dark:text-white/50 mt-2 leading-snug">
-                                                    {pitchCorrection ? 'Speed and pitch adjust independently.' : 'Speed changes pitch together.'}
-                                                </p>
-                                            </div>
-
-                                            <button
-                                                onClick={() => { setPlaybackRate(1.0); setPitch(0); }}
-                                                className="w-full py-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 dark:text-white/60 dark:hover:text-white dark:bg-white/5 dark:hover:bg-white/10 rounded-lg transition-all"
-                                            >
-                                                Reset
-                                            </button>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
+                            <SpeedPitchControls showLabel />
                         </div>
                         </div>
                     </div>
                 )}
 
                 {/* Lyrics Tab */}
-                {activeTab === 'lyrics' && !isZenMode && (
-                    <div className="flex-1 overflow-hidden relative">
+                {activeTab === 'lyrics' && !dj.state.active && !isZenMode && (
+                    <div className="flex-1 overflow-hidden relative" data-nebula-fullscreen-lyrics>
                         <div className="absolute inset-0 overflow-y-auto custom-scrollbar scroll-smooth" ref={lyricsContainerRef}>
                             <div className="min-h-full flex flex-col items-center justify-center py-20 px-6 text-center">
                                 {loadingLyrics ? (
@@ -682,11 +530,16 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         </div>
                     </div>
                 )}
-
                 {/* Queue Tab */}
                 {activeTab === 'queue' && !isZenMode && (
-                    <div className="flex-1 overflow-hidden px-4 md:px-8 pb-8">
+                    <div className="flex-1 overflow-hidden px-4 md:px-8 pb-8" data-nebula-fullscreen-queue>
                         <div className="max-w-3xl mx-auto h-full flex flex-col">
+                            {(dj.state.active || voice.speech) && <div className="nebula-dj-queue-player">
+                                <div><PlayerCover src={coverArt} className="w-full h-full object-cover" /></div>
+                                <div className="nebula-dj-queue-player-copy"><DjBadge /><strong>{voice.speech ? 'AI DJ' : currentSong.title}</strong><span>{voice.speech ? voice.subtitle : currentSong.artist}</span></div>
+                                <button type="button" onClick={togglePlay} aria-label={voice.playing ? 'Pause' : 'Play'}>{voice.playing ? <Pause size={20} /> : <Play size={20} />}</button>
+                                <button type="button" onClick={nextSong} aria-label="Next track"><SkipForward size={20} /></button>
+                            </div>}
                             <div className="flex items-center justify-between py-4">
                                 <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Up Next</h2>
                                 <span className="text-sm text-neutral-600 dark:text-white/60">{queue.length} songs</span>
@@ -694,8 +547,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 {queue.map((song, idx) => (
                                     <div
+                                        data-nebula-fullscreen-queue-row
                                         key={`${song.id}-${idx}`}
-                                        onClick={() => playSong(song, queue)}
+                                        onClick={() => playQueueIndex(idx)}
                                         className={`flex items-center p-3 rounded-lg transition-all cursor-pointer hover:bg-neutral-100 dark:hover:bg-white/5 mb-1 ${idx === currentSongIndex ? 'bg-neutral-200 dark:bg-white/10' : ''
                                             }`}
                                     >
@@ -736,20 +590,21 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <div className="grid items-end gap-6 md:grid-cols-[minmax(220px,320px)_1fr_minmax(220px,320px)]">
                                 <div className="flex min-w-0 items-center gap-4">
                                     <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white/10 shadow-2xl md:h-24 md:w-24">
-                                        <img src={coverArt} alt={currentSong.title} className="h-full w-full object-cover" />
+                                        <PlayerCover src={coverArt} alt={voice.speech ? 'AI DJ' : currentSong.title} className="h-full w-full object-cover" />
                                     </div>
                                     <div className="min-w-0 text-left">
+                                        <DjBadge />
                                         <div className="relative max-w-full overflow-hidden">
-                                            {currentSong.title.length > 34 ? (
+                                            {!voice.speech && currentSong.title.length > 34 ? (
                                                 <h2 className="zen-title-marquee text-lg font-black text-white md:text-2xl">
-                                                    <span>{currentSong.title}</span>
-                                                    <span aria-hidden="true">{currentSong.title}</span>
+                                                    <span>{voice.speech ? 'AI DJ' : currentSong.title}</span>
+                                                    <span aria-hidden="true">{voice.speech ? 'AI DJ' : currentSong.title}</span>
                                                 </h2>
                                             ) : (
-                                                <h2 className="truncate text-lg font-black text-white md:text-2xl">{currentSong.title}</h2>
+                                                <h2 className="truncate text-lg font-black text-white md:text-2xl">{voice.speech ? 'AI DJ' : currentSong.title}</h2>
                                             )}
                                         </div>
-                                        <p className="mt-1 truncate text-sm font-medium text-white/55 md:text-base">{currentSong.artist}</p>
+                                        <p className="mt-1 truncate text-sm font-medium text-white/55 md:text-base">{voice.speech ? voice.subtitle : currentSong.artist}</p>
                                     </div>
                                 </div>
 
@@ -761,9 +616,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                         <button
                                             onClick={togglePlay}
                                             className="flex h-16 w-16 items-center justify-center rounded-lg bg-white text-black shadow-xl transition hover:scale-105"
-                                            aria-label={isPlaying ? 'Pause' : 'Play'}
+                                            aria-label={voice.playing ? 'Pause' : 'Play'}
                                         >
-                                            {isPlaying ? <Pause className="h-7 w-7" fill="currentColor" /> : <Play className="ml-0.5 h-7 w-7" fill="currentColor" />}
+                                            {voice.playing ? <Pause className="h-7 w-7" fill="currentColor" /> : <Play className="ml-0.5 h-7 w-7" fill="currentColor" />}
                                         </button>
                                         <button onClick={nextSong} className="p-4 text-white/50 transition hover:text-white" aria-label="Next track">
                                             <SkipForward className="h-7 w-7" fill="currentColor" />
@@ -771,21 +626,23 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <span className="w-12 text-right font-mono text-sm text-white/60">{formatTime(currentTime)}</span>
+                                        <span className="w-12 text-right font-mono text-sm text-white/60">{formatTime(voice.speech ? voice.position : currentTime)}</span>
                                         <PlaybackProgress
                                             progress={displayProgress}
                                             mode={progressMode}
                                             accentColor={colors.primary}
+                                            secondaryColor={colors.secondary}
                                             baseColor={withAlpha(colors.primary, progressMode === 'waveform' ? 0.28 : 0.18)}
                                             markerColor={colors.secondary || colors.primary}
                                             waveform={waveform}
                                             onScrub={handleScrub}
+                                            scrubbable={!voice.speech}
                                             trackClassName={`flex-1 cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
                                                 ? 'h-16 bg-transparent rounded-none'
                                                 : 'h-1.5 bg-white/10 rounded'
                                                 }`}
                                         />
-                                        <span className="w-12 font-mono text-sm text-white/60">{formatTime(duration)}</span>
+                                        <span className="w-12 font-mono text-sm text-white/60">{formatTime(voice.speech ? voice.duration : duration)}</span>
                                     </div>
                                 </div>
 

@@ -4,8 +4,10 @@ const shared = {
   platform: 'node',
   target: 'node22',
   bundle: true,
-  sourcemap: 'inline',
-  external: ['electron'],
+  // Inline maps more than triple the shipped main bundle. Keep them opt-in
+  // for debugging rather than parsing their source text on every app launch.
+  sourcemap: process.env.NEBULA_DEBUG_BUILD === '1' ? 'inline' : false,
+  external: ['electron', 'echogarden', 'onnxruntime-node', 'sharp'],
   outdir: 'electron/dist',
   outExtension: { '.js': '.cjs' },
   logLevel: 'info',
@@ -24,3 +26,5 @@ await build({
 });
 
 console.log('esbuild: main.cjs and preload.cjs written to electron/dist');
+
+await build({ ...shared, entryPoints: ['electron/aiDj/voiceWorker.ts'], format: 'cjs' });

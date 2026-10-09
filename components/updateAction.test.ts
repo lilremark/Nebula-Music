@@ -36,6 +36,8 @@ describe('getUpdateAction', () => {
 
   it('has no action while disabled or busy', () => {
     expect(getUpdateAction(state({ enabled: false }))).toEqual({ kind: 'none', label: 'Update unavailable' });
+    expect(getUpdateAction(state({ phase: 'available', newVersion: '2.4.1' })))
+      .toEqual({ kind: 'none', label: 'Preparing download\u2026' });
     expect(getUpdateAction(state({ phase: 'checking' }))).toEqual({ kind: 'none', label: 'Checking\u2026' });
     expect(getUpdateAction(state({ phase: 'downloading', progress: 42 })))
       .toEqual({ kind: 'none', label: 'Downloading\u2026 42%' });

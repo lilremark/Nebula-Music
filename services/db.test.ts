@@ -1,139 +1,97 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IDBFactory, IDBObjectStore } from 'fake-indexeddb';
 import { LocalDB } from './db';
+import type { ListeningEvent } from '../playback/djTypes';
 
-const STORE_SETTINGS = 'settings';
-const STORE_CACHE = 'api_cache';
-const STORE_STATS = 'stats';
+describe('LocalDB transactions', () => {
+  beforeEach(() => vi.stubGlobal('indexedDB', new IDBFactory()));
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-describe('LocalDB', () => {
-  // In-memory backing store for every object store (name -> Map<key, value>).
-  const stores = new Map<string, Map<string, unknown>>();
-  let db: LocalDB;
+  it('preserves every simultaneous play count increment', async () => {
+    const database = new LocalDB();
+    const song = { id: 'same-song', title: 'Track' };
+    await Promise.all(Array.from({ length: 30 }, () => database.incrementPlayCount(song, 'server')));
+    expect((await database.get('stats', 'server:same-song')).playCount).toBe(30);
+  });
 
-  // Returns the object-store view for `name`. Every operation dispatches its
-  // request's `onsuccess` on the microtask queue, so `LocalDB`'s handlers
-  // (attached synchronously after the call returns) are always set in time.
-  // The backing Map is shared across transactions, so reads see earlier writes.
-  const makeStore = (name: string) => {
-    const data = stores.get(name)!;
-    return {
-      get: (key: string) => {
-        const req: any = { onsuccess: null, onerror: null, result: data.get(key) };
-        queueMicrotask(() => req.onsuccess && req.onsuccess());
-        return req;
-      },
-      put: (value: unknown, key?: string) => {
-        const k = key !== undefined ? key : (value as any).id;
-        data.set(String(k), value);
-        const req: any = { onsuccess: null, onerror: null, result: undefined };
-        queueMicrotask(() => req.onsuccess && req.onsuccess());
-        return req;
-      },
-      delete: (key: string) => {
-        data.delete(key);
-        const req: any = { onsuccess: null, onerror: null, result: undefined };
-        queueMicrotask(() => req.onsuccess && req.onsuccess());
-        return req;
-      },
-      getAll: () => {
-        const req: any = { onsuccess: null, onerror: null, result: [...data.values()] };
-        queueMicrotask(() => req.onsuccess && req.onsuccess());
-        return req;
-      },
-      clear: () => {
-        data.clear();
-      },
-    };
-  };
-
-  const installIndexedDB = () => {
-    vi.stubGlobal('indexedDB', {
-      open: vi.fn((_name: string, _version: number) => {
-        const request: any = {
-          onupgradeneeded: null,
-          onsuccess: null,
-          onerror: null,
-          error: null,
-          result: null,
-        };
-        // Fully realise the open lifecycle (upgrade then success) on the
-        // microtask queue, after LocalDB has attached its handlers.
-        queueMicrotask(() => {
-          if (!request.onupgradeneeded) return;
-          const idb: any = {
-            objectStoreNames: { contains: (n: string) => stores.has(n) },
-            createObjectStore: (n: string, opts?: { keyPath?: string }) => {
-              stores.set(n, new Map());
-              return { keyPath: opts?.keyPath ?? null };
-            },
-            transaction: () => {
-              const tx: any = {
-                objectStore: (n: string) => makeStore(n),
-                oncomplete: null,
-                onerror: null,
-                error: null,
-              };
-              // The shim never fails transactions, so only `oncomplete` fires.
-              // (`clear()` sets both handlers; firing onerror here would reject.)
-              queueMicrotask(() => {
-                if (tx.oncomplete) tx.oncomplete();
-              });
-              return tx;
-            },
-          };
-          request.result = idb;
-          request.onupgradeneeded({ oldVersion: 0, newVersion: _version, target: { result: idb } });
-          request.onsuccess && request.onsuccess();
-        });
-        return request;
-      }),
+  it('reports an aborted write even when the put request succeeds', async () => {
+    const database = new LocalDB();
+    const originalPut = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (this: IDBObjectStore, ...args) {
+      const request = originalPut.apply(this, args);
+      request.addEventListener('success', () => this.transaction.abort());
+      return request;
     });
-  };
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    stores.clear();
+    await expect(database.set('settings', 'volume', 0.5)).rejects.toThrow('Database write aborted');
+    expect(await database.get('settings', 'volume')).toBeUndefined();
   });
 
-  beforeEach(async () => {
-    stores.set(STORE_SETTINGS, new Map());
-    stores.set(STORE_CACHE, new Map());
-    stores.set(STORE_STATS, new Map());
-    installIndexedDB();
-    db = new LocalDB();
-    await db.init();
+  it('uses the server index for most-played results', async () => {
+    const database = new LocalDB();
+    await database.incrementPlayCount({ id: 'other' }, 'other-server');
+    await database.incrementPlayCount({ id: 'one' }, 'server');
+    await database.incrementPlayCount({ id: 'two' }, 'server');
+    await database.incrementPlayCount({ id: 'two' }, 'server');
+    const indexSpy = vi.spyOn(IDBObjectStore.prototype, 'index');
+    expect(await database.getMostPlayed('server', 1)).toEqual([{ id: 'two' }]);
+    expect(indexSpy).toHaveBeenCalledWith('serverId');
   });
 
-  it('saves and retrieves credentials', async () => {
-    const creds = { serverUrl: 'https://music.example', username: 'u' };
-    await db.saveCredentials(creds);
-    expect(await db.getCredentials()).toEqual(creds);
+  it('adds the server index while preserving a version 3 library', async () => {
+    const oldDatabase = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('nebula_music_db', 3);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore('settings');
+        request.result.createObjectStore('api_cache');
+        request.result.createObjectStore('stats', { keyPath: 'id' });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = oldDatabase.transaction('stats', 'readwrite');
+      tx.objectStore('stats').put({ id: 'server:song', serverId: 'server', playCount: 4, song: { id: 'song' } });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    oldDatabase.close();
+    const database = new LocalDB();
+    expect(await database.getMostPlayed('server')).toEqual([{ id: 'song' }]);
+    expect((await database.get('stats', 'server:song')).playCount).toBe(4);
   });
 
-  it('expires cached responses by TTL', async () => {
-    await db.cacheResponse('k', { albums: [1, 2] });
-    const fresh = await db.getCachedResponse('k', 60);
-    expect(fresh).toEqual({ albums: [1, 2] });
-    const expired = await db.getCachedResponse('k', -1);
-    expect(expired).toBeNull();
+  it('retries initialization after an open failure', async () => {
+    const database = new LocalDB();
+    const originalOpen = indexedDB.open.bind(indexedDB);
+    vi.spyOn(indexedDB, 'open').mockImplementationOnce(() => {
+      const request = { error: new Error('Temporary failure') } as unknown as IDBOpenDBRequest;
+      queueMicrotask(() => request.onerror?.(new Event('error')));
+      return request;
+    }).mockImplementation(originalOpen);
+    await expect(database.init()).rejects.toThrow('Temporary failure');
+    await database.set('settings', 'volume', 0.4);
+    expect(await database.get('settings', 'volume')).toBe(0.4);
   });
 
-  it('increments play counts and returns most-played first', async () => {
-    await db.incrementPlayCount({ id: 'a', title: 'A' }, 'srv');
-    await db.incrementPlayCount({ id: 'a', title: 'A' }, 'srv');
-    await db.incrementPlayCount({ id: 'b', title: 'B' }, 'srv');
-    await db.incrementPlayCount({ id: 'x', title: 'X' }, 'other');
-    const top = await db.getMostPlayed('srv', 10);
-    expect(top.map((s: any) => s.id)).toEqual(['a', 'b']);
+  it('isolates DJ learning by account and resets it without removing play counts', async () => {
+    const database = new LocalDB();
+    const event = { id: 'a', profile: 'server:alice', song: { id: 'song' }, at: Date.now(), listened: 50, qualified: true, completed: true, skipped: false } as ListeningEvent;
+    await database.addListeningEvent(event);
+    await database.addListeningEvent({ ...event, id: 'b', profile: 'server:bob' });
+    await database.incrementPlayCount(event.song, 'server:alice');
+    expect(await database.getListeningEvents('server:alice')).toEqual([event]);
+    await database.resetDjLearning('server:alice');
+    expect(await database.getListeningEvents('server:alice')).toEqual([]);
+    expect(await database.getListeningEvents('server:bob')).toHaveLength(1);
+    expect(await database.getMostPlayed('server:alice')).toEqual([event.song]);
   });
 
-  it('sets, gets, removes, and clears a value', async () => {
-    await db.set('settings', 'key', { ok: 1 });
-    expect(await db.get('settings', 'key')).toEqual({ ok: 1 });
-    await db.remove('settings', 'key');
-    expect(await db.get('settings', 'key')).toBeUndefined();
-    await db.set('settings', 'again', 1);
-    await db.clear('settings');
-    expect(await db.get('settings', 'again')).toBeUndefined();
+  it('leaves unscoped legacy history unassigned and expires old DJ events', async () => {
+    const database = new LocalDB();
+    await database.set('settings', 'history', [{ id: 'legacy' }]);
+    const event = { id: 'old', profile: 'server:alice', song: { id: 'song' }, at: Date.now() - 91 * 86400000, listened: 3, qualified: false, completed: false, skipped: true } as ListeningEvent;
+    await database.addListeningEvent(event);
+    expect(await database.getListeningEvents('server:alice')).toEqual([]);
+    expect(await database.get('settings', 'history')).toEqual([{ id: 'legacy' }]);
   });
 });

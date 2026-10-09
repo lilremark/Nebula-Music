@@ -24,12 +24,19 @@ import { createUpdater, type Updater } from './updater';
 import { installMacAppMenu, updateMacPlaybackMenu } from './macMenu';
 import { createCommandClient } from '../playback/commandClient';
 import { createStreamProxy } from './streamProxy';
+import { isRendererDocumentUrl, isTrustedRendererFrame, resolveRendererAsset } from './rendererSecurity';
+import { fetchWithTrustedRedirects, UntrustedTargetError } from './trustedFetch';
 import {
+  desktopCommandEnvelopeSchema,
   desktopSnapshotSchema,
   type DesktopCommand,
   type DesktopCommandEnvelope,
   type DesktopSnapshot,
 } from '../playback/desktopProtocol';
+import { DjModelManager } from './aiDj/modelManager';
+import { LocalDjRuntime } from './aiDj/localRuntime';
+import { djPrepareSchema } from './aiDj/localProtocol';
+import { randomUUID } from 'node:crypto';
 
 const SCHEME = 'app';
 const PROTOCOL_URL = 'app://nebula/';
@@ -47,7 +54,8 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: app://nebula https:",
-  "media-src 'self' app://nebula https:",
+  "media-src 'self' app://nebula https: blob:",
+  "worker-src 'self' blob:",
   "connect-src 'self' app://nebula ws://127.0.0.1:* https:",
   "object-src 'none'",
   "base-uri 'none'",
@@ -72,11 +80,16 @@ const broadcastSnapshotToMiniPlayer = (snapshot: DesktopSnapshot): void => {
   miniPlayerWindow?.webContents.send(IPC.playback.snapshotToClient, snapshot);
 };
 
+let localDj: LocalDjRuntime | null = null;
+let djModels: DjModelManager | null = null;
+const getDjModels = () => djModels ??= new DjModelManager(path.join(app.getPath('userData'), 'aiDj', 'smollm3-q4-kokoro-v1'), state => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(IPC.aiDj.modelsChanged, state); }, net.fetch as typeof fetch);
+const getLocalDj = () => localDj ??= new LocalDjRuntime(getDjModels().resources, path.join(__dirname, 'voiceWorker.cjs'), app.isPackaged ? path.join(process.resourcesPath, 'aiDj') : path.join(app.getAppPath(), 'electron/aiDj/resources'));
+
 // Snapshots arrive up to ~4x/sec (on `timeupdate`). Re-creating native images
 // from disk and poking the Windows taskbar on every snapshot is measurable
 // overhead and a known taskbar-freeze trigger, so the progress bar is only
 // updated when it moves meaningfully and the thumbar buttons are re-applied
-// only when the play/pause button actually changes.
+// only when their state changes or the window returns to the taskbar.
 let lastTaskbarProgress = -1;
 
 const updateTaskbarProgress = (snapshot: DesktopSnapshot): void => {
@@ -99,7 +112,7 @@ let thumbarImages: {
   play: Electron.NativeImage;
   pause: Electron.NativeImage;
 } | null = null;
-let thumbarState: { playing: boolean } | null = null;
+let thumbarState: { playing: boolean; ready: boolean } | null = null;
 
 const getThumbarImages = (): NonNullable<typeof thumbarImages> => {
   if (thumbarImages) return thumbarImages;
@@ -113,35 +126,36 @@ const getThumbarImages = (): NonNullable<typeof thumbarImages> => {
 };
 
 const updateThumbarButtons = (snapshot: DesktopSnapshot | null): void => {
-  if (!mainWindow || process.platform !== 'win32') return;
-  if (!snapshot) {
-    if (thumbarState !== null) {
-      thumbarState = null;
-      mainWindow.setThumbarButtons([]);
-    }
-    return;
-  }
-  if (thumbarState && thumbarState.playing === snapshot.playing) return;
-  thumbarState = { playing: snapshot.playing };
+  if (!mainWindow || mainWindow.isDestroyed() || process.platform !== 'win32' || !mainWindow.isVisible()) return;
+  const playing = snapshot?.playing ?? false;
+  const ready = snapshot !== null;
+  if (thumbarState?.playing === playing && thumbarState.ready === ready) return;
   const images = getThumbarImages();
   const send = (command: DesktopCommand): void => forwardCommand(thumbarClient.send(command));
-  mainWindow.setThumbarButtons([
+  const flags: Electron.ThumbarButton['flags'] = ready ? [] : ['disabled'];
+  const added = mainWindow.setThumbarButtons([
     {
       icon: images.prev,
       tooltip: 'Previous',
+      flags,
       click: () => send({ name: 'previous' }),
     },
     {
-      icon: snapshot.playing ? images.pause : images.play,
-      tooltip: snapshot.playing ? 'Pause' : 'Play',
+      icon: playing ? images.pause : images.play,
+      tooltip: playing ? 'Pause' : 'Play',
+      flags,
       click: () => send({ name: 'togglePlayback' }),
     },
     {
       icon: images.next,
       tooltip: 'Next',
+      flags,
       click: () => send({ name: 'next' }),
     },
   ]);
+  // Windows can reject registration before its taskbar button exists. Cache
+  // only a successful registration so the next snapshot retries failures.
+  thumbarState = added ? { playing, ready } : null;
 };
 
 const MIME: Record<string, string> = {
@@ -189,18 +203,14 @@ const streamProxy = createStreamProxy({
 
 const handleProtocol = async (request: Request): Promise<Response> => {
   const url = new URL(request.url);
-
-  if (url.pathname === '/proxy') return streamProxy.handle(request);
-
-  const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
-  const normalized = path.posix.normalize(pathname).replace(/^([/\\])+/, '');
-  if (!normalized || normalized === '..' || normalized.startsWith('../')) {
+  if (url.host !== 'nebula' || url.username || url.password) {
     return new Response('Forbidden', { status: 403 });
   }
 
-  const root = rendererRoot();
-  const filePath = path.join(root, normalized);
-  if (!filePath.startsWith(root)) return new Response('Forbidden', { status: 403 });
+  if (url.pathname === '/proxy') return streamProxy.handle(request);
+
+  const filePath = resolveRendererAsset(rendererRoot(), url.pathname);
+  if (!filePath) return new Response('Forbidden', { status: 403 });
 
   try {
     const data = await fs.readFile(filePath);
@@ -228,6 +238,7 @@ const openExternalSafely = async (rawUrl: string): Promise<boolean> => {
 };
 
 const createWindow = (): BrowserWindow => {
+  thumbarState = null;
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -239,7 +250,7 @@ const createWindow = (): BrowserWindow => {
         ? { frame: false }
         : {}),
     show: false,
-    backgroundColor: '#0b0b12',
+    backgroundColor: '#000000',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -261,8 +272,12 @@ const createWindow = (): BrowserWindow => {
   });
 
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(PROTOCOL_URL)) event.preventDefault();
+    if (!isRendererDocumentUrl(url)) event.preventDefault();
   });
+  win.webContents.on('will-redirect', (event, url) => {
+    if (!isRendererDocumentUrl(url)) event.preventDefault();
+  });
+  win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
   win.on('close', (event) => {
     if (!isQuitting) {
@@ -273,9 +288,6 @@ const createWindow = (): BrowserWindow => {
       }
       event.preventDefault();
       win.hide();
-    } else {
-      thumbarState = null;
-      mainWindow?.setThumbarButtons([]);
     }
   });
 
@@ -294,8 +306,20 @@ const createWindow = (): BrowserWindow => {
 
   win.once('ready-to-show', () => win.show());
 
+  const refreshThumbar = (): void => {
+    if (process.platform !== 'win32') return;
+    thumbarState = null;
+    // Let Windows create/recreate the taskbar button before registration.
+    setImmediate(() => {
+      if (!isQuitting && mainWindow === win) updateThumbarButtons(lastSnapshot);
+    });
+  };
+  win.on('show', refreshThumbar);
+  win.on('restore', refreshThumbar);
+
   win.webContents.on('did-finish-load', () => {
     console.log('[nebula] renderer loaded');
+    win.webContents.send(IPC.miniPlayer.visibility, miniPlayerWindow?.isVisible() ?? false);
   });
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
     console.error(
@@ -325,7 +349,7 @@ const createMiniPlayerWindow = (): BrowserWindow => {
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
-    backgroundColor: '#17171a',
+    backgroundColor: '#101010',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -343,8 +367,12 @@ const createMiniPlayerWindow = (): BrowserWindow => {
   });
 
   win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(PROTOCOL_URL)) event.preventDefault();
+    if (!isRendererDocumentUrl(url)) event.preventDefault();
   });
+  win.webContents.on('will-redirect', (event, url) => {
+    if (!isRendererDocumentUrl(url)) event.preventDefault();
+  });
+  win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
   // The mini-player is a companion window: closing it hides it instead of
   // destroying it, and never quits the app.
@@ -355,6 +383,9 @@ const createMiniPlayerWindow = (): BrowserWindow => {
     }
   });
 
+  win.on('show', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, true));
+  win.on('hide', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
+  win.on('closed', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
   win.once('ready-to-show', () => win.show());
 
   win.webContents.on('did-finish-load', () => {
@@ -407,7 +438,24 @@ const isTrustedSender = (webContents: Electron.WebContents): boolean => {
 };
 
 const registerIpc = (): void => {
-  ipcMain.on(IPC.app.info, (event) => {
+  // WebContents identity alone also trusts subframes and a navigated renderer.
+  // Gate every channel at registration so new native APIs inherit the policy.
+  const onTrusted = (channel: string, listener: (event: Electron.IpcMainEvent, ...args: any[]) => void): void => {
+    ipcMain.on(channel, (event, ...args) => {
+      if (!isTrustedSender(event.sender) || !isTrustedRendererFrame(event)) {
+        event.returnValue = null;
+        return;
+      }
+      listener(event, ...args);
+    });
+  };
+  const handleTrusted = (channel: string, listener: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown): void => {
+    ipcMain.handle(channel, (event, ...args) => {
+      if (!isTrustedSender(event.sender) || !isTrustedRendererFrame(event)) throw new Error('Unauthorized.');
+      return listener(event, ...args);
+    });
+  };
+  onTrusted(IPC.app.info, (event) => {
     event.returnValue = {
       os: process.platform,
       appName: app.getName(),
@@ -415,35 +463,35 @@ const registerIpc = (): void => {
     };
   });
 
-  ipcMain.handle(IPC.app.openExternal, (_event, url: unknown) => {
+  handleTrusted(IPC.app.openExternal, (_event, url: unknown) => {
     if (typeof url !== 'string') return false;
     return openExternalSafely(url);
   });
 
-  ipcMain.on(IPC.window.minimize, (event) => {
+  onTrusted(IPC.window.minimize, (event) => {
     BrowserWindow.fromWebContents(event.sender)?.minimize();
   });
-  ipcMain.on(IPC.window.toggleMaximize, (event) => {
+  onTrusted(IPC.window.toggleMaximize, (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return;
     if (win.isMaximized()) win.unmaximize();
     else win.maximize();
   });
-  ipcMain.on(IPC.window.close, (event) => {
+  onTrusted(IPC.window.close, (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
   });
-  ipcMain.handle(IPC.window.isMaximized, (event) =>
+  handleTrusted(IPC.window.isMaximized, (event) =>
     BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false,
   );
-  ipcMain.handle(IPC.window.isFullScreen, (event) =>
+  handleTrusted(IPC.window.isFullScreen, (event) =>
     BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false,
   );
 
-  ipcMain.handle(IPC.settings.get, (_event, key: unknown) => {
+  handleTrusted(IPC.settings.get, (_event, key: unknown) => {
     if (typeof key !== 'string') return null;
     return settingsStore.get(key) ?? null;
   });
-  ipcMain.handle(IPC.settings.set, async (_event, key: unknown, value: unknown) => {
+  handleTrusted(IPC.settings.set, async (_event, key: unknown, value: unknown) => {
     if (typeof key !== 'string') return;
     await settingsStore.set(key, value);
     if (key === 'mediaKeysEnabled') {
@@ -457,54 +505,71 @@ const registerIpc = (): void => {
       }
     } else if (key === 'taskbarProgressEnabled') {
       if (value === true && lastSnapshot) updateTaskbarProgress(lastSnapshot);
-      else mainWindow?.setProgressBar(-1);
+      else {
+        lastTaskbarProgress = -1;
+        mainWindow?.setProgressBar(-1);
+      }
     } else if (key === 'updateChannel' && typeof value === 'string') {
       updater.setChannel(value);
     }
   });
 
-  ipcMain.handle(IPC.vault.get, (event, serverUrl: unknown) => {
+  handleTrusted(IPC.vault.get, (event, serverUrl: unknown) => {
     if (!isTrustedSender(event.sender)) return null;
     if (typeof serverUrl !== 'string') return null;
     return credentialVault.get(serverUrl);
   });
-  ipcMain.handle(IPC.vault.set, async (event, credentials: unknown) => {
+  handleTrusted(IPC.vault.set, async (event, credentials: unknown) => {
     if (!isTrustedSender(event.sender)) return;
     await credentialVault.set(credentials as Parameters<CredentialVault['set']>[0]);
   });
-  ipcMain.handle(IPC.vault.clear, async (event, serverUrl: unknown) => {
+  handleTrusted(IPC.vault.clear, async (event, serverUrl: unknown) => {
     if (!isTrustedSender(event.sender)) return;
     if (typeof serverUrl === 'string') await credentialVault.clear(serverUrl);
   });
-  ipcMain.handle(IPC.vault.getSecret, (event, key: unknown) => {
+  handleTrusted(IPC.vault.getSecret, (event, key: unknown) => {
     if (!isTrustedSender(event.sender)) return null;
     if (typeof key !== 'string') return null;
     return credentialVault.getSecret(key);
   });
-  ipcMain.handle(IPC.vault.setSecret, async (event, key: unknown, value: unknown) => {
+  handleTrusted(IPC.vault.setSecret, async (event, key: unknown, value: unknown) => {
     if (!isTrustedSender(event.sender)) return;
     if (typeof key !== 'string' || typeof value !== 'string') return;
     await credentialVault.setSecret(key, value);
   });
-  ipcMain.handle(IPC.vault.clearSecret, async (event, key: unknown) => {
+  handleTrusted(IPC.vault.clearSecret, async (event, key: unknown) => {
     if (!isTrustedSender(event.sender)) return;
     if (typeof key === 'string') await credentialVault.clearSecret(key);
   });
 
-  ipcMain.handle(IPC.http.fetchJson, async (_event, url: unknown) => {
+  handleTrusted(IPC.http.fetchJson, async (_event, url: unknown) => {
     if (typeof url !== 'string' || !isTrustedProxyTarget(url)) {
       return { status: 403, statusText: 'Forbidden', ok: false, body: null };
     }
     try {
-      const res = await net.fetch(url, { redirect: 'follow' });
+      const res = await fetchWithTrustedRedirects(
+        (target, init) => net.fetch(target, init),
+        isTrustedProxyTarget,
+        url,
+        { signal: AbortSignal.timeout(30_000) },
+      );
       const body = await res.json().catch(() => null);
       return { status: res.status, statusText: res.statusText, ok: res.ok, body };
-    } catch {
+    } catch (error) {
+      if (error instanceof UntrustedTargetError) {
+        return { status: 403, statusText: 'Forbidden', ok: false, body: null };
+      }
       throw new Error('Network error while fetching Subsonic server.');
     }
   });
 
-  ipcMain.on(IPC.playback.snapshot, (event, snapshot: unknown) => {
+  onTrusted(IPC.playback.djEnergy, (event, energy: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !miniPlayerWindow?.isVisible()) return;
+    if (energy !== 0 && !lastSnapshot?.dj?.playing) return;
+    if (typeof energy !== 'number' || !Number.isFinite(energy) || energy < 0 || energy > 1) return;
+    miniPlayerWindow.webContents.send(IPC.playback.djEnergyToClient, energy);
+  });
+  onTrusted(IPC.playback.snapshot, (event, snapshot: unknown) => {
     if (!mainWindow || event.sender !== mainWindow.webContents) return;
     const parsed = desktopSnapshotSchema.safeParse(snapshot);
     if (!parsed.success) return;
@@ -518,31 +583,32 @@ const registerIpc = (): void => {
 
   // Commands from the mini-player (a remote client) are validated and
   // forwarded to the playback owner in the main window.
-  ipcMain.on(IPC.playback.clientCommand, (event, envelope: DesktopCommandEnvelope) => {
+  onTrusted(IPC.playback.clientCommand, (event, envelope: unknown) => {
     if (!miniPlayerWindow || event.sender !== miniPlayerWindow.webContents) return;
-    forwardCommand(envelope);
+    const parsed = desktopCommandEnvelopeSchema.safeParse(envelope);
+    if (parsed.success) forwardCommand(parsed.data);
   });
 
-  ipcMain.handle(IPC.miniPlayer.toggle, () => {
+  handleTrusted(IPC.miniPlayer.toggle, () => {
     toggleMiniPlayer();
   });
-  ipcMain.handle(IPC.miniPlayer.showMain, () => {
+  handleTrusted(IPC.miniPlayer.showMain, () => {
     showMainWindow();
   });
 
-  ipcMain.handle(IPC.updater.getState, (event) => {
+  handleTrusted(IPC.updater.getState, (event) => {
     if (!isTrustedSender(event.sender)) return null;
     return updater.getState();
   });
-  ipcMain.handle(IPC.updater.check, (event) => {
+  handleTrusted(IPC.updater.check, (event) => {
     if (!isTrustedSender(event.sender)) return false;
     return updater.check();
   });
-  ipcMain.handle(IPC.updater.installAndRestart, (event) => {
+  handleTrusted(IPC.updater.installAndRestart, (event) => {
     if (!isTrustedSender(event.sender)) return;
     updater.installAndRestart();
   });
-  ipcMain.handle(IPC.updater.openDownloadPage, async (event) => {
+  handleTrusted(IPC.updater.openDownloadPage, async (event) => {
     if (!mainWindow || event.sender !== mainWindow.webContents) return false;
     const state = updater.getState();
     if (
@@ -555,6 +621,38 @@ const registerIpc = (): void => {
     }
     const url = releaseUrlForVersion(state.newVersion);
     return url ? openExternalSafely(url) : false;
+  });
+
+  // Do not register model download or inference endpoints on unsupported OSes.
+  if (process.platform !== 'win32') return;
+  handleTrusted(IPC.aiDj.modelsStatus, async event => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
+    return getDjModels().status();
+  });
+  handleTrusted(IPC.aiDj.downloadModels, async event => {
+    if (event.sender !== mainWindow?.webContents || lastSnapshot?.dj?.active) throw new Error('Stop DJ before downloading models.');
+    localDj?.cancel(); localDj = null;
+    return getDjModels().download();
+  });
+  handleTrusted(IPC.aiDj.cancelDownload, async event => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
+    getDjModels().cancel();
+  });
+  handleTrusted(IPC.aiDj.readiness, async (event) => {
+    if (event.sender !== mainWindow?.webContents) return { ready: false, error: 'Unauthorized.' };
+    const models = await getDjModels().status();
+    return models.ready ? getLocalDj().readiness() : { ready: false, error: models.error || 'Download AI DJ models in Settings first.' };
+  });
+  handleTrusted(IPC.aiDj.prepare, async (event, request: unknown) => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
+    return getLocalDj().prepare(djPrepareSchema.parse(request));
+  });
+  handleTrusted(IPC.aiDj.preview, async (event, voice: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !['Michael', 'Heart'].includes(String(voice))) throw new Error('Invalid voice preview.');
+    return getLocalDj().prepare({ requestId: randomUUID(), sessionId: randomUUID(), tracks: [{ id: 'preview', title: 'your next set', artist: 'Nebula' }], taste: '', welcome: true, voice: voice as 'Michael' | 'Heart' }, true);
+  });
+  handleTrusted(IPC.aiDj.cancel, async (event) => {
+    if (event.sender === mainWindow?.webContents) localDj?.cancel();
   });
 };
 
@@ -627,6 +725,11 @@ if (!gotLock) {
       path.join(app.getPath('userData'), 'vault.json'),
       createSafeStorageCipher(),
     );
+
+    // Playback does not need device capture, location, or other browser grants.
+    // Cover both asynchronous requests and Chromium's synchronous checks.
+    session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+    session.defaultSession.setPermissionCheckHandler(() => false);
 
     // Auto-update only runs in installed builds; dev launches use the web
     // bundle over `npm run dev` and must never attempt a check.
@@ -719,7 +822,14 @@ if (!gotLock) {
     unregisterMediaKeys();
     destroyTray();
     updater?.dispose();
+    try {
+      localDj?.cancel();
+    } catch {
+      // ignore
+    }
     miniPlayerWindow?.destroy();
     miniPlayerWindow = null;
   });
 }
+
+app.on('before-quit', () => { localDj?.cancel(); djModels?.cancel(); });

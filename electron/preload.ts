@@ -66,6 +66,12 @@ const bridge: DesktopBridge = {
         ipcRenderer.removeListener(IPC.playback.command, listener);
       };
     },
+    publishDjEnergy: (energy) => ipcRenderer.send(IPC.playback.djEnergy, energy),
+    onDjEnergy: (handler) => {
+      const listener = (_event: Electron.IpcRendererEvent, energy: number) => handler(energy);
+      ipcRenderer.on(IPC.playback.djEnergyToClient, listener);
+      return () => ipcRenderer.removeListener(IPC.playback.djEnergyToClient, listener);
+    },
     publishSnapshot: (snapshot) => ipcRenderer.send(IPC.playback.snapshot, snapshot),
     onSnapshot: (handler) => {
       const listener = (_event: Electron.IpcRendererEvent, snapshot: unknown) => {
@@ -80,6 +86,11 @@ const bridge: DesktopBridge = {
   },
   miniPlayer: {
     toggle: () => ipcRenderer.invoke(IPC.miniPlayer.toggle),
+    onVisibility: (handler) => {
+      const listener = (_event: Electron.IpcRendererEvent, visible: boolean) => handler(visible);
+      ipcRenderer.on(IPC.miniPlayer.visibility, listener);
+      return () => ipcRenderer.removeListener(IPC.miniPlayer.visibility, listener);
+    },
     showMain: () => ipcRenderer.invoke(IPC.miniPlayer.showMain),
   },
   power: {
@@ -107,6 +118,20 @@ const bridge: DesktopBridge = {
       };
     },
   },
+  aiDj: info.os === 'win32' ? {
+    modelsStatus: () => ipcRenderer.invoke(IPC.aiDj.modelsStatus),
+    downloadModels: () => ipcRenderer.invoke(IPC.aiDj.downloadModels),
+    cancelDownload: () => ipcRenderer.invoke(IPC.aiDj.cancelDownload),
+    onModelsStatus: (handler) => {
+      const listener = (_event: Electron.IpcRendererEvent, state: import('./aiDj/localProtocol').DjModelStatus) => handler(state);
+      ipcRenderer.on(IPC.aiDj.modelsChanged, listener);
+      return () => { ipcRenderer.removeListener(IPC.aiDj.modelsChanged, listener); };
+    },
+    readiness: () => ipcRenderer.invoke(IPC.aiDj.readiness),
+    prepare: (request) => ipcRenderer.invoke(IPC.aiDj.prepare, request),
+    preview: (voice) => ipcRenderer.invoke(IPC.aiDj.preview, voice),
+    cancel: () => ipcRenderer.invoke(IPC.aiDj.cancel),
+  } : undefined,
 };
 
 contextBridge.exposeInMainWorld('desktop', bridge);
