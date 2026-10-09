@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { Headphones, Home, Compass, Mic2, Disc, Music, ListMusic, Heart, Star, Settings, X, Radio, Search } from 'lucide-react';
 import { useStore } from '../../context/Store';
 import { usePlatform } from '../../platform/PlatformContext';
+import { isLocalDjPlatform } from '../../platform/aiDjAvailability';
 import { View } from '../../types';
 import { getNavDrawerTopClass } from './drawerLayout';
 import logo from '../../logo.svg';
@@ -126,7 +127,7 @@ export const NavDrawer: React.FC<NavDrawerProps> = ({ isOpen, onClose }) => {
                     <div className="space-y-1">
                         {s.showHome && <NavItem icon={Home} label="Home" view="HOME" />}
                         {s.showBrowse && <NavItem icon={Compass} label="Browse" view="BROWSE" />}
-                        <NavItem icon={Headphones} label="AI DJ" view="AI_DJ" />
+                        {isLocalDjPlatform(platform?.info) && <NavItem icon={Headphones} label="AI DJ" view="AI_DJ" />}
                         {s.showRadio && <NavItem icon={Radio} label="Internet Radio" view="RADIO" />}
                         <button type="button" onClick={() => { onClose(); openSearchModal(); }} className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-neutral-700 dark:text-white/70 hover:bg-neutral-100 dark:hover:bg-white/10 text-left"><Search size={20} aria-hidden="true" /><span className="text-sm">Search</span></button>
                     </div>

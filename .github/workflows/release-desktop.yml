@@ -55,7 +55,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm audit --audit-level=high
+      - run: npm audit --audit-level=low
 
   windows:
     name: Build Windows x64
@@ -78,8 +78,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: node node_modules/electron/install.js
       - run: npm run dj:assets
       - run: npm run dist:win
+      - run: npm run test:desktop
+      - run: npm run test:dj-platforms
       - run: node scripts/releaseVersion.mjs --tag "v${RELEASE_VERSION}"
       - run: node scripts/releaseArtifacts.mjs --platform windows --version "${RELEASE_VERSION}" --dir release
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -110,7 +113,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: node node_modules/electron/install.js
       - run: npm run dist:mac
+      - run: npm run test:desktop
+      - run: npm run test:dj-platforms
       - run: node scripts/releaseVersion.mjs --tag "v${RELEASE_VERSION}"
       - run: node scripts/releaseArtifacts.mjs --platform mac --version "${RELEASE_VERSION}" --dir release
       - name: Verify bundle

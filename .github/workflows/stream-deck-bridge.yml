@@ -68,7 +68,7 @@ jobs:
         run: npm run build:electron
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=low
 
       - name: Validate NGINX security headers
         run: |

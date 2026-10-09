@@ -5,6 +5,8 @@ import { useStore } from '../../context/Store';
 import logo from '../../logo.svg';
 import { ServerConnectionStatus } from './ServerConnectionStatus';
 import type { View } from '../../types';
+import { usePlatform } from '../../platform/PlatformContext';
+import { isLocalDjPlatform } from '../../platform/aiDjAvailability';
 
 const sections = [
   { title: 'Your Library', items: [
@@ -26,6 +28,7 @@ const parentView = (view: View): View => {
 
 export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }> = ({ collapsed, onToggle }) => {
   const { currentView, setView, openSearchModal, settings, service, playlists } = useStore();
+  const platform = usePlatform();
   const reducedMotion = useReducedMotion();
   const bodyRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<HTMLDivElement>(null);
@@ -52,7 +55,7 @@ export const DesktopRail: React.FC<{ collapsed: boolean; onToggle: () => void }>
   const listenItems = [
     { view: 'HOME', label: 'Home', icon: Home, flag: settings.sidebar.showHome },
     { view: 'BROWSE', label: 'Browse', icon: Compass, flag: settings.sidebar.showBrowse },
-    { view: 'AI_DJ', label: 'AI DJ', icon: Headphones, flag: true },
+    { view: 'AI_DJ', label: 'AI DJ', icon: Headphones, flag: isLocalDjPlatform(platform?.info) },
     { view: 'RADIO', label: 'Internet Radio', icon: Radio, flag: settings.sidebar.showRadio },
   ] as const;
 

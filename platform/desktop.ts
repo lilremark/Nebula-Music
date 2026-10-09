@@ -8,6 +8,7 @@ import type {
   PlatformPower,
   WindowControl,
 } from './types';
+import { isLocalDjPlatform } from './aiDjAvailability';
 
 /**
  * The Electron platform implementation, backed by the preload bridge
@@ -107,7 +108,7 @@ export const createDesktopPlatform = (): Platform => {
       openDownloadPage: () => bridge.updater.openDownloadPage(),
       onStatus: (handler) => bridge.updater.onStatus(handler),
     },
-    aiDj: bridge.aiDj,
+    aiDj: isLocalDjPlatform(info) ? bridge.aiDj : undefined,
     fetchJson,
     resolveMediaUrl,
   };

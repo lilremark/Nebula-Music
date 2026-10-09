@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '2.5.0-beta.30';
+export const APP_VERSION = '3.0.0';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,19 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '3.0.0',
+    date: '2026-10-09',
+    title: 'Nebula 3.0',
+    changes: [
+      'Bring the redesigned library, responsive player, search and refreshed mini player to the stable channel.',
+      'Include playback recovery, account isolation, secure desktop IPC and network hardening from beta.',
+      'Update direct dependencies to current stable versions and remove known dependency vulnerabilities.',
+      'Keep optional local AI DJ exclusive to Windows; hide and disable it on web and macOS.',
+      'Release Windows x64 and macOS Apple Silicon builds together.',
+    ],
+    link: { label: 'View stable release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0' },
+  },
   {
     version: '2.5.0-beta.30',
     date: '2026-10-09',

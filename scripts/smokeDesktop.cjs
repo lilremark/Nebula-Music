@@ -16,8 +16,11 @@ let finished = false;
 const finish = (error) => {
   if (finished) return;
   finished = true;
+  clearTimeout(timeout);
   console.log(JSON.stringify({ desktopSmoke: error ? 'failed' : 'passed', windows: loaded, error: error?.message }));
-  app.exit(error ? 1 : 0);
+  // Defer shutdown out of the window's load callback and let the real app's
+  // before-quit handlers release tray/native resources before terminating.
+  setImmediate(() => error ? app.exit(1) : app.quit());
 };
 const timeout = setTimeout(() => finish(new Error('Desktop startup timed out.')), 30_000);
 app.on('browser-window-created', (_event, win) => {
@@ -28,12 +31,13 @@ app.on('browser-window-created', (_event, win) => {
         const bridge = window.desktop;
         return {
           info: bridge?.info,
+          djApiAvailable: Boolean(bridge?.aiDj),
           secureHttpDefault: await bridge?.settings.get('permitInsecureHttp'),
           maximized: await bridge?.window.isMaximized(),
           rendererMounted: Boolean(document.querySelector('#root > *, #mini-player-root > *')),
         };
       })()`);
-      if (result.info?.os !== 'win32' || result.secureHttpDefault !== false ||
+      if (result.info?.os !== process.platform || result.djApiAvailable !== (process.platform === 'win32') || result.secureHttpDefault !== false ||
           typeof result.maximized !== 'boolean' || !result.rendererMounted) {
         throw new Error(`Invalid desktop startup result: ${JSON.stringify(result)}`);
       }

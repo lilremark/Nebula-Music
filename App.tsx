@@ -20,6 +20,7 @@ import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
 import { DesktopOwnerBridgeProvider } from './playback/ownerBridge';
 import { usePlatform } from './platform/PlatformContext';
+import { isLocalDjPlatform } from './platform/aiDjAvailability';
 import { NebulaDesignPrototype } from './components/design-prototype/NebulaDesignPrototype';
 import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 
@@ -149,7 +150,7 @@ export const AppContent: React.FC<{
   switch (currentView) {
     case 'HOME': ViewComponent = HomeView; break;
     case 'BROWSE': ViewComponent = BrowseView; break;
-    case 'AI_DJ': ViewComponent = AiDjView; break;
+    case 'AI_DJ': ViewComponent = isLocalDjPlatform(platform?.info) ? AiDjView : HomeView; break;
     case 'RADIO': ViewComponent = InternetRadioView; break;
     case 'SETTINGS': ViewComponent = SettingsView; break;
     case 'ARTISTS':

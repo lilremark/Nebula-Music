@@ -75,6 +75,8 @@ app.on('browser-window-created', (_event, win) => {
           throw new Error('Sidebar appearance toggle remained visible');
         const logo = document.querySelector('.nebula-rail-brand img');
         await waitFor(() => logo?.complete && logo.naturalWidth > 0, 'official logo');
+        // Theme changes animate the canvas; the dark class precedes the final color.
+        await waitFor(() => getComputedStyle(document.querySelector('.nebula-next')).backgroundColor === 'rgb(0, 0, 0)', 'dark canvas transition');
         if (!logo.src.includes('logo-') || getComputedStyle(document.querySelector('.nebula-next')).backgroundColor !== 'rgb(0, 0, 0)')
           throw new Error('Official branding or OLED background was not applied');
         if (parseFloat(getComputedStyle(document.querySelector('.nebula-rail-status strong')).fontSize) < 13)

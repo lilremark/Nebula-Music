@@ -7,6 +7,7 @@ import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
 import { SettingPanel, ToggleRow } from '../components/ui';
 import { usePlatform } from '../platform/PlatformContext';
+import { isLocalDjPlatform } from '../platform/aiDjAvailability';
 import { InsecureHttpSetting } from '../components/InsecureHttpSetting';
 import { isInsecureHttpUrl, useInsecureHttpSetting } from '../hooks/useInsecureHttpSetting';
 import type { UpdaterState } from '../electron/updater';
@@ -317,6 +318,7 @@ const DesktopUpdatesPanel = () => {
 };
 
 export const SettingsView: React.FC = () => {
+    const platform = usePlatform();
     const { settings, updateSettings, connectToSubsonic, isDemoMode, credentials, visualizerMode, setVisualizerMode, disconnect } = useStore();
     const { mode, setTheme } = useTheme();
     const streamDeckBridge = useStreamDeckBridge();
@@ -337,8 +339,13 @@ export const SettingsView: React.FC = () => {
     const [pairingCode, setPairingCode] = useState('');
     const [pairingError, setPairingError] = useState('');
     const { viewData } = useStore();
-    const [activeSettingsJump, setActiveSettingsJump] = useState<string>(viewData === 'settings-ai-dj' ? 'settings-ai-dj' : SETTINGS_JUMPS[0][0]);
-    useEffect(() => { if (viewData === 'settings-ai-dj') setActiveSettingsJump('settings-ai-dj'); }, [viewData]);
+    const djAvailable = isLocalDjPlatform(platform?.info);
+    const settingsJumps = SETTINGS_JUMPS.filter(([id]) => id !== 'settings-ai-dj' || djAvailable);
+    const [activeSettingsJump, setActiveSettingsJump] = useState<string>(djAvailable && viewData === 'settings-ai-dj' ? 'settings-ai-dj' : SETTINGS_JUMPS[0][0]);
+    useEffect(() => {
+        if (djAvailable && viewData === 'settings-ai-dj') setActiveSettingsJump('settings-ai-dj');
+        else if (!djAvailable) setActiveSettingsJump(current => current === 'settings-ai-dj' ? SETTINGS_JUMPS[0][0] : current);
+    }, [djAvailable, viewData]);
 
     useEffect(() => {
         setIsInsecure(isInsecureHttpUrl(url));
@@ -492,7 +499,7 @@ export const SettingsView: React.FC = () => {
                 </header>
 
                 <nav data-nebula-settings-jumps role="tablist" aria-label="Settings sections">
-                    {SETTINGS_JUMPS.map(([panelId, label]) => (
+                    {settingsJumps.map(([panelId, label]) => (
                         <button
                             key={panelId}
                             type="button"
@@ -502,14 +509,14 @@ export const SettingsView: React.FC = () => {
                             aria-controls="settings-options"
                             tabIndex={activeSettingsJump === panelId ? 0 : -1}
                             onKeyDown={event => {
-                                const index = SETTINGS_JUMPS.findIndex(([id]) => id === panelId);
-                                const next = event.key === 'ArrowRight' ? (index + 1) % SETTINGS_JUMPS.length
-                                    : event.key === 'ArrowLeft' ? (index + SETTINGS_JUMPS.length - 1) % SETTINGS_JUMPS.length
-                                    : event.key === 'Home' ? 0 : event.key === 'End' ? SETTINGS_JUMPS.length - 1 : -1;
+                                const index = settingsJumps.findIndex(([id]) => id === panelId);
+                                const next = event.key === 'ArrowRight' ? (index + 1) % settingsJumps.length
+                                    : event.key === 'ArrowLeft' ? (index + settingsJumps.length - 1) % settingsJumps.length
+                                    : event.key === 'Home' ? 0 : event.key === 'End' ? settingsJumps.length - 1 : -1;
                                 if (next < 0) return;
                                 event.preventDefault();
-                                jumpToSetting(SETTINGS_JUMPS[next][0]);
-                                document.getElementById(SETTINGS_JUMPS[next][0] + '-tab')?.focus();
+                                jumpToSetting(settingsJumps[next][0]);
+                                document.getElementById(settingsJumps[next][0] + '-tab')?.focus();
                             }}
                             aria-current={activeSettingsJump === panelId ? 'true' : undefined}
                             onClick={() => jumpToSetting(panelId)}
@@ -1043,7 +1050,7 @@ export const SettingsView: React.FC = () => {
 
                         {activeSettingsJump === 'settings-desktop-integration' && <DesktopSettingsPanel />}
                         {activeSettingsJump === 'settings-desktop-integration' && <DesktopUpdatesPanel />}
-                        {activeSettingsJump === 'settings-ai-dj' && <AiDjSettings />}
+                        {djAvailable && activeSettingsJump === 'settings-ai-dj' && <AiDjSettings />}
                 </div>
             </div>
         </div>

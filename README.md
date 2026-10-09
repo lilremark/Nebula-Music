@@ -3,53 +3,45 @@
 
   # Nebula Music
 
-  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser or the (experimental) desktop app.**
+  **A polished, self-hosted music player for Subsonic and OpenSubsonic libraries — in your browser or the desktop app.**
 
   Stream from Navidrome, Gonic, Airsonic, and other compatible servers through
-  a responsive interface built for desktop, mobile, and Windows.
+  a responsive interface built for desktop, mobile, Windows, and macOS.
 
-  [![Version](https://img.shields.io/badge/version-2.5.0--beta.26-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.26)
+  [![Version](https://img.shields.io/badge/version-3.0.0-0ea5e9?style=flat-square)](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)
   [![React](https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-7-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](https://vite.dev/)
-  [![Windows](https://img.shields.io/badge/Windows-Desktop-0078d6?style=flat-square&logo=windows&logoColor=white)](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.26)
+  [![Windows](https://img.shields.io/badge/Windows-Desktop-0078d6?style=flat-square&logo=windows&logoColor=white)](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)
   [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?style=flat-square&logo=docker&logoColor=white)](./docker/README.md)
   [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](./LICENSE.txt)
 
-  [Features](#features) · [AI DJ](#local-ai-dj-windows-beta) · [Desktop App](#desktop-app-windows--macos) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
+  [Features](#features) · [AI DJ](#local-ai-dj-windows-experimental) · [Desktop App](#desktop-app-windows--macos) · [Screenshots](#screenshots) · [Quick Start](#quick-start) · [Docker](#docker) · [Contributing](#contributing)
 </div>
 
 ---
 
 ## Screenshots
 
-Current **2.5 beta** interface, captured in the desktop app with demo music and
-artwork. The stable branch retains its own screenshots.
+Nebula **3.0**, captured with Computer Use from the real desktop app in an
+isolated **Demo Mode** session. These screenshots use the demo library only;
+no personal music server or account is shown.
 
 <p align="center">
-  <img src="./screenshots/beta-home.png" alt="Beta Home with navigation, featured music and the now-playing sidebar" width="100%">
+  <img src="./screenshots/v3-home-demo.png" alt="Nebula 3.0 Home in Demo Mode with Quick Picks, recommendations and the now-playing sidebar" width="100%">
 </p>
 
 <table>
   <tr>
-    <td width="50%">
-      <img src="./screenshots/beta-ai-dj.png" alt="AI DJ collection-style Discover view with session queue, transcription and animated purple cover">
-    </td>
-    <td width="50%">
-      <img src="./screenshots/beta-player.png" alt="Full-screen player showing the purple DJ orb during speech">
-    </td>
+    <td width="50%"><img src="./screenshots/v3-browse-demo.png" alt="Demo library Browse with generated mixes and daily album picks"></td>
+    <td width="50%"><img src="./screenshots/v3-library-light-demo.png" alt="Demo album library in the light theme with the sidebar player"></td>
   </tr>
   <tr>
-    <td align="center"><strong>AI DJ in Discover</strong></td>
-    <td align="center"><strong>Speaking in the full-screen player</strong></td>
+    <td align="center"><strong>Browse and discovery</strong></td>
+    <td align="center"><strong>Album library in light mode</strong></td>
   </tr>
   <tr>
-    <td width="50%"><img src="./screenshots/beta-dj-settings.png" alt="AI DJ settings with optional model download, voice and listening preferences"></td>
-    <td width="50%"><img src="./screenshots/beta-sidebar-light.png" alt="Light theme with AI DJ music, sidebar queue and subtle purple background"></td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Model download and preferences</strong></td>
-    <td align="center"><strong>Sidebar player in light mode</strong></td>
+    <td colspan="2"><img src="./screenshots/v3-player-demo.png" alt="Full-screen player with a demo track and playback controls" width="100%"></td>
   </tr>
 </table>
 
@@ -69,13 +61,11 @@ Windows and macOS. It includes everything in the web player plus:
 
 ### Windows
 
-Download **[v2.5.0-beta.26](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.26)**
-(`Nebula-2.5.0-beta.26-setup.exe`) or sideload its unsigned `.appx` with
-Windows Developer Mode enabled. Windows beta builds are unsigned and may show
-SmartScreen warnings. Select **Beta** in Settings → Updates to receive future
-beta updates. Stable users are not offered prereleases; the
-[stable release](https://github.com/lilremark/Nebula-Music/releases/latest) remains
-available separately.
+Download **[v3.0.0](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)**
+(`Nebula-3.0.0-setup.exe`) or its unsigned `.appx` package. Windows builds are
+unsigned and may show SmartScreen warnings. Keep **Stable** selected in
+Settings → Updates to receive stable releases; choose **Beta** to opt into
+prereleases.
 
 ### macOS
 
@@ -94,11 +84,10 @@ features of the platform:
 - A floating **panel mini-player** that stays above other apps and is hidden
   from Cmd-Tab
 
-> **macOS builds ship unsigned.** On first launch, right-click the app and
-> choose **Open** (or allow it in System Settings → Privacy & Security) to
-> bypass Gatekeeper. Automatic updates require code signing; the update check,
-> download, and in-app banner work unsigned, but "Restart & Install" may not
-> complete until the app is signed with a Developer ID.
+Download the Apple Silicon **[v3.0.0 DMG or ZIP](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0)**.
+macOS builds are unsigned and not notarized, and Gatekeeper may block first
+launch. Updates check for a new version and open the GitHub release for manual
+DMG installation. AI DJ is disabled and hidden on macOS and in the web player.
 
 ## Features
 
@@ -126,7 +115,7 @@ features of the platform:
 - Persistent sorting and filtering by genre, year, and library metadata
 - Demo mode for exploring the interface without connecting a server
 
-### Local AI DJ (Windows beta)
+### Local AI DJ (Windows experimental)
 
 1. Open **Settings → AI DJ** and select **Download DJ models**. The optional
    **2.01 GB** download comes from pinned upstream Hugging Face sources and is
@@ -166,7 +155,7 @@ playing; Return to previous queue restores your earlier queue and position.
 
 Slower hardware may miss an interlude; music continues immediately. Automated
 model checks used a 32 GB Ryzen 7 9800X3D. A 16 GB reference machine and long
-real-server listening remain beta acceptance items. See
+real-server listening remain experimental-feature acceptance items. See
 [behavior, resource security and validation](docs/ai-dj.md),
 [model notices](electron/aiDj/NOTICE.md) and
 [shadercn/XorDev visualization notices](electron/assets/shadercn-NOTICE.txt).
@@ -217,8 +206,7 @@ correct CORS configuration are strongly recommended.
 
 ### Desktop (Windows & macOS)
 
-Download and run the [Windows beta installer](https://github.com/lilremark/Nebula-Music/releases/tag/v2.5.0-beta.26),
-or choose the [stable Windows/macOS release](https://github.com/lilremark/Nebula-Music/releases/latest).
+Download and run the [Nebula 3.0 Windows installer or macOS DMG](https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.0).
 Nebula checks GitHub Releases for app updates. AI DJ is optional and needs the
 model download described above. To run the desktop app from source:
 
@@ -428,6 +416,15 @@ permitted by the music server's CORS policy.
 </details>
 
 ## Changelog
+
+### v3.0.0 — October 9, 2026
+
+- Promote the beta design, playback reliability, search and mini-player improvements to stable.
+- Update every direct dependency to its latest stable version and remove known npm audit findings.
+- Disable and hide AI DJ on web and macOS while retaining optional experimental Windows support.
+- Refresh README screenshots using the real app and an isolated demo library.
+- Publish Windows x64 and macOS Apple Silicon builds together.
+
 
 ### v2.5.0-beta.26 — October 5, 2026
 

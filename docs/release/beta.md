@@ -22,8 +22,9 @@ prerelease tags (`2.5.0-beta.1`). See
 ## Branch model
 
 - `main` is the source of truth. All features land on `main` first.
-- `beta` is an **ephemeral snapshot line** cut from `main` for pre-release
-  cycles. It is never merged back into `main`.
+- `beta` normally serves as an **ephemeral snapshot line** cut from `main` for
+  pre-release cycles. Beta-first work requires reviewed integration into `main`
+  before stable promotion.
 - Promotion to stable is simply cutting a stable `v*` tag from `main`; the
   code already lives there.
 
@@ -85,6 +86,12 @@ appended to the published prerelease by the desktop workflow.
   - creates a **draft** GitHub release for a human to review and publish.
 
 ## Promoting beta to stable
+
+For 3.0.0, the user explicitly requested merging the beta-first development
+line into `main`. This integration includes the dependency/security review,
+platform gates, full verification and refreshed Demo Mode screenshots. Merge
+the reviewed beta pull request, then tag the resulting `main` commit `v3.0.0`.
+Review the assembled draft assets and publish the stable release.
 
 When a beta line matures:
 

@@ -623,6 +623,8 @@ const registerIpc = (): void => {
     return url ? openExternalSafely(url) : false;
   });
 
+  // Do not register model download or inference endpoints on unsupported OSes.
+  if (process.platform !== 'win32') return;
   handleTrusted(IPC.aiDj.modelsStatus, async event => {
     if (event.sender !== mainWindow?.webContents) throw new Error('Unauthorized.');
     return getDjModels().status();

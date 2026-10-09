@@ -118,7 +118,7 @@ const bridge: DesktopBridge = {
       };
     },
   },
-  aiDj: {
+  aiDj: info.os === 'win32' ? {
     modelsStatus: () => ipcRenderer.invoke(IPC.aiDj.modelsStatus),
     downloadModels: () => ipcRenderer.invoke(IPC.aiDj.downloadModels),
     cancelDownload: () => ipcRenderer.invoke(IPC.aiDj.cancelDownload),
@@ -131,7 +131,7 @@ const bridge: DesktopBridge = {
     prepare: (request) => ipcRenderer.invoke(IPC.aiDj.prepare, request),
     preview: (voice) => ipcRenderer.invoke(IPC.aiDj.preview, voice),
     cancel: () => ipcRenderer.invoke(IPC.aiDj.cancel),
-  },
+  } : undefined,
 };
 
 contextBridge.exposeInMainWorld('desktop', bridge);
