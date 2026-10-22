@@ -81,6 +81,9 @@
     "vitest": "^5.0.3"
   },
   "overrides": {
+    "vgpu": {
+      "@modelcontextprotocol/server": "^2.3.1"
+    },
     "onnxruntime-node": {
       "global-agent": "^4.1.3"
     },
