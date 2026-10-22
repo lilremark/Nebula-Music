@@ -57,6 +57,7 @@ app.whenReady().then(async () => {
       document.querySelector('.nebula-rail [aria-label="Settings"]').click();
       await wait(() => document.querySelector('[role="tablist"][aria-label="Settings sections"]'));
       if (!!document.getElementById('settings-ai-dj-tab') !== ${expected}) throw new Error('Incorrect AI DJ settings tab');
+      if (!!document.getElementById('settings-desktop-integration-tab') !== ${osName !== 'web'}) throw new Error('Incorrect Desktop settings tab');
       if (!!document.querySelector('.nebula-rail [aria-label="AI DJ"]') !== ${expected}) throw new Error('AI DJ navigation changed after platform initialization');
       const tabs = [...document.querySelectorAll('[role="tab"]')];
       if (tabs.filter(t => t.tabIndex === 0).length !== 1) throw new Error('Settings focus is invalid');

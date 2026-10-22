@@ -33,6 +33,7 @@
     "dj:verify": "node esbuild.config.mjs && esbuild scripts/verifyAiDjRuntime.ts --bundle --platform=node --format=cjs --external:electron --outfile=electron/dist/verifyAiDjRuntime.cjs && electron electron/dist/verifyAiDjRuntime.cjs",
     "test:dj-ui": "electron scripts/smokeDjUi.cjs",
     "test:dj-platforms": "electron scripts/smokeDjPlatforms.cjs",
+    "test:docker": "electron scripts/smokeDocker.cjs",
     "demo:screenshots": "electron scripts/openDemoForScreenshots.cjs"
   },
   "dependencies": {
