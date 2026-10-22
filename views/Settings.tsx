@@ -340,12 +340,17 @@ export const SettingsView: React.FC = () => {
     const [pairingError, setPairingError] = useState('');
     const { viewData } = useStore();
     const djAvailable = isLocalDjPlatform(platform?.info);
-    const settingsJumps = SETTINGS_JUMPS.filter(([id]) => id !== 'settings-ai-dj' || djAvailable);
+    const desktopAvailable = platform?.info.kind === 'desktop';
+    const settingsJumps = SETTINGS_JUMPS.filter(([id]) =>
+        (id !== 'settings-ai-dj' || djAvailable) &&
+        (id !== 'settings-desktop-integration' || desktopAvailable));
     const [activeSettingsJump, setActiveSettingsJump] = useState<string>(djAvailable && viewData === 'settings-ai-dj' ? 'settings-ai-dj' : SETTINGS_JUMPS[0][0]);
     useEffect(() => {
         if (djAvailable && viewData === 'settings-ai-dj') setActiveSettingsJump('settings-ai-dj');
-        else if (!djAvailable) setActiveSettingsJump(current => current === 'settings-ai-dj' ? SETTINGS_JUMPS[0][0] : current);
-    }, [djAvailable, viewData]);
+        else setActiveSettingsJump(current =>
+            (!djAvailable && current === 'settings-ai-dj') ||
+            (!desktopAvailable && current === 'settings-desktop-integration') ? SETTINGS_JUMPS[0][0] : current);
+    }, [djAvailable, desktopAvailable, viewData]);
 
     useEffect(() => {
         setIsInsecure(isInsecureHttpUrl(url));
