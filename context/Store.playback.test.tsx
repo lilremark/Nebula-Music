@@ -148,6 +148,65 @@ describe('StoreProvider playback transitions', () => {
     } }));
   };
 
+  it('shows loading and buffering for active music, clears on recovery and pause, and ignores preloading', async () => {
+    await mountStore();
+    mediaReadyState = HTMLMediaElement.HAVE_NOTHING;
+    await act(async () => latestStore!.playSong(queue[0], queue));
+    expect(latestStore!.playbackStatus).toBe('loading');
+    const [audio, preload] = document.querySelectorAll('audio');
+    mediaReadyState = HTMLMediaElement.HAVE_ENOUGH_DATA;
+    await act(async () => audio.dispatchEvent(new Event('playing')));
+    expect(latestStore!.playbackStatus).toBe('idle');
+    await act(async () => preload.dispatchEvent(new Event('waiting')));
+    expect(latestStore!.playbackStatus).toBe('idle');
+    audio.currentTime = 12;
+    mediaReadyState = HTMLMediaElement.HAVE_CURRENT_DATA;
+    await act(async () => audio.dispatchEvent(new Event('waiting')));
+    expect(latestStore!.playbackStatus).toBe('buffering');
+    await act(async () => audio.dispatchEvent(new Event('loadedmetadata')));
+    expect(latestStore!.playbackStatus).toBe('buffering');
+    mediaReadyState = HTMLMediaElement.HAVE_FUTURE_DATA;
+    await act(async () => audio.dispatchEvent(new Event('canplay')));
+    expect(latestStore!.playbackStatus).toBe('idle');
+    await act(async () => audio.dispatchEvent(new Event('waiting')));
+    await act(async () => latestStore!.togglePlay());
+    expect(latestStore!.playbackStatus).toBe('idle');
+  });
+
+  it('shows loading on automatic next-track transitions and a persistent error until the listener retries', async () => {
+    await mountStore();
+    await act(async () => latestStore!.playSong(queue[0], queue));
+    const audio = document.querySelector('audio')!;
+    await act(async () => audio.dispatchEvent(new Event('playing')));
+    mediaReadyState = HTMLMediaElement.HAVE_NOTHING;
+    await act(async () => audio.dispatchEvent(new Event('ended')));
+    expect(latestStore!.currentSongIndex).toBe(1);
+    expect(latestStore!.playbackStatus).toBe('loading');
+    mediaReadyState = HTMLMediaElement.HAVE_ENOUGH_DATA;
+    await act(async () => audio.dispatchEvent(new Event('playing')));
+    await act(async () => audio.dispatchEvent(new Event('error')));
+    expect(latestStore!.isPlaying).toBe(false);
+    expect(latestStore!.playbackStatus).toBe('error');
+    await act(async () => audio.dispatchEvent(new Event('timeupdate')));
+    expect(latestStore!.playbackStatus).toBe('error');
+    await act(async () => latestStore!.togglePlay());
+    await act(async () => audio.dispatchEvent(new Event('playing')));
+    expect(latestStore!.isPlaying).toBe(true);
+    expect(latestStore!.playbackStatus).toBe('idle');
+  });
+
+  it('reports a rejected play promise and allows the same track to be retried', async () => {
+    await mountStore();
+    vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValueOnce(new DOMException('Blocked', 'NotAllowedError'));
+    await act(async () => latestStore!.playSong(queue[0], queue));
+    expect(latestStore!.isPlaying).toBe(false);
+    expect(latestStore!.playbackStatus).toBe('error');
+    await act(async () => latestStore!.togglePlay());
+    const audio = document.querySelector('audio')!;
+    await act(async () => audio.dispatchEvent(new Event('playing')));
+    expect(latestStore!.playbackStatus).toBe('idle');
+  });
+
   it('starts a fresh DJ playback instance and restores position when the saved song has the same URL', async () => {
     window.desktop = {} as any; mockAudioGraph();
     await mountStore(); await act(async () => latestStore!.enableDemoMode());

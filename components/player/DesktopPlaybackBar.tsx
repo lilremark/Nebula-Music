@@ -7,6 +7,7 @@ import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
 import { SpeedPitchControls } from './SpeedPitchControls';
 import { PlayerSurface } from './PlayerSurface';
+import { PlaybackStatus } from './PlaybackStatus';
 
 interface DesktopPlaybackBarProps {
   onExpand: () => void;
@@ -109,6 +110,7 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
           {title}
         </button>
         <span title={subtitle}>{subtitle}</span>
+        {!isRadio && <PlaybackStatus />}
       </div>
       {!isRadio && song && <button disabled={voice.speech} type="button" className={`nebula-transport-icon nebula-transport-like ${song.starred ? 'is-liked' : ''}`} onClick={() => toggleLike(song)} aria-label={song.starred ? 'Unlike song' : 'Like song'}><Heart size={18} fill={song.starred ? 'currentColor' : 'none'} /></button>}
     </div>

@@ -15,6 +15,7 @@ import { SearchModal } from './components/SearchModal';
 import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { UpdateBanner } from './components/UpdateBanner';
+import { ServerConnectionBanner } from './components/ServerConnectionBanner';
 
 import { VISUALIZER_MODES } from './types';
 import { StreamDeckBridgeProvider } from './context/StreamDeckBridgeContext';
@@ -188,6 +189,7 @@ export const AppContent: React.FC<{
 
       {/* Top-level update banner (desktop only) */}
       <UpdateBanner />
+      {!isExpanded && !isZenMode && <ServerConnectionBanner />}
 
       {/* Split Screen Layout */}
       <div className="flex-1 min-h-0">

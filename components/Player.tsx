@@ -12,6 +12,8 @@ import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { useArtistImage } from '../hooks/useArtistImage';
 import { useTrackWaveform } from '../hooks/useTrackWaveform';
 import { PlaybackProgress } from './player/PlaybackProgress';
+import { PlaybackStatus } from './player/PlaybackStatus';
+import { ServerConnectionBanner } from './ServerConnectionBanner';
 import { SpeedPitchControls } from './player/SpeedPitchControls';
 import { VISUALIZER_MODES } from '../types';
 import { useTheme } from '../context/ThemeContext';
@@ -227,6 +229,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                     </div>
                 </div>
             )}
+            <ServerConnectionBanner />
             {/* Dot pattern background */}
             <div
                 className={`absolute inset-0 pointer-events-none ${isLightMode ? 'opacity-45' : 'opacity-30'}`}
@@ -318,6 +321,9 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                     </button>
                 </div>
             </header>
+            <div className="relative z-20 flex justify-center px-6">
+                <PlaybackStatus />
+            </div>
 
             {/* Main Content Area */}
             <div className={`relative z-10 flex-1 flex flex-col overflow-hidden ${isZenMode ? 'opacity-0 hover:opacity-100 transition-opacity duration-700' : ''}`} data-nebula-fullscreen-main>

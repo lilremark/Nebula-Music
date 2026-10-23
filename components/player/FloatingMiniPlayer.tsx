@@ -5,6 +5,7 @@ import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
+import { PlaybackStatus } from './PlaybackStatus';
 
 interface FloatingMiniPlayerProps {
     onExpand: () => void;
@@ -176,6 +177,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                         )}
                     </div>
                     <p className="text-xs text-neutral-700 dark:text-white/50 truncate">{voice.speech ? voice.subtitle : currentSong.artist}</p>
+                    <PlaybackStatus />
                 </div>
 
                 {/* Time display */}

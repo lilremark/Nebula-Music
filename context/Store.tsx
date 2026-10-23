@@ -14,8 +14,14 @@ import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
 import { defaultAccent } from '../design-system/tokens';
 import { applyEqPreamp, getEqPreampGain } from '../services/eqPreamp';
+import { observeMusicStatus, type MusicPlaybackStatus } from '../playback/musicStatus';
+import { monitorServerConnection, type ServerConnectionStatus } from '../services/serverConnection';
 
 interface StoreContextType extends AppState {
+  playbackStatus: MusicPlaybackStatus;
+  serverConnection: ServerConnectionStatus;
+  isCheckingConnection: boolean;
+  retryServerConnection: () => void;
   dj: ReturnType<typeof useDjSession>;
   setView: (view: View, data?: any, options?: { replace?: boolean; clearHistory?: boolean }) => void;
   goBack: (fallbackView?: View, fallbackData?: any) => void;
@@ -343,6 +349,31 @@ export const StoreProvider: React.FC<{
   const [queue, setQueue] = useState<ISong[]>([]);
   const [currentSongIndex, setCurrentSongIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackStatus, setPlaybackStatus] = useState<MusicPlaybackStatus>('idle');
+  const [serverConnection, setServerConnection] = useState<ServerConnectionStatus>('connected');
+  const [isCheckingConnection, setIsCheckingConnection] = useState(false);
+  const connectionMonitorRef = useRef<ReturnType<typeof monitorServerConnection> | null>(null);
+  const retryServerConnection = useCallback(() => { void connectionMonitorRef.current?.retry(); }, []);
+
+  useEffect(() => {
+    setServerConnection('connected');
+    setIsCheckingConnection(false);
+    if (!credentials || isDemoMode) return;
+    const monitor = monitorServerConnection({
+      probe: () => service.checkConnection(),
+      update: (status, checking) => {
+        setServerConnection(status);
+        setIsCheckingConnection(checking);
+      },
+      events: window,
+      isOnline: () => navigator.onLine !== false,
+    });
+    connectionMonitorRef.current = monitor;
+    return () => {
+      monitor.stop();
+      connectionMonitorRef.current = null;
+    };
+  }, [credentials, isDemoMode, service]);
   const [radioStations, setRadioStations] = useState<IRadioStation[]>([]);
   const [currentRadioStation, setCurrentRadioStation] = useState<IRadioStation | null>(null);
   const [isRadioPlaying, setIsRadioPlaying] = useState(false);
@@ -1790,6 +1821,28 @@ export const StoreProvider: React.FC<{
     else stopCrossfadeAudio();
   }, [currentSongIndex, getNextPlaybackIndex, isPlaying, prepareCrossfadeTrack, queue, repeatMode, settings.magicCrossfade, stopCrossfadeAudio]);
 
+  const statusSongRef = useRef<string | undefined>(undefined);
+  const statusSongId = queue[currentSongIndex]?.id;
+  useEffect(() => {
+    const changedSong = statusSongRef.current !== statusSongId;
+    statusSongRef.current = statusSongId;
+    if (!isPlaying || !statusSongId || currentRadioStation || dj.holdMusic) {
+      setPlaybackStatus(previous => !changedSong && previous === 'error' ? 'error' : 'idle');
+      return;
+    }
+    const primary = audioRef.current;
+    const crossfade = crossfadeAudioRef.current;
+    if (!primary || !crossfade) return;
+    return observeMusicStatus([primary, crossfade], () => {
+      const handoff = crossfadeHandoffRef.current?.songId === statusSongId;
+      return handoff && crossfade.dataset.nebulaSongId === statusSongId && !crossfade.paused
+        ? crossfade : primary;
+    }, status => {
+      setPlaybackStatus(status);
+      if (status === 'error') setIsPlaying(false);
+    });
+  }, [currentRadioStation, dj.holdMusic, isPlaying, statusSongId]);
+
   // Handle Playback State
   useEffect(() => {
     const audio = audioRef.current;
@@ -1854,7 +1907,11 @@ export const StoreProvider: React.FC<{
                   }
                 })
                 .catch(e => {
-                  if (e.name !== 'AbortError') console.warn("Play failed", e);
+                  if (!cancelled && e.name !== 'AbortError') {
+                    console.warn("Play failed", e);
+                    setPlaybackStatus('error');
+                    setIsPlaying(false);
+                  }
                 });
             } else if (handoff) {
               handoffTimer = window.setTimeout(finishCrossfadeHandoff, 180);
@@ -1871,7 +1928,14 @@ export const StoreProvider: React.FC<{
         }
       } else {
         if (isPlaying && audio.paused) {
-          audio.play().then(() => initAudioContext()).catch(e => console.warn("Resume failed", e));
+          if (audio.error) audio.load();
+          audio.play().then(() => { if (!cancelled) initAudioContext(); }).catch(e => {
+            if (!cancelled && e.name !== 'AbortError') {
+              console.warn("Resume failed", e);
+              setPlaybackStatus('error');
+              setIsPlaying(false);
+            }
+          });
         } else if (!isPlaying && !audio.paused) {
           audio.pause();
         }
@@ -2115,6 +2179,7 @@ export const StoreProvider: React.FC<{
 
 
   const connectToSubsonic = async (url: string, user: string, secret: string, authMode: 'password' | 'apiKey' = 'password') => {
+    const previousCredentials = service.getCredentials();
     djRef.current?.stop(false); listeningRef.current?.finish();
     const serverUrl = url.trim();
     const creds: SubsonicCredentials = authMode === 'apiKey'
@@ -2152,7 +2217,7 @@ export const StoreProvider: React.FC<{
       fetchArtists(true);
       return true;
     }
-    else { service.setCredentials(null as any); return false; }
+    else { service.setCredentials(previousCredentials); return false; }
   };
 
   const disconnect = async () => {
@@ -2325,6 +2390,7 @@ export const StoreProvider: React.FC<{
   return (
     <StoreContext.Provider value={{
       dj,
+      playbackStatus, serverConnection, isCheckingConnection, retryServerConnection,
       currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, radioPitch, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
       credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
       playSong, playRadioStation, toggleRadioPlay, stopRadio, setRadioPitch, togglePlay, nextSong, prevSong, playQueueIndex, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,

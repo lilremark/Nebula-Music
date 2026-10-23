@@ -1,0 +1,31 @@
+.nebula-server-warning {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 8px 20px;
+  background: #fff3d6;
+  color: #713f12;
+  border-bottom: 1px solid #c58c3c;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.nebula-server-warning > svg { flex-shrink: 0; }
+.nebula-server-warning-copy { flex: 1; min-width: 160px; }
+.nebula-server-warning-copy strong,
+.nebula-server-warning-copy span { display: block; }
+.nebula-server-warning button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-weight: 700;
+}
+.nebula-server-warning button:hover:not(:disabled) { background: #f6dfaf; }
+.nebula-server-warning button:disabled { cursor: wait; }
+.nebula-server-warning button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+html.dark .nebula-server-warning { background: #302410; color: #ffe0a3; border-color: #a47c3b; }
+html.dark .nebula-server-warning button:hover:not(:disabled) { background: #4a3718; }

@@ -1,0 +1,35 @@
+.nebula-playback-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: inherit;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--next-raised, #f3f4f8);
+  color: var(--next-text, #191b27);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+html.dark .nebula-playback-status { background: var(--next-raised, #181818); color: var(--next-text, #f5f5f5); }
+.nebula-playback-status svg { flex-shrink: 0; }
+.nebula-playback-status.is-error { color: #9a3412; }
+html.dark .nebula-playback-status.is-error { color: #fed7aa; }
+.nebula-transport-track-copy .nebula-playback-status,
+.nebula-transport-track-copy .nebula-playback-status span { color: var(--next-text, #191b27); font-size: 11px; white-space: normal; }
+html.dark .nebula-transport-track-copy .nebula-playback-status,
+html.dark .nebula-transport-track-copy .nebula-playback-status span { color: var(--next-text, #f5f5f5); }
+.nebula-transport-track-copy .nebula-playback-status.is-error,
+.nebula-transport-track-copy .nebula-playback-status.is-error span { color: #9a3412; }
+html.dark .nebula-transport-track-copy .nebula-playback-status.is-error,
+html.dark .nebula-transport-track-copy .nebula-playback-status.is-error span { color: #fed7aa; }
+
+/* Motion is limited to the period when playback is waiting for audio. */
+.nebula-buffering-spinner { animation: nebula-buffering-spin 1s linear infinite; }
+@keyframes nebula-buffering-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .nebula-buffering-spinner { animation: none; }
+}

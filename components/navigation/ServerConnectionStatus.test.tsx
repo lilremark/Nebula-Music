@@ -4,11 +4,11 @@ import { createRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
 import { ServerConnectionStatus } from './ServerConnectionStatus';
 
-const { store } = vi.hoisted(() => ({ store: { credentials: null as any, isDemoMode: false } }));
+const { store } = vi.hoisted(() => ({ store: { credentials: null as any, isDemoMode: false, serverConnection: 'connected' } }));
 vi.mock('../../context/Store', () => ({ useStore: () => store }));
 
-const renderStatus = async (credentials: any, isDemoMode = false) => {
-  Object.assign(store, { credentials, isDemoMode });
+const renderStatus = async (credentials: any, isDemoMode = false, serverConnection = 'connected') => {
+  Object.assign(store, { credentials, isDemoMode, serverConnection });
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const container = document.createElement('div');
   const root = createRoot(container);
@@ -39,6 +39,14 @@ describe('sidebar server identification', () => {
   it('shows offline when no server is configured', async () => {
     const html = await renderStatus(null);
     expect(html).toContain('Offline');
+    expect(html).not.toContain('Connected to server');
+  });
+
+  it('shows a lost connection while retaining the configured server identity', async () => {
+    const html = await renderStatus({ serverUrl: 'https://music.example/subsonic' }, false, 'disconnected');
+    expect(html).toContain('Offline');
+    expect(html).toContain('data-state="offline"');
+    expect(html).toContain('music.example/subsonic');
     expect(html).not.toContain('Connected to server');
   });
 });

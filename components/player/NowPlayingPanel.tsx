@@ -11,6 +11,7 @@ import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
+import { PlaybackStatus } from './PlaybackStatus';
 
 interface NowPlayingPanelProps {
     onExpand: () => void;
@@ -196,6 +197,8 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         {voice.speech ? '' : currentSong.album}
                     </p>
                 </div>
+
+                <PlaybackStatus />
 
                 {/* Progress Bar */}
                 <div className="w-full px-6 mb-2" data-nebula-sidebar-player-progress>

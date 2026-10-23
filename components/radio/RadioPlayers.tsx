@@ -4,6 +4,7 @@ import { useStore } from '../../context/Store';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { Visualizer } from '../Visualizer';
 import { VISUALIZER_MODES } from '../../types';
+import { ServerConnectionBanner } from '../ServerConnectionBanner';
 
 const withAlpha = (color: string, alpha: number) => {
     if (color.startsWith('#')) {
@@ -270,6 +271,7 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                 </div>
             )}
 
+            <ServerConnectionBanner />
             <header className="relative z-20 flex items-center justify-between p-4 md:p-6">
                 <button
                     onClick={onClose}

@@ -246,6 +246,17 @@ export class SubsonicService {
     }
   }
 
+  async checkConnection(): Promise<boolean> {
+    if (this.isDemo || !this.creds) return true;
+    try {
+      await this.request('ping.view');
+      return true;
+    } catch (error) {
+      // API errors prove reachability; login handles authentication and negotiation.
+      return error instanceof SubsonicApiError;
+    }
+  }
+
   async getPing(): Promise<boolean> {
     if (this.isDemo) return true;
     for (const version of SUBSONIC_PROTOCOL_FALLBACKS) {
