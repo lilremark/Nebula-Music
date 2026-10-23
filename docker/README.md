@@ -107,6 +107,11 @@ $env:NEBULA_DOCKER_URL = "http://127.0.0.1:8080"
 npm run test:docker
 ```
 
+To cover plain HTTP on a LAN/VPN hostname as well, run the local container check
+with `$env:NEBULA_DOCKER_HTTP_ORIGIN = "1"`. The browser uses a test hostname
+mapped to loopback so secure-context-only APIs are unavailable, as on a remote
+HTTP deployment. The container URL should use `127.0.0.1` in this mode.
+
 This checks NGINX health, security/cache headers, SPA routing, desktop and mobile
 settings, keyboard navigation, theme switching, and decoded audio playback with
 pause, resume, mute, and track changes. It uses a temporary Chromium profile with
@@ -129,6 +134,7 @@ The container is healthy when `http://localhost:8080/healthz` returns HTTP 204.
 - Nebula Music is a static browser app. Subsonic/OpenSubsonic credentials are entered in the UI and stored in the browser, not in the container.
 - Your Subsonic-compatible server must be reachable from the user's browser, not just from the Docker container.
 - If the app cannot connect to your music server, check HTTPS and CORS settings on the Subsonic server.
+- Container port 8080 serves HTTP. A TLS handshake sent directly to that port produces a binary-looking request and HTTP 400 in the access log. Use `http://HOST:8080`, or terminate HTTPS at a reverse proxy and forward to the container over HTTP. NGINX `[notice]` messages on STDERR, graceful SIGQUIT shutdowns, and worker exit code 0 are normal lifecycle messages.
 - Enter the final server base URL, including any reverse-proxy path. Browser API requests reject redirects so an authentication query cannot be forwarded to another host. Request deadlines also cover stalled response bodies.
 - The bundled NGINX configuration sends a Content Security Policy and denies framing. It permits user-selected HTTP/HTTPS music and radio endpoints, the local Stream Deck websocket, artwork, and Google Fonts. Browser mixed-content and private-network restrictions still apply when the app is served over HTTPS.
 - No runtime environment variables or persistent volumes are required.

@@ -3,6 +3,7 @@ import type { ISong } from '../types';
 import { db } from '../services/db';
 import { ListeningClock } from '../playback/listeningClock';
 import type { ListeningEvent } from '../playback/djTypes';
+import { randomId } from '../utils/randomId';
 
 export function useListeningEvents(inputs: { profile: string | null; song?: ISong; playing: boolean; owner: () => HTMLAudioElement | null; onQualified: (song: ISong) => void }) {
   const latest = useRef(inputs); latest.current = inputs;
@@ -30,7 +31,7 @@ export function useListeningEvents(inputs: { profile: string | null; song?: ISon
       if (!profile || !song || !playing) return;
       const audio = owner(); observe(audio); if (!audio) return;
       if (!instance.current && (audio.paused || audio.ended)) return;
-      instance.current ??= { id: crypto.randomUUID(), profile, song, clock: new ListeningClock(song.duration) };
+      instance.current ??= { id: randomId(), profile, song, clock: new ListeningClock(song.duration) };
       if (instance.current.clock.sample(audio.currentTime, performance.now(), !audio.paused, audio.playbackRate, audio.seeking)) onQualified(song);
     }, 250);
     return () => { window.clearInterval(timer); observe(null); finishRef.current(); };

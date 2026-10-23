@@ -129,6 +129,8 @@ docker compose logs --tail=100 nebula-music
 - **Cannot reach the server:** check that its URL is accessible from the browser's device. Use the final server base URL, including any reverse-proxy path; API requests reject redirects.
 - **CORS errors:** configure the music server or its reverse proxy to allow requests from Nebula's origin, including its scheme and port.
 - **HTTPS and HTTP:** an HTTPS-hosted player may be blocked from connecting to an HTTP music server. Serve both over HTTPS where possible. Browser mixed-content and private-network restrictions still apply.
+- **TLS error or binary-looking HTTP 400:** container port `8080` serves plain HTTP. Open `http://HOST:8080` directly, or terminate HTTPS at a reverse proxy and forward to Nebula over HTTP. Sending HTTPS directly to port `8080` will fail.
+- **Red STDERR startup entries:** NGINX `[notice]` messages, graceful SIGQUIT shutdowns, and workers exiting with code `0` are normal lifecycle logs. Check the message severity and HTTP status rather than the log viewer's color.
 - **Playback formats:** codec support depends on the browser. Configure transcoding on your music server for formats that browser cannot play.
 - **Reverse proxy:** forward traffic to container port `8080`. Serving Nebula from its own hostname at the site root keeps asset URLs straightforward.
 

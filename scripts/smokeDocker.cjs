@@ -5,6 +5,13 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const baseUrl = process.env.NEBULA_DOCKER_URL || 'http://127.0.0.1:18080';
+const browserUrl = new URL(baseUrl);
+const insecureOrigin = process.env.NEBULA_DOCKER_HTTP_ORIGIN === '1';
+if (insecureOrigin) {
+  browserUrl.hostname = 'nebula-docker.test';
+  app.commandLine.appendSwitch('host-resolver-rules', 'MAP nebula-docker.test 127.0.0.1');
+  app.commandLine.appendSwitch('no-proxy-server');
+}
 app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'nebula-docker-')));
 app.commandLine.appendSwitch('mute-audio');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -38,9 +45,10 @@ app.whenReady().then(async () => {
   win.webContents.session.webRequest.onBeforeRequest({ urls: ['https://*/*'] }, (details, callback) => callback({
     cancel: details.resourceType !== 'image' && !details.url.startsWith('https://cdn.pixabay.com/download/audio/'),
   }));
-  await win.loadURL(baseUrl);
+  await win.loadURL(browserUrl.href);
   await win.webContents.executeJavaScript(`(async () => {
-    const wait = async (check, label) => { for (let i = 0; i < 240; i++) { if (check()) return; await new Promise(r => setTimeout(r, 25)); } throw new Error('Timed out: ' + label); };
+    if (${insecureOrigin} && (isSecureContext || typeof crypto.randomUUID !== 'undefined')) throw new Error('HTTP origin test unexpectedly has secure-context APIs');
+    const wait = async (check, label) => { for (let i = 0; i < 240; i++) { if (check()) return; if (document.body.textContent.includes('Something went wrong')) throw new Error(document.body.textContent); await new Promise(r => setTimeout(r, 25)); } throw new Error('Timed out: ' + label); };
     window.smokeWait = wait;
     const buttons = () => [...document.querySelectorAll('button')];
     await wait(() => buttons().some(b => b.textContent.trim() === 'Try Demo Mode'), 'setup');
@@ -92,7 +100,7 @@ app.whenReady().then(async () => {
   })()`);
   const fatal = errors.filter(message => !message.startsWith('Failed to load resource: net::ERR_BLOCKED_BY_CLIENT') && !message.includes('404 (Not Found)'));
   if (fatal.length) throw new Error('Browser errors: ' + fatal.join('\n'));
-  console.log(JSON.stringify({ dockerUrl: baseUrl, health: 'passed', headersAndRouting: 'passed', webAndMobileSettings: 'passed', theme: 'passed', playbackPauseResumeMuteNext: 'passed' }));
+  console.log(JSON.stringify({ dockerUrl: baseUrl, browserOrigin: browserUrl.origin, insecureOrigin, health: 'passed', headersAndRouting: 'passed', webAndMobileSettings: 'passed', theme: 'passed', playbackPauseResumeMuteNext: 'passed' }));
   clearTimeout(timeout);
   win.destroy();
   app.exit(0);

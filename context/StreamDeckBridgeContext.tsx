@@ -12,6 +12,7 @@ import { usePlatform } from '../platform/PlatformContext';
 import type { Platform } from '../platform/types';
 import { db } from '../services/db';
 import { APP_VERSION } from '../constants';
+import { randomId } from '../utils/randomId';
 import { createSanitizedArtwork } from '../services/streamDeckArtwork';
 import {
   StreamDeckBridge,
@@ -47,7 +48,7 @@ const getSessionId = (): string => {
   const key = 'nebula_stream_deck_session_id';
   const existing = sessionStorage.getItem(key);
   if (existing) return existing;
-  const id = crypto.randomUUID();
+  const id = randomId();
   sessionStorage.setItem(key, id);
   return id;
 };
@@ -56,7 +57,7 @@ const getClientId = (): string => {
   const key = 'nebula_stream_deck_client_id';
   const existing = localStorage.getItem(key);
   if (existing) return existing;
-  const id = crypto.randomUUID();
+  const id = randomId();
   localStorage.setItem(key, id);
   return id;
 };
