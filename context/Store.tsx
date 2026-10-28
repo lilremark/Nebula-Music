@@ -14,6 +14,7 @@ import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
 import { defaultAccent } from '../design-system/tokens';
 import { applyEqPreamp, getEqPreampGain } from '../services/eqPreamp';
+import { applyReplayGain, DEFAULT_REPLAY_GAIN, normalizeReplayGainSettings } from '../services/replayGain';
 import { observeMusicStatus, type MusicPlaybackStatus } from '../playback/musicStatus';
 import { monitorServerConnection, type ServerConnectionStatus } from '../services/serverConnection';
 
@@ -129,6 +130,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   miniPlayerMode: 'sidebar',
   progressVisualization: 'bar',
   magicCrossfade: false,
+  replayGain: { ...DEFAULT_REPLAY_GAIN },
   streamDeck: {
     enabled: false,
     port: 37921,
@@ -268,6 +270,7 @@ const compactSongForStorage = (song: ISong): ISong => ({
   artistId: song.artistId,
   starred: song.starred,
   playCount: song.playCount,
+  replayGain: song.replayGain,
 });
 
 const trimPlayHistory = (history: PlayHistoryMap, limit = MAX_PLAY_HISTORY_ENTRIES): PlayHistoryMap => {
@@ -432,6 +435,10 @@ export const StoreProvider: React.FC<{
   const compressorRef = useRef<DynamicsCompressorNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const musicReplayGainRef = useRef<GainNode | null>(null);
+  const crossfadeReplayGainRef = useRef<GainNode | null>(null);
+  const replayGainSettingsRef = useRef(settings.replayGain);
+  replayGainSettingsRef.current = settings.replayGain;
   const crossfadeAudioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const radioAudioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const radioPitchShiftNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -449,6 +456,21 @@ export const StoreProvider: React.FC<{
   const stateRef = useRef({ queue, currentSongIndex, isPlaying, repeatMode, volume, playbackRate, pitch, pitchCorrection, magicCrossfade: settings.magicCrossfade });
 
   const currentSong = queue[currentSongIndex];
+
+  useEffect(() => {
+    if (settings.replayGain.mode === 'off' || isDemoMode || !currentSong) return;
+    let cancelled = false;
+    const nextIndex = computeNextPlaybackIndex(currentSongIndex, queue, repeatMode);
+    const candidates = settings.magicCrossfade && nextIndex >= 0 ? [currentSong, queue[nextIndex]] : [currentSong];
+    const missing = [...new Map(candidates.filter(song => song && song.replayGain === undefined).map(song => [song.id, song])).values()];
+    if (!missing.length) return;
+    void Promise.all(missing.map(song => service.getSong(song.id))).then(songs => {
+      if (cancelled) return;
+      const metadata = new Map(songs.filter((song): song is ISong => song !== null).map(song => [song.id, song.replayGain || {}]));
+      if (metadata.size) setQueue(previous => previous.map(song => metadata.has(song.id) ? { ...song, replayGain: metadata.get(song.id) } : song));
+    });
+    return () => { cancelled = true; };
+  }, [credentials, currentSong, currentSongIndex, isDemoMode, queue, repeatMode, service, settings.magicCrossfade, settings.replayGain.mode]);
 
   useEffect(() => {
     stateRef.current = { queue, currentSongIndex, isPlaying, repeatMode, volume, playbackRate, pitch, pitchCorrection, magicCrossfade: settings.magicCrossfade };
@@ -768,6 +790,7 @@ export const StoreProvider: React.FC<{
           theme: { ...prev.theme, ...savedSettings.theme },
           sidebar: { ...prev.sidebar, ...savedSettings.sidebar },
           shortcuts: { ...prev.shortcuts, ...savedSettings.shortcuts },
+          replayGain: normalizeReplayGainSettings(savedSettings.replayGain),
           eq: {
             ...prev.eq,
             ...(savedSettings.eq || {}),
@@ -915,6 +938,18 @@ export const StoreProvider: React.FC<{
     applyEqToGraph();
   }, [applyEqToGraph]);
 
+  const applyMusicReplayGain = useCallback((target: 'music' | 'crossfade', song: ISong | undefined, immediate = false) => {
+    const node = target === 'music' ? musicReplayGainRef.current : crossfadeReplayGainRef.current;
+    const ctx = audioContextRef.current;
+    if (node && ctx) applyReplayGain(node, song?.replayGain, replayGainSettingsRef.current, ctx.currentTime, immediate);
+  }, []);
+
+  useEffect(() => {
+    applyMusicReplayGain('music', currentSong);
+    const preparedId = crossfadeAudioRef.current?.dataset.nebulaSongId;
+    applyMusicReplayGain('crossfade', queue.find(song => song.id === preparedId));
+  }, [applyMusicReplayGain, currentSong, queue, settings.replayGain]);
+
   // Audio Context Initialization (Lazy)
   const initAudioContext = useCallback(async (target: 'music' | 'crossfade' | 'radio' = 'music') => {
     try {
@@ -955,18 +990,27 @@ export const StoreProvider: React.FC<{
       } else if (target === 'crossfade') {
         const crossfadeAudio = crossfadeAudioRef.current;
         if (crossfadeAudio && !crossfadeAudioSourceRef.current) {
+          const gain = ctx.createGain();
+          crossfadeReplayGainRef.current = gain;
+          const preparedSong = stateRef.current.queue.find(song => song.id === crossfadeAudio.dataset.nebulaSongId);
+          applyMusicReplayGain('crossfade', preparedSong, true);
           crossfadeAudioSourceRef.current = ctx.createMediaElementSource(crossfadeAudio);
-          crossfadeAudioSourceRef.current.connect(dspInput);
+          crossfadeAudioSourceRef.current.connect(gain);
+          gain.connect(dspInput);
         }
       } else {
         const audio = audioRef.current;
         if (audio && !audioSourceRef.current) {
+          const gain = ctx.createGain();
+          musicReplayGainRef.current = gain;
+          applyMusicReplayGain('music', stateRef.current.queue[stateRef.current.currentSongIndex], true);
           audioSourceRef.current = ctx.createMediaElementSource(audio);
-          audioSourceRef.current.connect(dspInput);
+          audioSourceRef.current.connect(gain);
+          gain.connect(dspInput);
         }
       }
     } catch (e) { console.warn("Audio Context init error:", e); }
-  }, [ensureDspGraph, ensureRadioPitchNode]);
+  }, [applyMusicReplayGain, ensureDspGraph, ensureRadioPitchNode]);
 
   const profile = credentials ? credentials.serverUrl.replace(/\/$/, '') + ':' + credentials.username : isDemoMode ? 'demo' : null;
   const listening = useListeningEvents({ profile, song: currentSong, playing: isPlaying,
@@ -1043,18 +1087,20 @@ export const StoreProvider: React.FC<{
 
     if (!nextAudio || !nextSong) return;
     if (nextAudio.dataset.nebulaSongId === nextSong.id && nextAudio.src) {
+      applyMusicReplayGain('crossfade', nextSong, true);
       applyPlaybackAttributes(nextAudio);
       return;
     }
 
     nextAudio.pause();
+    applyMusicReplayGain('crossfade', nextSong, true);
     nextAudio.volume = 0;
     nextAudio.src = service.getStreamUrl(nextSong.id, nextSong.suffix);
     nextAudio.dataset.nebulaSongId = nextSong.id;
     nextAudio.dataset.nebulaQueueIndex = nextIndex.toString();
     applyPlaybackAttributes(nextAudio);
     nextAudio.load();
-  }, [applyPlaybackAttributes, service]);
+  }, [applyMusicReplayGain, applyPlaybackAttributes, service]);
 
   const activatePreparedTrack = useCallback((nextIndex: number) => {
     const nextAudio = crossfadeAudioRef.current;
@@ -1862,6 +1908,7 @@ export const StoreProvider: React.FC<{
         : null;
       const sourceChanged = audio.src !== url;
       if (sourceChanged) {
+        applyMusicReplayGain('music', song, true);
         audio.src = url;
         audio.volume = volume;
         audio.load();
@@ -1885,6 +1932,7 @@ export const StoreProvider: React.FC<{
 
           const startPlayback = () => {
             if (cancelled) return;
+            initAudioContext();
             if (handoff && Number.isFinite(handoff.currentTime)) {
               try {
                 const handoffAudio = crossfadeAudioRef.current;
@@ -1916,7 +1964,6 @@ export const StoreProvider: React.FC<{
             } else if (handoff) {
               handoffTimer = window.setTimeout(finishCrossfadeHandoff, 180);
             }
-            initAudioContext(); // Ensure context is ready
           };
 
           if ((handoff || restorePositionRef.current !== null) && audio.readyState < 1) {
@@ -1929,7 +1976,8 @@ export const StoreProvider: React.FC<{
       } else {
         if (isPlaying && audio.paused) {
           if (audio.error) audio.load();
-          audio.play().then(() => { if (!cancelled) initAudioContext(); }).catch(e => {
+          initAudioContext();
+          audio.play().catch(e => {
             if (!cancelled && e.name !== 'AbortError') {
               console.warn("Resume failed", e);
               setPlaybackStatus('error');
@@ -1951,7 +1999,7 @@ export const StoreProvider: React.FC<{
       if (handoffTimer !== undefined) window.clearTimeout(handoffTimer);
       if (metadataListener) audio.removeEventListener('loadedmetadata', metadataListener);
     };
-  }, [applyPlaybackAttributes, cancelCrossfade, currentSongIndex, getNextPlaybackIndex, initAudioContext, isPlaying, pitch, pitchCorrection, playbackRate, prepareCrossfadeTrack, queue, service, stopCrossfadeAudio, volume, dj.holdMusic]);
+  }, [applyMusicReplayGain, applyPlaybackAttributes, cancelCrossfade, currentSongIndex, getNextPlaybackIndex, initAudioContext, isPlaying, pitch, pitchCorrection, playbackRate, prepareCrossfadeTrack, queue, service, stopCrossfadeAudio, volume, dj.holdMusic]);
 
   const playSong = (song: ISong, contextQueue?: ISong[]) => {
     listeningRef.current?.finish(false, true); djRef.current?.stop(false);
@@ -2160,6 +2208,7 @@ export const StoreProvider: React.FC<{
         theme: { ...prev.theme, ...(newSettings.theme || {}) },
         sidebar: { ...prev.sidebar, ...(newSettings.sidebar || {}) },
         shortcuts: { ...prev.shortcuts, ...(newSettings.shortcuts || {}) },
+        replayGain: normalizeReplayGainSettings({ ...prev.replayGain, ...newSettings.replayGain }),
         eq: updatedEQ
       };
 

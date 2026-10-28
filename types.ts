@@ -1,4 +1,19 @@
 
+export interface ReplayGainInfo {
+  trackGain?: number;
+  albumGain?: number;
+  trackPeak?: number;
+  albumPeak?: number;
+  baseGain?: number;
+  fallbackGain?: number;
+}
+
+export interface ReplayGainSettings {
+  mode: 'off' | 'track' | 'album';
+  preampDb: number;
+  preventClipping: boolean;
+}
+
 export interface ISong {
   id: string;
   parent?: string;
@@ -22,6 +37,7 @@ export interface ISong {
   starred?: boolean;
   bitRate?: number;
   playCount?: number;
+  replayGain?: ReplayGainInfo;
 }
 
 export interface IAlbum {
@@ -170,6 +186,7 @@ export interface AppSettings {
   miniPlayerMode: 'floating' | 'sidebar'; // sidebar layout uses the bottom bar only while the side panel is closed
   progressVisualization: 'bar' | 'waveform';
   magicCrossfade: boolean;
+  replayGain: ReplayGainSettings;
   streamDeck: {
     enabled: boolean;
     port: number;

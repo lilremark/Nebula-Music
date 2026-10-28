@@ -11,7 +11,7 @@ import { isLocalDjPlatform } from '../platform/aiDjAvailability';
 import { InsecureHttpSetting } from '../components/InsecureHttpSetting';
 import { isInsecureHttpUrl, useInsecureHttpSetting } from '../hooks/useInsecureHttpSetting';
 import type { UpdaterState } from '../electron/updater';
-import { VISUALIZER_MODES } from '../types';
+import { VISUALIZER_MODES, type ReplayGainSettings } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { getAutoEqPreampDb } from '../services/eqPreamp';
 import { CustomDropdown } from '../components/CustomDropdown';
@@ -974,6 +974,28 @@ export const SettingsView: React.FC = () => {
                                 checked={settings.magicCrossfade}
                                 onChange={(v) => updateSettings({ magicCrossfade: v })}
                             />
+                        </SettingPanel>)}
+
+                        {activeSettingsJump === 'settings-equalizer' && (<SettingPanel icon={Sliders} title="ReplayGain" description="Use loudness tags supplied by your music server to balance playback volume.">
+                            <div className="px-5 py-4">
+                                <label htmlFor="replaygain-mode" className="mb-2 block text-sm font-semibold text-neutral-900 dark:text-white">ReplayGain mode</label>
+                                <select id="replaygain-mode" className={inputClass} value={settings.replayGain.mode}
+                                    onChange={event => updateSettings({ replayGain: { ...settings.replayGain, mode: event.target.value as ReplayGainSettings['mode'] } })}>
+                                    <option value="off">Off</option>
+                                    <option value="track">Track</option>
+                                    <option value="album">Album</option>
+                                </select>
+                                <p className="mt-2 text-xs leading-relaxed text-neutral-600 dark:text-white/50">Track balances individual songs. Album preserves volume differences within an album. Missing tags use the other mode or the server fallback; untagged songs stay unchanged.</p>
+                            </div>
+                            <div className="px-5 py-4">
+                                <label htmlFor="replaygain-preamp" className="mb-3 block text-sm font-semibold text-neutral-900 dark:text-white">ReplayGain preamp: {settings.replayGain.preampDb > 0 ? '+' : ''}{settings.replayGain.preampDb} dB</label>
+                                <input id="replaygain-preamp" type="range" min="-12" max="12" step="0.5" className="w-full accent-primary"
+                                    disabled={settings.replayGain.mode === 'off'} value={settings.replayGain.preampDb}
+                                    onChange={event => updateSettings({ replayGain: { ...settings.replayGain, preampDb: Number(event.target.value) } })} />
+                            </div>
+                            <ToggleRow label="Prevent ReplayGain clipping" description="Limit gain using available peak tags. EQ boosts and overlapping fades can still raise the output level."
+                                checked={settings.replayGain.preventClipping} disabled={settings.replayGain.mode === 'off'}
+                                onChange={preventClipping => updateSettings({ replayGain: { ...settings.replayGain, preventClipping } })} />
                         </SettingPanel>)}
 
                         {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Palette} title="Appearance">

@@ -5,6 +5,7 @@ import { db } from './db';
 import md5 from 'blueimp-md5';
 import { webSubsonicTransport, type SubsonicTransport } from './subsonicTransport';
 import { fetchAndRead } from './httpRequest';
+import { parseReplayGain } from './replayGain';
 
 const SUBSONIC_API_VERSION = '1.16.1';
 const SUBSONIC_PROTOCOL_FALLBACKS = [SUBSONIC_API_VERSION, '1.15.0', '1.14.0'] as const;
@@ -204,7 +205,7 @@ export class SubsonicService {
     // namespace identifier, not a password-security or authentication primitive.
     const account = creds ? [creds.serverUrl, creds.authType || 'token',
       creds.authType === 'apiKey' ? creds.apiKey : creds.username] : ['demo'];
-    return `subsonic:${md5(JSON.stringify(account))}:${key}`;
+    return `subsonic:${md5(JSON.stringify(account))}:rg1:${key}`;
   }
 
   private async getCachedResponse(key: string, ttlMinutes: number) {
@@ -305,7 +306,8 @@ export class SubsonicService {
       created: s.created,
       starred: s.starred !== undefined,
       bitRate: s.bitRate,
-      playCount: s.userPlayCount !== undefined ? s.userPlayCount : s.playCount
+      playCount: s.userPlayCount !== undefined ? s.userPlayCount : s.playCount,
+      replayGain: parseReplayGain(s.replayGain),
     };
   }
 
@@ -371,6 +373,14 @@ export class SubsonicService {
       await this.cacheResponse(cacheKey, genreNames);
       return genreNames;
     } catch (e) { return []; }
+  }
+
+  async getSong(id: string): Promise<ISong | null> {
+    if (this.isDemo) return MOCK_SONGS.find(song => song.id === id) || null;
+    try {
+      const response = await this.request('getSong.view', { id });
+      return response.song ? this.mapSong(response.song) : null;
+    } catch { return null; }
   }
 
   async getRandomSongs(size: number = 10, params: { fromYear?: number, toYear?: number, genre?: string } = {}): Promise<ISong[]> {

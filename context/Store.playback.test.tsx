@@ -28,7 +28,7 @@ vi.mock('../services/db', () => ({
 type Store = ReturnType<typeof useStore>;
 
 const mockAudioGraph = () => {
-  const param = () => ({ value: 0, cancelScheduledValues: vi.fn(), cancelAndHoldAtTime: vi.fn(), setTargetAtTime: vi.fn() });
+  const param = () => ({ value: 0, cancelScheduledValues: vi.fn(), cancelAndHoldAtTime: vi.fn(), setTargetAtTime: vi.fn(), setValueAtTime: vi.fn() });
   const node = () => ({ connect: vi.fn(), disconnect: vi.fn() });
   const gains: Array<ReturnType<typeof node> & { gain: ReturnType<typeof param> }> = [];
   const filters: Array<ReturnType<typeof node> & { gain: ReturnType<typeof param> }> = [];
@@ -234,16 +234,18 @@ describe('StoreProvider playback transitions', () => {
     await act(async () => latestStore!.playRadioStation({
       id: 'station', name: 'Live', streamUrl: 'https://radio.example/live', created: '2026-09-30',
     }));
-    expect(graph.gains).toHaveLength(2);
+    expect(graph.gains).toHaveLength(4);
     const [input, preamp] = graph.gains;
     expect(input.connect).toHaveBeenCalledWith(preamp);
     expect(input.connect).toHaveBeenCalledWith(graph.analyser);
     expect(preamp.connect).toHaveBeenCalledWith(graph.filters[0]);
     expect(preamp.gain.value).toBeCloseTo(10 ** (-7 / 20));
     expect(graph.filters[6].gain.setTargetAtTime).toHaveBeenLastCalledWith(6, 4, 0.015);
-    for (const audio of [mainAudio, crossfadeAudio, radioAudio]) {
-      expect(graph.sources.find(source => source.mediaElement === audio)?.connect).toHaveBeenCalledWith(input);
+    for (const [audio, target] of [[mainAudio, graph.gains[2]], [crossfadeAudio, graph.gains[3]], [radioAudio, input]] as const) {
+      expect(graph.sources.find(source => source.mediaElement === audio)?.connect).toHaveBeenCalledWith(target);
     }
+    expect(graph.gains[2].connect).toHaveBeenCalledWith(input);
+    expect(graph.gains[3].connect).toHaveBeenCalledWith(input);
   });
 
   it('changes preamp live, bypasses and restores it, and clears it without changing volume or bands', async () => {
@@ -266,7 +268,61 @@ describe('StoreProvider playback transitions', () => {
     expect(latestStore!.settings.eq.bands['2k']).toBe(6);
     expect(latestStore!.volume).toBe(0.4);
     expect(document.querySelector('audio')!.volume).toBe(0.4);
-    expect(graph.gains).toHaveLength(2);
+    expect(graph.gains).toHaveLength(3);
+  });
+
+  it('applies saved ReplayGain at startup, updates live, and leaves volume and EQ independent', async () => {
+    const graph = mockAudioGraph();
+    vi.mocked(db.get).mockResolvedValueOnce({ replayGain: { mode: 'track' } });
+    await mountStore();
+    expect(latestStore!.settings.replayGain).toEqual({ mode: 'track', preampDb: 0, preventClipping: true });
+    const song = { ...queue[0], replayGain: { trackGain: -6, albumGain: -3 } };
+    await act(async () => latestStore!.playSong(song, [song]));
+    const gain = graph.gains[2].gain;
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(10 ** (-6 / 20), 4);
+    await applyAutoEq(-7);
+    await act(async () => latestStore!.setVolume(0.4));
+    await act(async () => latestStore!.updateSettings({ replayGain: { mode: 'album', preampDb: 1, preventClipping: true } }));
+    expect(gain.setTargetAtTime).toHaveBeenLastCalledWith(10 ** (-2 / 20), 4, 0.015);
+    await act(async () => latestStore!.updateSettings({ replayGain: { ...latestStore!.settings.replayGain, mode: 'off' } }));
+    expect(gain.setTargetAtTime).toHaveBeenLastCalledWith(1, 4, 0.015);
+    expect(latestStore!.volume).toBe(0.4);
+    expect(document.querySelector('audio')!.volume).toBe(0.4);
+    expect(graph.gains[1].gain.setTargetAtTime).toHaveBeenLastCalledWith(10 ** (-7 / 20), 4, 0.015);
+    expect(graph.sources).toHaveLength(1);
+  });
+
+  it('keeps per-song gain through prepared handoff and resets for an untagged song', async () => {
+    const graph = mockAudioGraph();
+    await mountStore();
+    await act(async () => latestStore!.updateSettings({ magicCrossfade: true, replayGain: { mode: 'track', preampDb: 0, preventClipping: true } }));
+    const songs = [
+      { ...queue[0], replayGain: { trackGain: -6 } },
+      { ...queue[1], replayGain: { trackGain: -12 } },
+      { ...queue[2], replayGain: {} },
+    ];
+    await act(async () => latestStore!.playSong(songs[0], songs));
+    const [audio] = document.querySelectorAll('audio');
+    await act(async () => audio.dispatchEvent(new Event('ended')));
+    expect(graph.gains[3].gain.setValueAtTime).toHaveBeenCalledWith(10 ** (-12 / 20), 4);
+    expect(graph.gains[2].gain.setValueAtTime).toHaveBeenLastCalledWith(10 ** (-12 / 20), 4);
+    await act(async () => latestStore!.nextSong());
+    expect(graph.gains[2].gain.setValueAtTime).toHaveBeenLastCalledWith(1, 4);
+    expect(graph.gains).toHaveLength(4);
+    expect(graph.sources).toHaveLength(2);
+  });
+
+  it('refreshes missing ReplayGain on old history entries and persists settings', async () => {
+    const graph = mockAudioGraph();
+    await mountStore();
+    vi.spyOn(latestStore!.service, 'getSong').mockResolvedValue({ ...queue[0], replayGain: { trackGain: -9 } });
+    await act(async () => latestStore!.updateSettings({ replayGain: { mode: 'track', preampDb: 0, preventClipping: true } }));
+    await act(async () => latestStore!.playSong(queue[0], [queue[0]]));
+    expect(latestStore!.service.getSong).toHaveBeenCalledWith(queue[0].id);
+    expect(latestStore!.queue[0].replayGain).toEqual({ trackGain: -9 });
+    expect(graph.gains[2].gain.setTargetAtTime).toHaveBeenLastCalledWith(10 ** (-9 / 20), 4, 0.015);
+    await act(async () => new Promise(resolve => window.setTimeout(resolve, 1100)));
+    expect(db.set).toHaveBeenCalledWith('settings', 'user_settings', expect.objectContaining({ replayGain: { mode: 'track', preampDb: 0, preventClipping: true } }));
   });
 
   it('starts with the persisted profile preamp and removes it when choosing a built-in preset', async () => {

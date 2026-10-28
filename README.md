@@ -45,6 +45,21 @@ These screenshots use the demo library only.
   </tr>
 </table>
 
+## ReplayGain
+
+Settings → Sound → ReplayGain offers **Off**, **Track**, and **Album** modes.
+Track mode balances individual songs; Album mode preserves relative volume
+within an album. The adjustment uses ReplayGain gain and peak tags supplied by
+your OpenSubsonic server. Nebula does not scan audio or modify your music files.
+
+ReplayGain is off by default. When enabled, a missing gain uses the other mode's
+gain, then the server's fallback gain. Songs without gain metadata keep their
+original level. A saved preamp from -12 to +12 dB adjusts tagged tracks, and
+clipping protection limits gain using available peak tags. This protection
+does not account for subsequent EQ boosts or the sum of overlapping crossfades.
+ReplayGain works in the desktop and web players, applies independently to both
+crossfade tracks, and does not normalize internet radio or DJ speech.
+
 ## Desktop App (Windows & macOS)
 
 Nebula is also distributed as a **native desktop app** built with Electron, on
