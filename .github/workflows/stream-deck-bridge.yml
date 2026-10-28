@@ -43,6 +43,10 @@ jobs:
     name: Node 24 verification
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      # These checks use the bundled CPU runtimes, not optional Linux CUDA binaries.
+      ONNXRUNTIME_NODE_INSTALL: skip
+      ONNXRUNTIME_NODE_INSTALL_CUDA: skip
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
