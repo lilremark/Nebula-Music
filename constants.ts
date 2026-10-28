@@ -1,7 +1,7 @@
 
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
-export const APP_VERSION = '3.0.0';
+export const APP_VERSION = '3.0.1-beta.1';
 
 export interface ChangelogEntry {
   version: string;
@@ -15,6 +15,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '3.0.1-beta.1',
+    date: '2026-10-28',
+    title: 'ReplayGain and Playback Feedback',
+    changes: [
+      'Add ReplayGain under Settings → Sound, with Off, Track and Album modes, a preamp, and peak-based clipping protection using tags from your music server.',
+      'Keep ReplayGain independent for each crossfade track while preserving your volume and equalizer settings.',
+      'Show loading, buffering and playback errors in the player, including next-track transitions.',
+      'Warn when the music server is unreachable and provide a retry action when the connection returns.',
+      'Fix browser playback on plain-HTTP Docker and LAN addresses, and show platform-appropriate settings in web and desktop builds.',
+      'Update dependencies, including Electron 45, React, Motion, ONNX Runtime and WebGPU tooling, and fix the reported dependency vulnerabilities.',
+    ],
+    link: { label: 'View beta release', href: 'https://github.com/lilremark/Nebula-Music/releases/tag/v3.0.1-beta.1' },
+  },
   {
     version: '3.0.0',
     date: '2026-10-09',

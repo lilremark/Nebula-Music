@@ -1,7 +1,7 @@
 {
   "name": "nebula-music",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.0.1-beta.1",
   "description": "Subsonic music player for the desktop.",
   "author": "Nebula",
   "main": "electron/dist/main.cjs",
