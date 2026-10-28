@@ -1,5 +1,6 @@
 import { d } from "typegpu";
-import type { Effect, Gpu } from "vgpu";
+import { prepareShader } from "@vgpu/wgsl/prepare";
+import type { Effect, Gpu, ShaderSource } from "vgpu";
 import { clock, effect, frameLoop, init, surface, Uniform } from "vgpu";
 
 /* ---------------------------------- schema --------------------------------- */
@@ -65,6 +66,8 @@ export interface OrbVariant {
   statePresets?: Partial<Record<OrbState, Record<string, number>>>;
   stateColors?: Partial<Record<OrbState, Record<string, string>>>;
 }
+
+const preparedShaders = new WeakMap<OrbVariant, ShaderSource>();
 
 export type OrbParamValues = Partial<Record<string, number>>;
 export type OrbColorValues = Partial<Record<string, string>>;
@@ -238,7 +241,12 @@ export const createOrbScene = (
     label: variant.key,
     size: words.byteLength,
   });
-  const shader = effect(gpu, variant.shader, {
+  let prepared = preparedShaders.get(variant);
+  if (!prepared) {
+    prepared = prepareShader(variant.shader, `${variant.key}.wgsl`);
+    preparedShaders.set(variant, prepared);
+  }
+  const shader = effect(gpu, prepared, {
     label: variant.key,
     set: { params: uniform },
   });
