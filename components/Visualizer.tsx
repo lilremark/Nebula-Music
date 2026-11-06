@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useStore } from '../context/Store';
+import { useDocumentVisible } from '../hooks/useDocumentVisible';
 import { clamp, getBandForPosition, getFrequencyBin, getFrequencyBands } from './visualizerBands';
 
 const withAlpha = (color: string, alpha: number) => {
@@ -109,8 +110,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationIdRef = useRef<number>(0);
   const warnedFrameErrorsRef = useRef<Set<string>>(new Set());
-  const isPlayingRef = useRef(isPlaying);
-  isPlayingRef.current = isPlaying;
+  const visible = useDocumentVisible();
 
   const stateRef = useRef({
     angle: 0,
@@ -122,7 +122,9 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !analyser) return;
+    // Only run the frame loop while something can be seen; the last frame
+    // stays on the canvas while paused or hidden.
+    if (!canvas || !analyser || !isPlaying || !visible) return;
 
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
@@ -156,10 +158,6 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
 
     const renderFrame = () => {
       animationIdRef.current = requestAnimationFrame(renderFrame);
-
-      // Skip drawing while paused or hidden (backgroundThrottling is disabled,
-      // so this loop keeps firing even when the window is minimized/trayed).
-      if (!isPlayingRef.current || document.visibilityState !== 'visible') return;
 
       try {
         const displayWidth = canvas.clientWidth;
@@ -339,7 +337,7 @@ export const Visualizer: React.FC<{ className?: string; primaryColor?: string; s
     return () => {
       cancelAnimationFrame(animationIdRef.current);
     };
-  }, [analyser, visualizerMode, primaryColor, secondaryColor]);
+  }, [analyser, visualizerMode, primaryColor, secondaryColor, isPlaying, visible]);
 
   return (
     <div className={`w-full h-full ${className}`}>

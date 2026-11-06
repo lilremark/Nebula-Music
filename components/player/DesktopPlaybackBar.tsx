@@ -1,7 +1,8 @@
 import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './DjPresentation';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { AudioLines, Heart, ListMusic, Maximize2, Pause, Play, SkipBack, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { useStore } from '../../context/Store';
+import { useAudioProgress } from '../../hooks/useAudioProgress';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
@@ -33,35 +34,11 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
   const streamUrl = !isRadio && song ? service.getStreamUrl(song.id, song.suffix) : null;
   const progressMode = voice.speech ? 'bar' : settings.progressVisualization;
   const waveform = useTrackWaveform(isRadio ? undefined : song?.id, progressMode === 'waveform' ? streamUrl : null);
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
-
-  useEffect(() => {
-    if (isRadio || !song) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-    const sync = () => {
-      setPosition(audio.currentTime || 0);
-      setDuration(Number.isFinite(audio.duration) ? audio.duration : song.duration || 0);
-    };
-    sync();
-    let frame = 0;
-    const animate = () => {
-      // Read the Store's current owner on every frame, including crossfade handoffs.
-      setPosition(audioRef.current?.currentTime || 0);
-      frame = window.requestAnimationFrame(animate);
-    };
-    if (isPlaying && window.requestAnimationFrame) frame = window.requestAnimationFrame(animate);
-    audio.addEventListener('timeupdate', sync);
-    audio.addEventListener('durationchange', sync);
-    audio.addEventListener('loadedmetadata', sync);
-    return () => {
-      window.cancelAnimationFrame?.(frame);
-      audio.removeEventListener('timeupdate', sync);
-      audio.removeEventListener('durationchange', sync);
-      audio.removeEventListener('loadedmetadata', sync);
-    };
-  }, [audioRef, isRadio, song?.id, isPlaying]);
+  const { currentTime: position, duration, setCurrentTime: setPosition } = useAudioProgress(audioRef, {
+    enabled: !isRadio && !!song,
+    fallbackDuration: song?.duration || 0,
+    resetKey: song?.id,
+  });
 
   const artwork = isRadio
     ? radioMetadata?.artworkUrl || currentRadioStation?.imageUrl

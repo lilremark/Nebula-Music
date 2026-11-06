@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { Visualizer } from './Visualizer';
+import { useAudioProgress } from '../hooks/useAudioProgress';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { useArtistImage } from '../hooks/useArtistImage';
 import { useTrackWaveform } from '../hooks/useTrackWaveform';
@@ -70,8 +71,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const [lyrics, setLyrics] = useState('');
     const [syncedLyrics, setSyncedLyrics] = useState<SyncedLine[]>([]);
     const [loadingLyrics, setLoadingLyrics] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
+    const { currentTime, duration, setCurrentTime } = useAudioProgress(audioRef);
     const [visualProgress, setVisualProgress] = useState(0); // For immediate visual feedback
     const [showZenControls, setShowZenControls] = useState(false);
 
@@ -88,23 +88,6 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
     const isLightMode = mode === 'light';
     const platform = usePlatform();
     const isWindows = platform?.info.os === 'win32';
-
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        const updateTime = () => {
-            setCurrentTime(audio.currentTime);
-            setDuration(audio.duration || 0);
-        };
-        audio.addEventListener('timeupdate', updateTime);
-        audio.addEventListener('loadedmetadata', updateTime);
-        // Sync immediately on mount
-        updateTime();
-        return () => {
-            audio.removeEventListener('timeupdate', updateTime);
-            audio.removeEventListener('loadedmetadata', updateTime);
-        };
-    }, [audioRef]);
 
     const parseLyrics = useCallback((lrc: string) => {
         if (!lrc) return [];

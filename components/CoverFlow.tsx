@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useDocumentVisible } from '../hooks/useDocumentVisible';
 
 const COVER_GRADIENTS: [string, string][] = [
     ['#06b6d4', '#8b5cf6'], // cyan -> violet
@@ -45,21 +46,21 @@ export const CoverFlow: React.FC = () => {
         return () => observer.disconnect();
     }, []);
 
+    const visible = useDocumentVisible();
+
     useEffect(() => {
+        if (!visible) return;
         let raf = 0;
         let last = performance.now();
         const tick = (now: number) => {
             raf = requestAnimationFrame(tick);
-            // backgroundThrottling is disabled, so pause the carousel re-render
-            // loop while the window is minimized/trayed.
-            if (document.visibilityState !== 'visible') return;
             const dt = Math.min((now - last) / 1000, 0.05);
             last = now;
             setProgress((p) => p + dt * 0.12);
         };
         raf = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf);
-    }, []);
+    }, [visible]);
 
     const N = COVERS.length;
     const spacing = Math.round(size * 1.12);

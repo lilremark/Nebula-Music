@@ -1,5 +1,5 @@
 import { DjBadge, DjHaze, PlayerCover, useDjPlayback } from './DjPresentation';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Play, Pause, SkipBack, SkipForward,
     Volume2, Volume1, VolumeX,
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { SpeedPitchControls } from './SpeedPitchControls';
 import { useStore } from '../../context/Store';
+import { useAudioProgress } from '../../hooks/useAudioProgress';
 import { useAdaptiveColors } from '../../hooks/useAdaptiveColors';
 import { useTrackWaveform } from '../../hooks/useTrackWaveform';
 import { PlaybackProgress } from './PlaybackProgress';
@@ -49,8 +50,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
 
     const { dj, playQueueIndex } = useStore();
     const voice = useDjPlayback();
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
+    const { currentTime, duration, setCurrentTime } = useAudioProgress(audioRef);
     const [isHoveringVolume, setIsHoveringVolume] = useState(false);
     const [visualProgress, setVisualProgress] = useState(0);
     const [isQueueCollapsed, setIsQueueCollapsed] = useState(false);
@@ -64,40 +64,6 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     // Adaptive colors from album art
     const { colors } = useAdaptiveColors(coverArt);
 
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        let raf = 0;
-        let lastTime = -1;
-        let lastDuration = -1;
-        const tick = () => {
-            raf = requestAnimationFrame(tick);
-            // Skip work while hidden (backgroundThrottling is disabled, so the
-            // frame loop keeps firing even when the window is minimized/trayed).
-            if (document.visibilityState !== 'visible') return;
-            const time = audio.currentTime;
-            if (Math.abs(time - lastTime) >= 0.1) {
-                lastTime = time;
-                setCurrentTime(time);
-            }
-            const dur = audio.duration || 0;
-            if (dur !== lastDuration) {
-                lastDuration = dur;
-                setDuration(dur);
-            }
-        };
-        raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
-    }, [audioRef]);
-
-    useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        const syncDuration = () => setDuration(audio.duration || 0);
-        audio.addEventListener('loadedmetadata', syncDuration);
-        syncDuration();
-        return () => audio.removeEventListener('loadedmetadata', syncDuration);
-    }, [audioRef]);
 
     const progress = duration ? (currentTime / duration) * 100 : 0;
     const displayProgress = voice.speech ? voice.progress : visualProgress || progress;

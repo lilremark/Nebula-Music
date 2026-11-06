@@ -11,6 +11,7 @@ import {
   Music2,
 } from 'lucide-react';
 import { useAdaptiveColors } from './hooks/useAdaptiveColors';
+import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { PlaybackProgress } from './components/player/PlaybackProgress';
 import { PlatformProvider, usePlatform } from './platform/PlatformContext';
 import { createCommandClient } from './playback/commandClient';
@@ -73,34 +74,34 @@ const MiniPlayerContent: React.FC = () => {
   const [displayProgress, setDisplayProgress] = useState(0);
   const { colors } = useAdaptiveColors(snapshot?.track?.coverArtUrl);
 
+  const visible = useDocumentVisible();
+  const displayProgressRef = useRef(0);
+
+  // Ease the bar toward the latest snapshot, then stop: the loop only runs
+  // until it converges and restarts when the next snapshot arrives (~1/s), so
+  // a paused or hidden mini-player schedules no frames at all.
   useEffect(() => {
+    if (!visible) return;
+    const target =
+      snapshot?.dj?.speech && snapshot.dj.duration > 0 ? Math.min(100, snapshot.dj.position / snapshot.dj.duration * 100)
+        : snapshot && snapshot.durationSeconds > 0
+        ? Math.min(100, (snapshot.positionSeconds / snapshot.durationSeconds) * 100)
+        : 0;
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
-      raf = requestAnimationFrame(tick);
-      // Skip work while hidden (backgroundThrottling is disabled, so the frame
-      // loop keeps firing even when the mini-player is hidden).
-      if (document.visibilityState !== 'visible') return;
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
-      const snap = snapshotRef.current;
-      const target =
-        snap?.dj?.speech && snap.dj.duration > 0 ? Math.min(100, snap.dj.position / snap.dj.duration * 100)
-          : snap && snap.durationSeconds > 0
-          ? Math.min(100, (snap.positionSeconds / snap.durationSeconds) * 100)
-          : 0;
-      setDisplayProgress((prev) => {
-        // Bail out (React skips the re-render) once converged, so a paused
-        // mini-player does not re-render at 60fps forever.
-        if (Math.abs(target - prev) < 0.01) return prev;
-        const next = prev + (target - prev) * Math.min(1, dt * 6);
-        return Math.abs(next - prev) < 0.01 ? prev : next;
-      });
+      const prev = displayProgressRef.current;
+      const next = prev + (target - prev) * Math.min(1, dt * 6);
+      const settled = Math.abs(target - next) < 0.01;
+      displayProgressRef.current = settled ? target : next;
+      setDisplayProgress(displayProgressRef.current);
+      if (!settled) raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
+    if (Math.abs(target - displayProgressRef.current) >= 0.01) raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [visible, snapshot]);
 
   const send = (name: 'togglePlayback' | 'next' | 'previous' | 'setPlayback') => {
     platform?.playback.sendCommand(

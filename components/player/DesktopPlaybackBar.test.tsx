@@ -82,20 +82,13 @@ describe('bottom player waveform', () => {
     expect(container.querySelector<HTMLInputElement>('input[aria-label="Playback position"]')!.value).toBe('50');
   });
 
-  it('reads the active audio owner between timeupdate events and cancels animation on unmount', async () => {
-    const callbacks = new Map<number, FrameRequestCallback>();
-    let frame = 0;
-    vi.stubGlobal('requestAnimationFrame', vi.fn(callback => { callbacks.set(++frame, callback); return frame; }));
-    const cancel = vi.fn();
-    vi.stubGlobal('cancelAnimationFrame', cancel);
+  it('follows media events without a per-frame render loop', async () => {
+    const raf = vi.fn();
+    vi.stubGlobal('requestAnimationFrame', raf);
     await render();
-    const replacement = document.createElement('audio');
-    replacement.currentTime = 60;
-    store.audioRef.current = replacement;
-    await act(async () => callbacks.get(1)!(16));
+    await act(async () => { audio.currentTime = 60; audio.dispatchEvent(new Event('timeupdate')); });
     expect(container.querySelector<HTMLInputElement>('input[aria-label="Playback position"]')!.value).toBe('30');
-    await act(async () => root.render(null));
-    expect(cancel).toHaveBeenCalledWith(2);
+    expect(raf).not.toHaveBeenCalled();
   });
 
   it('uses existing Store controls for visualization, speed and pitch', async () => {
