@@ -7,6 +7,11 @@ const shared = {
   // Inline maps more than triple the shipped main bundle. Keep them opt-in
   // for debugging rather than parsing their source text on every app launch.
   sourcemap: process.env.NEBULA_DEBUG_BUILD === '1' ? 'inline' : false,
+  // Minified code is parsed faster and takes less memory in the main process
+  // at every launch. Function and class names are kept so stack traces in logs
+  // stay readable; debug builds skip minification entirely.
+  minify: process.env.NEBULA_DEBUG_BUILD !== '1',
+  keepNames: true,
   external: ['electron', 'echogarden', 'onnxruntime-node', 'sharp'],
   outdir: 'electron/dist',
   outExtension: { '.js': '.cjs' },

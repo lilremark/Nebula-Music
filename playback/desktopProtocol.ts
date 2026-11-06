@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from '../lib/zod';
 import type { RepeatMode } from '../types';
 import { STREAM_DECK_MAX_ARTWORK_LENGTH } from '../services/streamDeckProtocol';
 
@@ -22,25 +22,25 @@ export const desktopCommandSchema = z.discriminatedUnion('name', [
   z.object({ name: z.literal('next') }),
   z.object({
     name: z.literal('setVolume'),
-    volume: z.number().min(0).max(1),
+    volume: z.number().check(z.minimum(0), z.maximum(1)),
   }),
   z.object({
     name: z.literal('setPlaybackRate'),
-    playbackRate: z.number().min(0.5).max(2),
+    playbackRate: z.number().check(z.minimum(0.5), z.maximum(2)),
   }),
   z.object({
     name: z.literal('seekRelative'),
-    seconds: z.number().min(-86_400).max(86_400),
+    seconds: z.number().check(z.minimum(-86_400), z.maximum(86_400)),
   }),
   z.object({
     name: z.literal('seekAbsolute'),
-    seconds: z.number().min(0).max(86_400),
-    trackId: z.string().min(1).max(256),
+    seconds: z.number().check(z.minimum(0), z.maximum(86_400)),
+    trackId: z.string().check(z.minLength(1), z.maxLength(256)),
   }),
   z.object({ name: z.literal('setRepeatMode'), repeatMode: z.enum(REPEAT_MODES) }),
   z.object({
     name: z.literal('playQueueIndex'),
-    index: z.number().int().min(0).max(65_535),
+    index: z.int().check(z.minimum(0), z.maximum(65_535)),
   }),
 ]);
 
@@ -48,65 +48,65 @@ export type DesktopCommand = z.infer<typeof desktopCommandSchema>;
 
 export const desktopCommandEnvelopeSchema = z.object({
   v: z.literal(DESKTOP_PROTOCOL_VERSION),
-  clientId: z.string().min(1).max(64),
-  epoch: z.number().int().min(0),
-  seq: z.number().int().min(1),
-  issuedAt: z.number().int().min(0),
+  clientId: z.string().check(z.minLength(1), z.maxLength(64)),
+  epoch: z.int().check(z.minimum(0)),
+  seq: z.int().check(z.minimum(1)),
+  issuedAt: z.int().check(z.minimum(0)),
   command: desktopCommandSchema,
 });
 
 export type DesktopCommandEnvelope = z.infer<typeof desktopCommandEnvelopeSchema>;
 
-const desktopCoverArtUrlSchema = z
-  .string()
-  .max(STREAM_DECK_MAX_ARTWORK_LENGTH)
-  .regex(
+const desktopCoverArtUrlSchema = z.string().check(
+  z.maxLength(STREAM_DECK_MAX_ARTWORK_LENGTH),
+  z.regex(
     /^data:image\/jpeg;base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/,
-  );
+  ),
+);
 
-export const desktopTrackSchema = z
-  .object({
-    id: z.string().min(1).max(256),
-    title: z.string().min(1).max(512),
-    artist: z.string().min(1).max(512),
-    album: z.string().max(512).optional(),
-    coverArtUrl: desktopCoverArtUrlSchema.optional(),
-  })
-  .nullable();
+export const desktopTrackSchema = z.nullable(
+  z.object({
+    id: z.string().check(z.minLength(1), z.maxLength(256)),
+    title: z.string().check(z.minLength(1), z.maxLength(512)),
+    artist: z.string().check(z.minLength(1), z.maxLength(512)),
+    album: z.optional(z.string().check(z.maxLength(512))),
+    coverArtUrl: z.optional(desktopCoverArtUrlSchema),
+  }),
+);
 
 export type DesktopTrack = z.infer<typeof desktopTrackSchema>;
 
 /** A track queued ahead of the current one, for the mini-player "Up Next" list. */
 export const desktopUpcomingTrackSchema = z.object({
-  id: z.string().min(1).max(256),
-  title: z.string().min(1).max(512),
-  artist: z.string().min(1).max(512),
-  album: z.string().max(512).optional(),
-  durationSeconds: z.number().min(0),
-  coverArtUrl: desktopCoverArtUrlSchema.optional(),
+  id: z.string().check(z.minLength(1), z.maxLength(256)),
+  title: z.string().check(z.minLength(1), z.maxLength(512)),
+  artist: z.string().check(z.minLength(1), z.maxLength(512)),
+  album: z.optional(z.string().check(z.maxLength(512))),
+  durationSeconds: z.number().check(z.minimum(0)),
+  coverArtUrl: z.optional(desktopCoverArtUrlSchema),
 });
 
 export type DesktopUpcomingTrack = z.infer<typeof desktopUpcomingTrackSchema>;
 
 export const desktopSnapshotSchema = z.object({
   v: z.literal(DESKTOP_PROTOCOL_VERSION),
-  ownerId: z.string().min(1).max(64),
-  epoch: z.number().int().min(0),
+  ownerId: z.string().check(z.minLength(1), z.maxLength(64)),
+  epoch: z.int().check(z.minimum(0)),
   playing: z.boolean(),
   track: desktopTrackSchema,
-  positionSeconds: z.number().min(0),
-  durationSeconds: z.number().min(0),
-  volume: z.number().min(0).max(1),
+  positionSeconds: z.number().check(z.minimum(0)),
+  durationSeconds: z.number().check(z.minimum(0)),
+  volume: z.number().check(z.minimum(0), z.maximum(1)),
   muted: z.boolean(),
-  playbackRate: z.number().min(0.5).max(2),
+  playbackRate: z.number().check(z.minimum(0.5), z.maximum(2)),
   repeatMode: z.enum(REPEAT_MODES),
-  updatedAt: z.number().int().min(0),
-  dj: z.object({
-    sessionId: z.string().max(64).nullable(), active: z.boolean(), speech: z.boolean(), preview: z.boolean(), playing: z.boolean(),
-    position: z.number().min(0).max(86400), duration: z.number().min(0).max(86400),
-  }).optional(),
+  updatedAt: z.int().check(z.minimum(0)),
+  dj: z.optional(z.object({
+    sessionId: z.nullable(z.string().check(z.maxLength(64))), active: z.boolean(), speech: z.boolean(), preview: z.boolean(), playing: z.boolean(),
+    position: z.number().check(z.minimum(0), z.maximum(86400)), duration: z.number().check(z.minimum(0), z.maximum(86400)),
+  })),
   /** Upcoming queue entries (mini-player "Up Next" list). Empty when nothing is queued. */
-  upcoming: z.array(desktopUpcomingTrackSchema).default([]),
+  upcoming: z._default(z.array(desktopUpcomingTrackSchema), []),
 });
 
 export type DesktopSnapshot = z.infer<typeof desktopSnapshotSchema>;

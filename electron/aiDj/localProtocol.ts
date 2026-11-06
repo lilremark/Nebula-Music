@@ -1,10 +1,15 @@
-import { z } from 'zod';
+import * as z from '../../lib/zod';
 
-export const djTrackSchema = z.object({ id: z.string().min(1).max(256), title: z.string().max(256), artist: z.string().max(256), genre: z.string().max(128).optional() });
+export const djTrackSchema = z.object({
+  id: z.string().check(z.minLength(1), z.maxLength(256)),
+  title: z.string().check(z.maxLength(256)),
+  artist: z.string().check(z.maxLength(256)),
+  genre: z.optional(z.string().check(z.maxLength(128))),
+});
 export const djPrepareSchema = z.object({
-  requestId: z.string().uuid(), sessionId: z.string().uuid(),
-  tracks: z.array(djTrackSchema).min(1).max(5),
-  taste: z.string().max(1200), welcome: z.boolean(),
+  requestId: z.uuid(), sessionId: z.uuid(),
+  tracks: z.array(djTrackSchema).check(z.minLength(1), z.maxLength(5)),
+  taste: z.string().check(z.maxLength(1200)), welcome: z.boolean(),
   voice: z.enum(['Michael', 'Heart']),
 });
 export type DjPrepareRequest = z.infer<typeof djPrepareSchema>;
@@ -44,11 +49,13 @@ export function groundedCommentaryChoices(request: DjPrepareRequest): string[] {
   return starts.map(start => `${start}, beginning with ${track} by ${artist}. ${context}`);
 }
 
+const commentarySchema = z.string().check(z.trim(), z.minLength(1), z.maxLength(360));
+
 export function parseLocalCommentary(body: unknown, allowed?: string[]): string {
   const content = (body as { choices?: { message?: { content?: string } }[] })?.choices?.[0]?.message?.content;
   if (typeof content !== 'string') throw new Error('The local DJ returned no commentary.');
   const result = JSON.parse(content);
-  const text = z.string().trim().min(1).max(360).parse(result.speech);
+  const text = commentarySchema.parse(result.speech);
   if (/<\/?think>|https?:|\{|\b(classic|legendary|influential|released|born|award|masterpiece)\b/i.test(text) || text.split(/(?<=[.!?])\s+/).length > 2) throw new Error('The local DJ returned unsuitable commentary.');
   if (allowed && !allowed.includes(text)) throw new Error('Commentary was not grounded in this set.');
   return text;
