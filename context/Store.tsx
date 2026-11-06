@@ -17,6 +17,7 @@ import { applyEqPreamp, getEqPreampGain } from '../services/eqPreamp';
 import { applyReplayGain, DEFAULT_REPLAY_GAIN, normalizeReplayGainSettings } from '../services/replayGain';
 import { observeMusicStatus, type MusicPlaybackStatus } from '../playback/musicStatus';
 import { monitorServerConnection, type ServerConnectionStatus } from '../services/serverConnection';
+import { createStoreHandle, usePublishStoreValue, useStableCallbacks, useStableObject, useTrackedStore, type StoreHandle } from './storeSubscription';
 
 interface StoreContextType extends AppState {
   playbackStatus: MusicPlaybackStatus;
@@ -87,7 +88,7 @@ interface StoreContextType extends AppState {
   fetchArtists: (force?: boolean) => Promise<void>;
 }
 
-const StoreContext = createContext<StoreContextType | undefined>(undefined);
+const StoreContext = createContext<StoreHandle<StoreContextType> | undefined>(undefined);
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: { ...defaultAccent },
@@ -2436,20 +2437,33 @@ export const StoreProvider: React.FC<{
     }));
   };
 
+  // Inline actions are recreated on every Store render; give consumers stable
+  // identities that always call the latest closure (see storeSubscription.ts).
+  const actions = useStableCallbacks({
+    addRadioStation, addSongToPlaylist, addToQueue, closePlaylistModal, closeSearchModal, connectToSubsonic, createPlaylist, deletePlaylist, deleteRadioStation, disconnect, enableDemoMode, nextSong, openPlaylistModal, openSearchModal, performSearch, playQueueIndex, playRadioStation, playSong, prevSong, reorderPlaylist, savePlaylist, stopRadio, toggleLike, togglePlay, toggleRadioPlay, toggleRepeat, updateRadioStation, updateSettings,
+    setRepeatMode: (mode: RepeatMode) => { if (!djRef.current?.state.active) setRepeatMode(mode); },
+  });
+  const djView = useStableObject(dj);
+  const getMostPlayedSnapshot = useCallback(() => mostPlayed, [mostPlayed]);
+
+  const value: StoreContextType = {
+    dj: djView,
+    playbackStatus, serverConnection, isCheckingConnection, retryServerConnection,
+    currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, radioPitch, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
+    credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
+    playSong: actions.playSong, playRadioStation: actions.playRadioStation, toggleRadioPlay: actions.toggleRadioPlay, stopRadio: actions.stopRadio, setRadioPitch, togglePlay: actions.togglePlay, nextSong: actions.nextSong, prevSong: actions.prevSong, playQueueIndex: actions.playQueueIndex, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat: actions.toggleRepeat, toggleLike: actions.toggleLike,
+    connectToSubsonic: actions.connectToSubsonic, disconnect: actions.disconnect, enableDemoMode: actions.enableDemoMode, addToQueue: actions.addToQueue, updateSettings: actions.updateSettings,
+    openPlaylistModal: actions.openPlaylistModal, closePlaylistModal: actions.closePlaylistModal, createPlaylist: actions.createPlaylist, savePlaylist: actions.savePlaylist, addSongToPlaylist: actions.addSongToPlaylist, deletePlaylist: actions.deletePlaylist, reorderPlaylist: actions.reorderPlaylist, addRadioStation: actions.addRadioStation, updateRadioStation: actions.updateRadioStation, deleteRadioStation: actions.deleteRadioStation,
+    performSearch: actions.performSearch, searchResults, isSearching, lastSearchQuery, isSearchModalOpen, openSearchModal: actions.openSearchModal, closeSearchModal: actions.closeSearchModal,
+    getMostPlayedSongs: getMostPlayedSnapshot, refreshMostPlayed, playInstantMix, history, service, audioRef, radioAudioRef, analyser, isZenMode, setZenMode,
+    homeData, cachedArtists, refreshHomeData, refreshQuickPicks, refreshDiscovery, fetchArtists,
+    setRepeatMode: actions.setRepeatMode,
+  };
+  const [storeHandle] = useState(() => createStoreHandle(value));
+  usePublishStoreValue(storeHandle, value);
+
   return (
-    <StoreContext.Provider value={{
-      dj,
-      playbackStatus, serverConnection, isCheckingConnection, retryServerConnection,
-      currentView, setView, goBack, canGoBack, backTarget, viewData, queue, currentSongIndex, isPlaying, radioStations, currentRadioStation, isRadioPlaying, radioMetadata, isRadioMetadataLoading, radioPitch, volume, playbackRate, pitch, pitchCorrection, visualizerMode, repeatMode,
-      credentials, isDemoMode, isInitialized, settings, playlists, modalOpen, songToAddToPlaylist,
-      playSong, playRadioStation, toggleRadioPlay, stopRadio, setRadioPitch, togglePlay, nextSong, prevSong, playQueueIndex, setVolume, setPlaybackRate, setPitch, setPitchCorrection, setVisualizerMode, toggleRepeat, toggleLike,
-      setRepeatMode: mode => { if (!djRef.current?.state.active) setRepeatMode(mode); },
-      connectToSubsonic, disconnect, enableDemoMode, addToQueue, updateSettings,
-      openPlaylistModal, closePlaylistModal, createPlaylist, savePlaylist, addSongToPlaylist, deletePlaylist, reorderPlaylist, addRadioStation, updateRadioStation, deleteRadioStation,
-      performSearch, searchResults, isSearching, lastSearchQuery, isSearchModalOpen, openSearchModal, closeSearchModal,
-      getMostPlayedSongs: () => mostPlayed, refreshMostPlayed, playInstantMix, history, service, audioRef, radioAudioRef, analyser, isZenMode, setZenMode,
-      homeData, cachedArtists, refreshHomeData, refreshQuickPicks, refreshDiscovery, fetchArtists
-    }}>
+    <StoreContext.Provider value={storeHandle}>
       {children}
       <audio
         ref={audioRef}
@@ -2471,8 +2485,8 @@ export const StoreProvider: React.FC<{
   );
 };
 
-export const useStore = () => {
-  const context = useContext(StoreContext);
-  if (!context) throw new Error("useStore must be used within StoreProvider");
-  return context;
-};
+/**
+ * Returns the Store. Components re-render only when a key they read changes,
+ * not on every Store update (see storeSubscription.ts).
+ */
+export const useStore = (): StoreContextType => useTrackedStore(StoreContext, 'useStore');
