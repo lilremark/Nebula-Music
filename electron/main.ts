@@ -262,7 +262,10 @@ const createWindow = (): BrowserWindow => {
       // publishing) alive while the window is minimized or hidden to tray.
       // Without this, Chromium pauses rAF and throttles timers to 1/sec, which
       // stalls live streams and leaves the app frozen after long minimize/sleep.
+      // Renderer animation loops stop themselves while hidden (useDocumentVisible).
       backgroundThrottling: false,
+      // No text entry needs spellcheck; skip loading the dictionaries.
+      spellcheck: false,
     },
   });
 
@@ -357,7 +360,9 @@ const createMiniPlayerWindow = (): BrowserWindow => {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
-      backgroundThrottling: false,
+      // A remote client driven by IPC snapshots: it owns no playback, so
+      // Chromium's default background throttling is safe here.
+      spellcheck: false,
     },
   });
 
@@ -374,14 +379,9 @@ const createMiniPlayerWindow = (): BrowserWindow => {
   });
   win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
-  // The mini-player is a companion window: closing it hides it instead of
-  // destroying it, and never quits the app.
-  win.on('close', (event) => {
-    if (!isQuitting) {
-      event.preventDefault();
-      win.hide();
-    }
-  });
+  // Closing the mini-player destroys it so its renderer process is freed; it
+  // is recreated (and re-seeded from lastSnapshot) the next time it is opened.
+  // It never quits the app.
 
   win.on('show', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, true));
   win.on('hide', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
@@ -412,7 +412,7 @@ const createMiniPlayerWindow = (): BrowserWindow => {
 const toggleMiniPlayer = (): void => {
   if (miniPlayerWindow) {
     if (miniPlayerWindow.isVisible()) {
-      miniPlayerWindow.hide();
+      miniPlayerWindow.close();
     } else {
       miniPlayerWindow.show();
       miniPlayerWindow.focus();

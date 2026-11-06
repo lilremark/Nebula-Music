@@ -16,7 +16,13 @@ export class LocalDjRuntime {
   private controller: AbortController | null = null;
   private startup: Promise<void> | null = null;
   private verified = false;
-  constructor(private readonly resources: string, private readonly workerPath: string, private readonly helperResources = resources) {}
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * @param idleMs How long the model helper and voice worker may sit unused
+   * before they are shut down to release their memory. Interludes are prepared
+   * ahead of the boundary that plays them, so the cold start is not audible.
+   */
+  constructor(private readonly resources: string, private readonly workerPath: string, private readonly helperResources = resources, private readonly idleMs = 120_000) {}
 
   async readiness() {
     try {
@@ -108,7 +114,29 @@ export class LocalDjRuntime {
     });
   }
 
+  private clearIdleTimer() {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
+  }
+
+  private scheduleIdleRelease() {
+    this.clearIdleTimer();
+    if (!this.child && !this.worker) return;
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null;
+      if (this.controller || this.startup) return;
+      this.releaseProcesses();
+    }, this.idleMs);
+    this.idleTimer.unref?.();
+  }
+
+  private releaseProcesses() {
+    this.child?.kill(); this.child = null; this.baseUrl = '';
+    this.worker?.kill(); this.worker = null;
+  }
+
   async prepare(request: DjPrepareRequest, preview = false): Promise<DjPreparedAudio> {
+    this.clearIdleTimer();
     this.controller?.abort();
     const controller = new AbortController(); this.controller = controller;
     const generation = this.generation;
@@ -138,12 +166,15 @@ export class LocalDjRuntime {
       controller.signal.throwIfAborted();
       if (generation !== this.generation) throw new Error('DJ session cancelled.');
       return { requestId: request.requestId, sessionId: request.sessionId, text, wavBase64, fallback, error };
-    } finally { clearTimeout(deadline); if (this.controller === controller) this.controller = null; }
+    } finally {
+      clearTimeout(deadline);
+      if (this.controller === controller) { this.controller = null; this.scheduleIdleRelease(); }
+    }
   }
 
   cancel() {
     this.generation++; this.controller?.abort(new Error('DJ session cancelled.')); this.controller = null;
-    this.child?.kill(); this.child = null; this.baseUrl = '';
-    this.worker?.kill(); this.worker = null;
+    this.clearIdleTimer();
+    this.releaseProcesses();
   }
 }

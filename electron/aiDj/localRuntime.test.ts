@@ -96,4 +96,26 @@ describe('bundled DJ runtime failures and cancellation', () => {
     expect(result.fallback).toBe(true); expect(result.error).toContain('stopped unexpectedly');
     expect(result.wavBase64).toBeTruthy();
   });
+  it('releases the model helper and voice worker after sitting idle', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    expect((await runtime.prepare(request())).fallback).toBe(false);
+    expect(child.kill).not.toHaveBeenCalled(); expect(worker.kill).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(119_000);
+    expect(child.kill).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(child.kill).toHaveBeenCalled(); expect(worker.kill).toHaveBeenCalled();
+  });
+  it('keeps the processes warm while interludes keep arriving and restarts them after release', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    await runtime.prepare(request(), true);
+    await vi.advanceTimersByTimeAsync(100_000);
+    await runtime.prepare(request(), true);
+    await vi.advanceTimersByTimeAsync(100_000);
+    expect(worker.kill).not.toHaveBeenCalled();
+    expect(utilityProcess.fork).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(worker.kill).toHaveBeenCalledTimes(1);
+    await runtime.prepare(request(), true);
+    expect(utilityProcess.fork).toHaveBeenCalledTimes(2);
+  });
 });
