@@ -662,9 +662,14 @@ const registerIpc = (): void => {
  * `http:`/`https:` origins on the loopback bridge handshake and otherwise closes
  * the socket with "Valid Origin required". Rewrite the Origin header for the
  * Stream Deck WebSocket endpoint so pairing works from the desktop build.
+ *
+ * The URL filter keeps every other request (audio ranges, cover art, radio
+ * segments) off this main-process hook; the pattern matches any port.
  */
+const STREAM_DECK_REQUEST_FILTER = { urls: ['ws://127.0.0.1/nebula/v1*'] };
+
 const registerStreamDeckOriginRewrite = (): void => {
-  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+  session.defaultSession.webRequest.onBeforeSendHeaders(STREAM_DECK_REQUEST_FILTER, (details, callback) => {
     if (isStreamDeckBridgeUrl(details.url)) {
       const headers = { ...details.requestHeaders, Origin: 'http://localhost' };
       callback({ requestHeaders: headers });

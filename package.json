@@ -34,7 +34,8 @@
     "test:dj-ui": "electron scripts/smokeDjUi.cjs",
     "test:dj-platforms": "electron scripts/smokeDjPlatforms.cjs",
     "test:docker": "electron scripts/smokeDocker.cjs",
-    "demo:screenshots": "electron scripts/openDemoForScreenshots.cjs"
+    "demo:screenshots": "electron scripts/openDemoForScreenshots.cjs",
+    "test:streamdeck-origin": "electron scripts/smokeStreamDeckOrigin.cjs"
   },
   "dependencies": {
     "blueimp-md5": "^2.19.0",
