@@ -35,7 +35,8 @@
     "test:dj-platforms": "electron scripts/smokeDjPlatforms.cjs",
     "test:docker": "electron scripts/smokeDocker.cjs",
     "demo:screenshots": "electron scripts/openDemoForScreenshots.cjs",
-    "test:streamdeck-origin": "electron scripts/smokeStreamDeckOrigin.cjs"
+    "test:streamdeck-origin": "electron scripts/smokeStreamDeckOrigin.cjs",
+    "measure:memory": "electron scripts/measureMemory.cjs"
   },
   "dependencies": {
     "echogarden": "3.4.0",
