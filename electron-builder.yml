@@ -10,6 +10,9 @@ files:
   - electron/assets/**/*
   - package.json
 asar: true
+# Chromium UI strings only; the app itself is English. Saves ~48 MB of .pak files.
+electronLanguages:
+  - en-US
 asarUnpack:
   - "**/node_modules/onnxruntime-node/**/*"
   - "**/node_modules/echogarden/**/*"
@@ -17,6 +20,17 @@ asarUnpack:
   - "**/node_modules/sharp/**/*"
 win:
   icon: electron/assets/icon.ico
+  # A platform `files` list replaces the top-level one, so it is complete here.
+  # The AI DJ's onnxruntime copies ship binaries for every OS; keep win32/x64.
+  files:
+    - dist/**/*
+    - electron/dist/main.cjs
+    - electron/dist/preload.cjs
+    - electron/dist/voiceWorker.cjs
+    - electron/assets/**/*
+    - package.json
+    - "!**/node_modules/onnxruntime-node/bin/*/{darwin,linux}/**"
+    - "!**/node_modules/onnxruntime-node/bin/*/win32/arm64/**"
   target:
     - target: nsis
       arch:
@@ -43,6 +57,16 @@ appx:
   publisher: CN=Nebula
 mac:
   icon: electron/assets/icon.icns
+  # A platform `files` list replaces the top-level one, so it is complete here.
+  # The bundled main/preload need no node_modules at runtime; the only runtime
+  # dependencies are the AI DJ voice stack, which is Windows-only.
+  files:
+    - dist/**/*
+    - electron/dist/main.cjs
+    - electron/dist/preload.cjs
+    - electron/assets/**/*
+    - package.json
+    - "!node_modules/**"
   category: public.app-category.music
   identity: null
   target:
