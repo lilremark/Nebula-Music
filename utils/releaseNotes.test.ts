@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { parseReleaseNotes, renderGitHubReleaseNotes, toPlainText } from './releaseNotes';
+import { loadReleaseNotes } from '../scripts/releaseNotes.mjs';
+import packageJson from '../package.json';
+import { APP_VERSION } from '../constants';
 
 const notes = (body: string, front = 'version: 1.2.3-beta.1\ndate: 2026-11-06\ntitle: Example') =>
   `---\n${front}\n---\n\n${body}`;
@@ -49,3 +52,11 @@ describe('release notes format', () => {
   });
 });
 
+describe('current release', () => {
+  it('has valid notes for the packaged version', () => {
+    expect(APP_VERSION).toBe(packageJson.version);
+    const { notes: current, errors } = loadReleaseNotes(process.cwd(), packageJson.version);
+    expect(errors).toEqual([]);
+    expect(current?.version).toBe(packageJson.version);
+  });
+});
