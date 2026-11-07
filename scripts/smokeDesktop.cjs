@@ -20,8 +20,24 @@ const finish = (error) => {
   console.log(JSON.stringify({ desktopSmoke: error ? 'failed' : 'passed', windows: loaded, error: error?.message }));
   // Defer shutdown out of the window's load callback and let the real app's
   // before-quit handlers release tray/native resources before terminating.
-  setImmediate(() => error ? app.exit(1) : app.quit());
+  setImmediate(() => {
+    if (error) return app.exit(1);
+    app.quit();
+    // Shutdown is part of the check: a quit that never completes would
+    // otherwise hold a CI job until its timeout.
+    setTimeout(() => {
+      console.error(JSON.stringify({ desktopSmoke: 'failed', error: 'App did not exit within 15s of quit.' }));
+      app.exit(1);
+    }, 15_000);
+  });
 };
+// Without a handler, Electron reports an uncaught main-process error in a modal
+// dialog, which blocks exit indefinitely on a headless runner. Fail instead,
+// including for errors thrown while the app shuts down.
+process.on('uncaughtException', (error) => {
+  console.error(JSON.stringify({ desktopSmoke: 'failed', error: `Uncaught main-process error: ${error?.stack || error}` }));
+  app.exit(1);
+});
 const timeout = setTimeout(() => finish(new Error('Desktop startup timed out.')), 30_000);
 app.on('browser-window-created', (_event, win) => {
   win.webContents.on('did-fail-load', (_event, code, message) => finish(new Error(`${code}: ${message}`)));

@@ -63,6 +63,16 @@ const CSP = [
 ].join('; ');
 
 let mainWindow: BrowserWindow | null = null;
+
+/**
+ * Sends to the main renderer unless its window is gone. During quit the main
+ * window is destroyed before the mini-player's `closed` event; touching a
+ * destroyed window's webContents throws, and an uncaught main-process error
+ * opens a modal dialog that blocks the app from exiting.
+ */
+const sendToMainWindow = (channel: string, ...args: unknown[]): void => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, ...args);
+};
 let miniPlayerWindow: BrowserWindow | null = null;
 let settingsStore: SettingsStore;
 let credentialVault: CredentialVault;
@@ -73,7 +83,7 @@ let lastSnapshot: DesktopSnapshot | null = null;
 const thumbarClient = createCommandClient('nebula-thumbar', () => lastSnapshot?.epoch ?? 0);
 
 const forwardCommand = (envelope: DesktopCommandEnvelope): void => {
-  mainWindow?.webContents.send(IPC.playback.command, envelope);
+  sendToMainWindow(IPC.playback.command, envelope);
 };
 
 const broadcastSnapshotToMiniPlayer = (snapshot: DesktopSnapshot): void => {
@@ -82,7 +92,7 @@ const broadcastSnapshotToMiniPlayer = (snapshot: DesktopSnapshot): void => {
 
 let localDj: LocalDjRuntime | null = null;
 let djModels: DjModelManager | null = null;
-const getDjModels = () => djModels ??= new DjModelManager(path.join(app.getPath('userData'), 'aiDj', 'smollm3-q4-kokoro-v1'), state => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(IPC.aiDj.modelsChanged, state); }, net.fetch as typeof fetch);
+const getDjModels = () => djModels ??= new DjModelManager(path.join(app.getPath('userData'), 'aiDj', 'smollm3-q4-kokoro-v1'), state => sendToMainWindow(IPC.aiDj.modelsChanged, state), net.fetch as typeof fetch);
 const getLocalDj = () => localDj ??= new LocalDjRuntime(getDjModels().resources, path.join(__dirname, 'voiceWorker.cjs'), app.isPackaged ? path.join(process.resourcesPath, 'aiDj') : path.join(app.getAppPath(), 'electron/aiDj/resources'));
 
 // Snapshots arrive up to ~4x/sec (on `timeupdate`). Re-creating native images
@@ -283,6 +293,12 @@ const createWindow = (): BrowserWindow => {
   });
   win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
+  // Clear the reference once destroyed so later IPC checks and sends never
+  // touch a destroyed window.
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
+
   win.on('close', (event) => {
     if (!isQuitting) {
       if (settingsStore.get('trayOnClose') === false) {
@@ -397,13 +413,13 @@ const createMiniPlayerWindow = (): BrowserWindow => {
   });
   win.webContents.on('will-attach-webview', (event) => event.preventDefault());
 
-  // Closing the mini-player destroys it so its renderer process is freed; it
-  // is recreated (and re-seeded from lastSnapshot) the next time it is opened.
-  // It never quits the app.
+  // Closing the mini-player destroys it so its renderer process is freed. It
+  // is recreated (and re-seeded from lastSnapshot) the next time it is opened,
+  // and never quits the app.
 
-  win.on('show', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, true));
-  win.on('hide', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
-  win.on('closed', () => mainWindow?.webContents.send(IPC.miniPlayer.visibility, false));
+  win.on('show', () => sendToMainWindow(IPC.miniPlayer.visibility, true));
+  win.on('hide', () => sendToMainWindow(IPC.miniPlayer.visibility, false));
+  win.on('closed', () => sendToMainWindow(IPC.miniPlayer.visibility, false));
   win.once('ready-to-show', () => win.show());
 
   win.webContents.on('did-finish-load', () => {
@@ -784,7 +800,7 @@ if (!gotLock) {
         toggleMiniPlayer,
         openSettings: () => {
           mainWindow?.show();
-          mainWindow?.webContents.send(IPC.app.openSettings);
+          sendToMainWindow(IPC.app.openSettings);
         },
       });
       // Dev launches run from the Electron binary and show its default Dock
@@ -822,7 +838,7 @@ if (!gotLock) {
     // snapshot and re-sync the mini-player so tray/media-key/taskbar state and
     // the mini-player's progress reflect the real position again.
     powerMonitor.on('resume', () => {
-      mainWindow?.webContents.send(IPC.power.resumed);
+      sendToMainWindow(IPC.power.resumed);
       if (lastSnapshot) broadcastSnapshotToMiniPlayer(lastSnapshot);
     });
 
