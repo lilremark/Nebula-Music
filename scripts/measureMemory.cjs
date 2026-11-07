@@ -1,7 +1,7 @@
-// Run with Electron, after build:electron. Reports per-process memory for the
+// Run with Electron, after build:electron. Reports per-process memory and CPU for the
 // real desktop app in a disposable profile, signed into demo mode:
-// visible-and-idle, then hidden (the tray case). The window is shown fully transparent, so nothing appears on
-// screen. Usage: npm run measure:memory [-- --settle=8000]
+// visible-and-idle, then hidden (the tray case). The window is shown fully transparent and without
+// focus, so nothing appears on screen. Usage: npm run measure:memory [-- --settle=8000]
 const { app, BrowserWindow } = require('electron');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -12,7 +12,6 @@ const SETTLE_MS = settleArg ? Number(settleArg.slice('--settle='.length)) : 8_00
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'nebula-memory-'));
 app.setPath('userData', profile);
 app.getAppPath = () => path.resolve(__dirname, '..');
-const realShow = BrowserWindow.prototype.show;
 BrowserWindow.prototype.show = function () {};
 BrowserWindow.prototype.focus = function () {};
 
@@ -28,21 +27,28 @@ const sample = async win => {
     await pause(500);
   }
   const byType = {};
+  const cpuByType = {};
   for (const metrics of runs) {
     const totals = {};
+    const cpu = {};
     for (const proc of metrics) {
       const key = proc.name ? `${proc.type}:${proc.name}` : proc.type;
       const value = proc.memory.privateBytes ?? proc.memory.workingSetSize;
       totals[key] = (totals[key] ?? 0) + value;
+      cpu[key] = (cpu[key] ?? 0) + proc.cpu.percentCPUUsage;
     }
     for (const [key, value] of Object.entries(totals)) (byType[key] ??= []).push(value);
+    for (const [key, value] of Object.entries(cpu)) (cpuByType[key] ??= []).push(value);
   }
   const median = values => values.slice().sort((a, b) => a - b)[Math.floor(values.length / 2)];
   const processes = Object.fromEntries(Object.entries(byType).map(([key, values]) => [key, mb(median(values))]));
-  const heap = await win.webContents.executeJavaScript(
-    'performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576 * 10) / 10 : null');
+  const cpuPercent = Object.fromEntries(Object.entries(cpuByType).map(([key, values]) => [key, Math.round(median(values) * 10) / 10]));
+  const { heap, visibility } = await win.webContents.executeJavaScript(`({
+    heap: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576 * 10) / 10 : null,
+    visibility: document.visibilityState,
+  })`);
   const total = Math.round(Object.values(processes).reduce((sum, value) => sum + value, 0) * 10) / 10;
-  return { totalMB: total, rendererJsHeapMB: heap, processesMB: processes };
+  return { totalMB: total, visibility, rendererJsHeapMB: heap, processesMB: processes, cpuPercent };
 };
 
 let finished = false;
@@ -60,7 +66,7 @@ app.once('browser-window-created', (_event, win) => {
     try {
       win.setOpacity(0);
       win.setSkipTaskbar(true);
-      realShow.call(win);
+      win.showInactive();
       const entered = await win.webContents.executeJavaScript(`(async () => {
         for (let i = 0; i < 100; i++) {
           const button = [...document.querySelectorAll('button')].find(b => b.textContent.includes('Try Demo Mode'));
