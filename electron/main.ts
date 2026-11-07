@@ -262,7 +262,8 @@ const createWindow = (): BrowserWindow => {
       // publishing) alive while the window is minimized or hidden to tray.
       // Without this, Chromium pauses rAF and throttles timers to 1/sec, which
       // stalls live streams and leaves the app frozen after long minimize/sleep.
-      // Renderer animation loops stop themselves while hidden (useDocumentVisible).
+      // That also pins document.visibilityState to "visible", so the window's
+      // real visibility is sent to the renderer instead (sendWindowVisibility).
       backgroundThrottling: false,
       // No text entry needs spellcheck; skip loading the dictionaries.
       spellcheck: false,
@@ -309,6 +310,22 @@ const createWindow = (): BrowserWindow => {
 
   win.once('ready-to-show', () => win.show());
 
+  // backgroundThrottling is off, so Chromium reports the page as visible even
+  // in the tray. The renderer uses this to pause animations and progress
+  // renders; audio, timers and crossfades are unaffected.
+  // Until the first show the renderer keeps its default (visible), so startup
+  // animations are not paused while the window is still being created.
+  let shownOnce = false;
+  win.once('show', () => { shownOnce = true; });
+  const sendWindowVisibility = (): void => {
+    if (win.isDestroyed() || !shownOnce) return;
+    win.webContents.send(IPC.window.visibilityChanged, win.isVisible() && !win.isMinimized());
+  };
+  win.on('show', sendWindowVisibility);
+  win.on('hide', sendWindowVisibility);
+  win.on('minimize', sendWindowVisibility);
+  win.on('restore', sendWindowVisibility);
+
   const refreshThumbar = (): void => {
     if (process.platform !== 'win32') return;
     thumbarState = null;
@@ -322,6 +339,7 @@ const createWindow = (): BrowserWindow => {
 
   win.webContents.on('did-finish-load', () => {
     console.log('[nebula] renderer loaded');
+    sendWindowVisibility();
     win.webContents.send(IPC.miniPlayer.visibility, miniPlayerWindow?.isVisible() ?? false);
   });
   win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {

@@ -500,3 +500,7 @@ html.dark .nebula-next-setup .nebula-setup-card { border-color: #303030; backgro
   .nebula-next [data-nebula-topbar-title] { font-size: 18px; }
   .nebula-next .nebula-quick-grid, .nebula-next [data-nebula-mix-grid] { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* The main window is hidden to the tray or minimized (platform/windowVisibility.ts):
+   stop infinite CSS animations from producing compositor frames nobody sees. */
+html[data-window-hidden] *, html[data-window-hidden] *::before, html[data-window-hidden] *::after { animation-play-state: paused !important; }

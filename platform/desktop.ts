@@ -9,6 +9,9 @@ import type {
   WindowControl,
 } from './types';
 import { isLocalDjPlatform } from './aiDjAvailability';
+import { installWindowVisibility } from './windowVisibility';
+
+let windowVisibilityInstalled = false;
 
 /**
  * The Electron platform implementation, backed by the preload bridge
@@ -22,6 +25,11 @@ export const createDesktopPlatform = (): Platform => {
     throw new Error(
       'createDesktopPlatform() requires window.desktop (run inside the Electron renderer).',
     );
+  }
+
+  if (!windowVisibilityInstalled && typeof document !== 'undefined') {
+    windowVisibilityInstalled = true;
+    installWindowVisibility(handler => bridge.window.onVisibilityChanged(handler));
   }
 
   const windowControl: WindowControl = {

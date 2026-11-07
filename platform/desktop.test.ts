@@ -3,7 +3,7 @@ import { createDesktopPlatform } from './desktop';
 
 const desktopBridge = {
   info: { os: 'win32', appName: 'Nebula', appVersion: '2.5.0' },
-  window: { minimize: vi.fn(), toggleMaximize: vi.fn(), close: vi.fn(), isMaximized: vi.fn(), isFullScreen: vi.fn(), onMaximizeChanged: vi.fn() },
+  window: { minimize: vi.fn(), toggleMaximize: vi.fn(), close: vi.fn(), isMaximized: vi.fn(), isFullScreen: vi.fn(), onMaximizeChanged: vi.fn(), onVisibilityChanged: vi.fn(() => () => {}) },
   settings: { get: vi.fn(), set: vi.fn() },
   vault: { get: vi.fn(), set: vi.fn(), clear: vi.fn(), getSecret: vi.fn(), setSecret: vi.fn(), clearSecret: vi.fn() },
   playback: { onCommand: vi.fn(), publishSnapshot: vi.fn(), onSnapshot: vi.fn(), sendCommand: vi.fn() },

@@ -5,6 +5,15 @@ import type { UpdaterState } from './updater';
 
 const info = ipcRenderer.sendSync(IPC.app.info) as DesktopBridge['info'];
 
+// Cached from load so a late subscriber (the desktop platform module loads
+// asynchronously) still learns the current window visibility.
+let windowVisible = true;
+const windowVisibilityHandlers = new Set<(visible: boolean) => void>();
+ipcRenderer.on(IPC.window.visibilityChanged, (_event, visible: unknown) => {
+  windowVisible = visible !== false;
+  for (const handler of windowVisibilityHandlers) handler(windowVisible);
+});
+
 const bridge: DesktopBridge = {
   info,
   app: {
@@ -28,6 +37,13 @@ const bridge: DesktopBridge = {
     },
     isMaximized: () => ipcRenderer.invoke(IPC.window.isMaximized),
     isFullScreen: () => ipcRenderer.invoke(IPC.window.isFullScreen),
+    onVisibilityChanged: (handler) => {
+      windowVisibilityHandlers.add(handler);
+      handler(windowVisible);
+      return () => {
+        windowVisibilityHandlers.delete(handler);
+      };
+    },
     onMaximizeChanged: (handler) => {
       const listener = (_event: Electron.IpcRendererEvent, maximized: unknown) => {
         handler(Boolean(maximized));

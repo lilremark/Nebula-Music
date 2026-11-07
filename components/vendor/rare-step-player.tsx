@@ -5,6 +5,7 @@ import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react'
 
 import { cn } from '../../lib/utils'
+import { useDocumentVisible } from '../../hooks/useDocumentVisible'
 
 const WIDTH_SPRING = { type: 'spring', duration: 0.42, bounce: 0.14 } as const
 const ICON_SPRING = { type: 'spring', duration: 0.32, bounce: 0.22 } as const
@@ -181,6 +182,7 @@ function StepPlayer({
 
     const index = Math.min(isValueControlled ? value : indexState, count - 1)
     const isPlaying = isPlayingControlled ? playing : playingState
+    const documentVisible = useDocumentVisible()
 
     const shouldReduceMotion = useReducedMotion()
     const metrics = useMemo(() => metricsFor(size), [size])
@@ -217,7 +219,8 @@ function StepPlayer({
     )
 
     useEffect(() => {
-        if (!isPlaying || stepDuration <= 0) {
+        // Resumes from the saved progress once the window is visible again.
+        if (!isPlaying || !documentVisible || stepDuration <= 0) {
             return
         }
         let frame = 0
@@ -243,7 +246,7 @@ function StepPlayer({
         }
         frame = requestAnimationFrame(tick)
         return () => cancelAnimationFrame(frame)
-    }, [isPlaying, index, count, stepDuration, loop, commitIndex, commitPlaying, progress])
+    }, [isPlaying, documentVisible, index, count, stepDuration, loop, commitIndex, commitPlaying, progress])
 
     const handleControl = () => {
         if (finished) {

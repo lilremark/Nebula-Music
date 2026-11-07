@@ -23,6 +23,8 @@ export interface DesktopBridge {
     isMaximized(): Promise<boolean>;
     isFullScreen(): Promise<boolean>;
     onMaximizeChanged(handler: (maximized: boolean) => void): () => void;
+    /** Whether the window is on screen (not hidden to the tray or minimized). Calls back immediately. */
+    onVisibilityChanged(handler: (visible: boolean) => void): () => void;
   };
   openExternal(url: string): Promise<boolean>;
   settings: {

@@ -15,6 +15,7 @@ export const IPC = {
     isMaximized: 'nebula:window:is-maximized',
     isFullScreen: 'nebula:window:is-full-screen',
     maximizeChanged: 'nebula:window:maximize-changed',
+    visibilityChanged: 'nebula:window:visibility-changed',
   },
   settings: {
     get: 'nebula:settings:get',
