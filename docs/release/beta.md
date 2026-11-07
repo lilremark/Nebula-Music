@@ -55,15 +55,17 @@ appended to the published prerelease by the desktop workflow.
    node -e "const fs=require('fs');const f=u=>JSON.parse(fs.readFileSync(u,'utf8'));const w=(u,v)=>{const j=JSON.parse(fs.readFileSync(u,'utf8'));j.version=v;j.packages[''].version=v;fs.writeFileSync(u,JSON.stringify(j,null,2)+'\n')}"
    ```
    Then set `version` in `package.json`, both `version` fields in
-   `package-lock.json`, and `APP_VERSION` in `constants.ts`. Add a matching
-   entry at the top of `CHANGELOG` in `constants.ts`.
+   `package-lock.json`, and `APP_VERSION` in `constants.ts`. Write the release
+   notes in `docs/release/v<version>.md` using the format in
+   [README.md](README.md); the app's What's New dialog and the GitHub release
+   both use that file.
 3. Verify all sources agree:
    ```bash
    node scripts/releaseVersion.mjs --tag "v2.5.0-beta.1"
    ```
 4. Commit and tag:
    ```bash
-   git add package.json package-lock.json constants.ts
+   git add package.json package-lock.json constants.ts docs/release/
    git commit -m "chore(release): prepare Nebula v2.5.0-beta.1"
    git tag v2.5.0-beta.1
    ```
@@ -77,7 +79,8 @@ appended to the published prerelease by the desktop workflow.
 `.github/workflows/release-desktop.yml` runs on `v*` tags:
 
 - Any tag containing `-beta.` is treated as a **beta pre-release**:
-  - builds Windows x64 and macOS Apple Silicon (arm64),
+  - builds Windows x64 and macOS Apple Silicon (arm64), the web bundle, and
+    the Docker image (pushed as `<version>` and `beta`),
   - requires both platform builds and artifact checks to pass before publication,
   - publishes a **published GitHub Prerelease** immediately (drafts are
     invisible to the updater, so a beta must be published to be delivered).

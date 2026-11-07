@@ -2,7 +2,8 @@
 
 ARG NODE_VERSION=24-alpine
 ARG NGINX_VERSION=1.30.3-alpine
-ARG APP_VERSION=3.0.0
+# The release workflow passes the released version; local builds are labeled dev.
+ARG APP_VERSION=dev
 
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build
 

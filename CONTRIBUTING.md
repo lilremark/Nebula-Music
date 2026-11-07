@@ -100,18 +100,22 @@ Version bumps touch multiple places. When releasing (e.g. `2.3.0`), update all o
 them together to avoid drift:
 
 - `package.json` and `package-lock.json` (`"version"`)
-- `constants.ts` — `APP_VERSION` and the top `CHANGELOG` entry
+- `constants.ts` — `APP_VERSION`
+- `docs/release/v<version>.md` — the release notes shown on GitHub and in the
+  app's What's New dialog. Format and category rules:
+  [docs/release/README.md](docs/release/README.md)
 - `context/StreamDeckBridgeContext.tsx` — `NEBULA_VERSION` (derived from
   `APP_VERSION`, keep in sync)
 - `README.md` — version badge, release section, and changelog
 - `SECURITY.md` — supported-versions table
 - `docker/README.md` — pinned image tag, when a web/Docker release is cut
 
-Desktop releases are built natively by `.github/workflows/release-desktop.yml`.
+Releases (Windows, macOS, web bundle and Docker image) are built by
+`.github/workflows/release-desktop.yml`.
 The workflow is dynamic: it runs on any pushed `v*` tag and on manual
 `workflow_dispatch`. After release-prep changes merge and before tagging, run a
-manual `workflow_dispatch` of the Desktop release workflow (Actions > Desktop
-release > Run workflow) and confirm the `verify`, `windows`, and `macos` jobs
+manual `workflow_dispatch` of the Release workflow (Actions > Release > Run
+workflow) and confirm the `verify`, `windows`, and `macos` jobs
 all pass on their native runners. The Windows `.appx` target requires the
 Windows SDK on the runner, so ensure it is installed before dispatching. Only
 after that manual confirmation, create and push an annotated `v<version>` tag

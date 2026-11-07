@@ -85,8 +85,9 @@ docker run -d \
 | `3.0.0` | Pin the published 3.0.0 image |
 | `3.0` | Follow the 3.0 release line |
 | `latest` | Follow the latest stable Docker release |
+| `beta` | Follow pre-releases (for example `3.0.2-beta.1`), each also published under its exact version |
 
-All three tags currently point to Nebula **3.0.0**, with **`linux/amd64`** and **`linux/arm64`** images. Docker selects the architecture that matches your host.
+`3.0.0`, `3.0` and `latest` point to Nebula **3.0.0**. Every tag includes **`linux/amd64`** and **`linux/arm64`** images. Docker selects the architecture that matches your host.
 
 ## Configuration and storage
 

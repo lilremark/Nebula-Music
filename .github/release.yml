@@ -1,0 +1,22 @@
+# Groups GitHub's auto-generated "What's Changed" list with the same categories
+# as the curated notes in docs/release/v<version>.md. Label pull requests with
+# enhancement, performance or bug.
+changelog:
+  exclude:
+    labels:
+      - wontfix
+      - duplicate
+      - invalid
+  categories:
+    - title: Features
+      labels:
+        - enhancement
+    - title: Performance
+      labels:
+        - performance
+    - title: Bug fixes
+      labels:
+        - bug
+    - title: Other changes
+      labels:
+        - "*"

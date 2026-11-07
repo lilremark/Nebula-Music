@@ -33,7 +33,9 @@ Open:
 http://localhost:8080
 ```
 
-The published image supports `linux/amd64` and `linux/arm64`.
+The published image supports `linux/amd64` and `linux/arm64`. Use `latest` for
+stable releases or `beta` for the newest pre-release; every release is also
+tagged with its exact version.
 
 ## Docker Compose
 
