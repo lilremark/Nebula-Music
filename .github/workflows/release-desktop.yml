@@ -1,3 +1,5 @@
+# Publishing the stable draft this workflow creates triggers pages.yml, which
+# redeploys the homepage with download links for the new version. Betas don't.
 name: Desktop release
 
 on:

@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nebula Music</title>
+<meta name="description" content="Nebula Music is a self-hosted music player for Navidrome, Gonic, Airsonic and other Subsonic servers. Available for Windows, macOS, the web and Docker.">
+<meta name="theme-color" content="#000000">
+<meta property="og:title" content="Nebula Music">
+<meta property="og:description" content="A self-hosted music player for Subsonic and OpenSubsonic libraries. Windows, macOS, web and Docker.">
+<meta property="og:image" content="assets/home.webp">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@600;700;800&display=swap">
+<style>
+/* Layout: the app's own listening room. Black canvas, hairline panels, white primary controls,
+   with the logo's cyan-to-violet meter as the single brand moment. Dark-only, like the app's default. */
+:root {
+  --canvas: #000000;
+  --panel: #0b0b0c;
+  --raised: #151517;
+  --well: #1e1e21;
+  --hairline: rgba(255, 255, 255, 0.09);
+  --hairline-strong: rgba(255, 255, 255, 0.16);
+  --text: #f5f5f4;
+  --muted: #a3a3a8;
+  --faint: #8a8a90;
+  --on-light: #0a0a0a;
+  --cyan: #06b6d4;
+  --violet: #8b5cf6;
+  --dj: #a78bfa;
+  --flame: #fb923c;
+
+  --font-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --step-hero: clamp(2.6rem, 6.4vw, 5.2rem);
+  --step-h2: clamp(2rem, 4vw, 3.25rem);
+  --step-h3: 1.2rem;
+  --r-control: 11px;
+  --r-card: 16px;
+  --r-frame: 22px;
+  --wrap: 1180px;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 60; background: var(--canvas);
+}
+img { max-width: 100%; height: auto; display: block; }
+#bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+main section[id] { scroll-margin-top: 84px; }
+@media (max-width: 860px) { main section[id] { scroll-margin-top: 112px; } }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 6px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; color: var(--text); }
+p { margin: 0; }
+
+.wrap {
+  width: 100%;
+  max-width: calc(var(--wrap) + 2 * 32px);
+  margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 720px) {
+  .wrap {
+    padding-left: max(32px, env(safe-area-inset-left, 0px));
+    padding-right: max(32px, env(safe-area-inset-right, 0px));
+  }
+}
+
+.label {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 48px; padding: 0 20px; border-radius: var(--r-control);
+  font: 600 0.95rem/1 var(--font-body); text-decoration: none; white-space: nowrap;
+  border: 1px solid transparent; cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+}
+.btn svg { width: 18px; height: 18px; flex: none; }
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--text); color: var(--on-light); }
+.btn-primary:hover { background: #ffffff; }
+.btn-secondary { background: var(--well); color: var(--text); border-color: var(--hairline); }
+.btn-secondary:hover { background: #26262a; border-color: var(--hairline-strong); }
+.btn-small { min-height: 40px; padding: 0 14px; font-size: 0.875rem; }
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
+  background: color-mix(in srgb, var(--canvas) 82%, transparent);
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid var(--hairline);
+}
+.site-header .wrap { display: flex; align-items: center; gap: 24px; min-height: 68px; }
+.brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; font: 700 1.2rem/1 var(--font-display); letter-spacing: -0.02em; }
+.brand img { width: 34px; height: 34px; border-radius: 9px; }
+/* Section progress: one segment per section, each fills as you read through it */
+.progress { display: flex; gap: 6px; margin-left: auto; }
+.progress a {
+  display: grid; gap: 8px; min-width: 96px; padding: 10px 4px 6px;
+  color: var(--faint); text-decoration: none; font-size: 0.82rem; font-weight: 500;
+  transition: color .2s ease;
+}
+.progress a:hover, .progress a.active { color: var(--text); }
+.progress b { display: block; height: 3px; border-radius: 999px; background: var(--well); overflow: hidden; }
+.progress i {
+  display: block; width: 100%; height: 100%; transform-origin: left center;
+  transform: scaleX(var(--p, 0));
+  background: linear-gradient(90deg, var(--cyan), var(--violet));
+}
+.progress a.active b { box-shadow: 0 0 12px -2px color-mix(in srgb, var(--violet) 70%, transparent); }
+.header-cta { display: flex; gap: 8px; }
+.icon-link { width: 40px; padding: 0; }
+@media (max-width: 860px) {
+  .site-header .wrap { flex-wrap: wrap; row-gap: 0; }
+  .header-cta { margin-left: auto; }
+  .progress { order: 3; width: 100%; margin-left: 0; gap: 4px; padding-bottom: 6px; }
+  .progress a { flex: 1; min-width: 0; padding-top: 0; font-size: 0.72rem; text-align: center; }
+}
+@media (max-width: 420px) { .header-cta .btn-primary span { display: none; } .header-cta .btn-primary { width: 40px; padding: 0; } }
+
+/* ---------- Hero ---------- */
+.hero { position: relative; padding-block: clamp(56px, 9vw, 112px) 0; overflow: hidden; }
+.hero::before {
+  content: ""; position: absolute; inset: auto -20% -10% -20%; height: 70%;
+  background:
+    radial-gradient(45% 60% at 30% 70%, color-mix(in srgb, var(--cyan) 22%, transparent), transparent 70%),
+    radial-gradient(45% 60% at 72% 70%, color-mix(in srgb, var(--violet) 26%, transparent), transparent 70%);
+  filter: blur(30px); pointer-events: none;
+}
+.hero-copy {
+  position: relative; display: grid; justify-items: center; gap: 26px;
+  max-width: 880px; min-width: 0; margin-inline: auto; text-align: center;
+}
+.release-pill { display: inline-flex; align-items: center; gap: 10px;
+  padding: 7px 14px 7px 8px; border-radius: 999px; border: 1px solid var(--hairline-strong);
+  background: var(--panel); color: var(--muted); font-size: 0.84rem; text-decoration: none;
+}
+.release-pill:hover { color: var(--text); border-color: rgba(255,255,255,.28); }
+.release-pill b {
+  font: 500 0.75rem/1 var(--font-mono); color: var(--text);
+  background: var(--well); padding: 5px 8px; border-radius: 999px;
+}
+.hero h1 { font-size: var(--step-hero); font-weight: 800; line-height: 0.98; letter-spacing: -0.045em; }
+.hero h1 .grad {
+  background: linear-gradient(100deg, var(--cyan), var(--violet) 70%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.lede { font-size: clamp(1.05rem, 1.6vw, 1.22rem); color: var(--muted); max-width: 58ch; }
+.hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 4px; }
+.hero-actions .btn { min-height: 52px; padding: 0 24px; }
+.hero-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; color: var(--faint); font-size: 0.85rem; }
+.hero-meta span { display: inline-flex; align-items: center; gap: 8px; }
+.hero-meta span::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--hairline-strong); }
+.hero-meta span:first-child::before { display: none; }
+
+/* The Nebula logo, with its waveform playing inside */
+.logo-mark {
+  width: 88px; height: 88px; border-radius: 24%;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  background: linear-gradient(45deg, var(--cyan), var(--violet));
+  box-shadow: 0 10px 34px -8px color-mix(in srgb, var(--cyan) 55%, transparent),
+              0 0 60px -10px color-mix(in srgb, var(--violet) 50%, transparent);
+}
+.logo-mark i {
+  display: block; width: 7px; height: var(--h); border-radius: 999px; background: #ffffff;
+  transform-origin: center; animation: eq var(--d) ease-in-out infinite alternate;
+  will-change: transform; backface-visibility: hidden; transform: translateZ(0);
+}
+.logo-mark i:nth-child(1) { --h: 14px; --d: 1.3s;  --delay: -0.4s; opacity: .5; }
+.logo-mark i:nth-child(2) { --h: 26px; --d: 1.55s; --delay: -1.1s; opacity: .75; }
+.logo-mark i:nth-child(3) { --h: 42px; --d: 1.2s;  --delay: -0.2s; }
+.logo-mark i:nth-child(4) { --h: 26px; --d: 1.45s; --delay: -0.8s; opacity: .75; }
+.logo-mark i:nth-child(5) { --h: 14px; --d: 1.7s;  --delay: -1.3s; opacity: .5; }
+/* One continuous swing per direction (no mid-keyframe stop), sine-shaped easing */
+.logo-mark i {
+  animation: eq var(--d) cubic-bezier(.37, 0, .63, 1) var(--delay) infinite alternate;
+}
+@keyframes eq {
+  from { transform: translateZ(0) scaleY(.55); }
+  to   { transform: translateZ(0) scaleY(1.1); }
+}
+
+.hero-shot { position: relative; margin-top: clamp(48px, 7vw, 80px); }
+.frame {
+  border-radius: var(--r-frame); border: 1px solid var(--hairline-strong); background: var(--panel);
+  overflow: hidden;
+  box-shadow: 0 40px 120px -40px rgba(0,0,0,.9), 0 0 0 1px rgba(0,0,0,.6);
+}
+.frame-bar { display: flex; align-items: center; gap: 7px; height: 38px; padding-inline: 16px; border-bottom: 1px solid var(--hairline); }
+.frame-bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--well); }
+.frame-bar span { margin-left: 12px; font: 500 0.74rem/1 var(--font-mono); color: var(--faint); }
+.hero-shot .frame { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: 0; }
+.hero-shot::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 30%;
+  background: linear-gradient(to bottom, transparent, var(--canvas)); pointer-events: none;
+}
+
+/* ---------- Servers strip ---------- */
+.servers { border-block: 1px solid var(--hairline); background: color-mix(in srgb, var(--panel) 78%, transparent); }
+.servers .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 36px; padding-block: 22px; }
+.servers ul { display: flex; flex-wrap: wrap; gap: 10px 30px; list-style: none; margin: 0; padding: 0; }
+.servers li { font: 700 1.05rem/1.2 var(--font-display); letter-spacing: -0.01em; color: var(--text); }
+.servers li a { text-decoration: none; }
+.servers li a:hover { color: var(--cyan); }
+.servers .api { margin-left: auto; font: 400 0.8rem/1.4 var(--font-mono); color: var(--faint); }
+@media (max-width: 860px) { .servers .api { margin-left: 0; } }
+
+/* ---------- Sections ---------- */
+.section { padding-block: clamp(80px, 11vw, 140px); }
+.section-head { display: grid; gap: 16px; max-width: 720px; margin-bottom: clamp(40px, 6vw, 64px); }
+.section-head h2 { font-size: var(--step-h2); font-weight: 800; line-height: 1.02; letter-spacing: -0.04em; }
+.section-head p { color: var(--muted); font-size: 1.08rem; max-width: 60ch; }
+
+/* Feature rows */
+.feature-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 72px); align-items: center; }
+.feature-row + .feature-row { margin-top: clamp(72px, 10vw, 120px); }
+.feature-row.flip { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.feature-row.flip .feature-media { order: 2; }
+.feature-media { position: relative; isolation: isolate; }
+.feature-media::before {
+  content: ""; position: absolute; inset: 6% -5% -6%; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(55% 60% at 25% 60%, color-mix(in srgb, var(--cyan) 16%, transparent), transparent 70%),
+    radial-gradient(55% 60% at 75% 60%, color-mix(in srgb, var(--violet) 20%, transparent), transparent 70%);
+  filter: blur(34px);
+}
+.feature-media.glow-strong::before {
+  inset: -4% -8% -10%;
+  background:
+    radial-gradient(60% 65% at 22% 60%, color-mix(in srgb, var(--cyan) 34%, transparent), transparent 72%),
+    radial-gradient(60% 65% at 78% 60%, color-mix(in srgb, var(--violet) 40%, transparent), transparent 72%);
+  filter: blur(42px);
+}
+.feature-media .frame { border-radius: var(--r-card); }
+.feature-copy { display: grid; gap: 18px; min-width: 0; }
+.feature-copy h3 { font-size: clamp(1.6rem, 2.6vw, 2.2rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.08; }
+.feature-copy > p { color: var(--muted); }
+.ticks { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 0; }
+.ticks li { display: grid; grid-template-columns: 22px 1fr; gap: 12px; padding: 11px 0; border-top: 1px solid var(--hairline); color: var(--text); font-size: 0.95rem; }
+.ticks li:last-child { border-bottom: 1px solid var(--hairline); }
+.ticks svg { width: 18px; height: 18px; margin-top: 3px; color: var(--muted); }
+.ticks small { display: block; color: var(--faint); font-size: 0.85rem; }
+.tag {
+  justify-self: start; display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 11px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  background: color-mix(in srgb, var(--violet) 16%, transparent); color: var(--dj);
+}
+.tag.flame { background: color-mix(in srgb, var(--flame) 14%, transparent); color: var(--flame); }
+@media (max-width: 900px) {
+  .feature-row, .feature-row.flip { grid-template-columns: 1fr; }
+  .feature-row.flip .feature-media { order: 0; }
+}
+
+/* More features: four tiles, each with a gradient icon and its items as pills */
+.spec { margin-top: clamp(80px, 11vw, 130px); display: grid; gap: 22px; }
+.spec > .label { text-align: center; }
+.spec-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.spec-col {
+  position: relative; display: grid; align-content: start; gap: 16px; padding: 24px;
+  border-radius: var(--r-card); border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, var(--raised), color-mix(in srgb, var(--panel) 90%, transparent));
+  overflow: hidden;
+  transition: border-color .2s ease, transform .25s cubic-bezier(.2,.8,.2,1);
+}
+.spec-col::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cyan) 70%, transparent), color-mix(in srgb, var(--violet) 70%, transparent), transparent);
+  opacity: .35; transition: opacity .2s ease;
+}
+.spec-col::after {
+  content: ""; position: absolute; width: 180px; height: 180px; right: -70px; top: -90px; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--violet) 22%, transparent), transparent);
+  pointer-events: none; opacity: .6; transition: opacity .25s ease;
+}
+.spec-col:hover { border-color: var(--hairline-strong); transform: translateY(-2px); }
+.spec-col:hover::before { opacity: 1; }
+.spec-col:hover::after { opacity: 1; }
+.spec-icon {
+  position: relative; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--cyan), var(--violet));
+  box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--violet) 70%, transparent);
+  color: #ffffff;
+}
+.spec-icon svg { width: 22px; height: 22px; }
+.spec-col h3 { position: relative; font-size: var(--step-h3); font-weight: 700; letter-spacing: -0.02em; }
+.spec-col ul { position: relative; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.spec-col li {
+  font-size: 0.84rem; line-height: 1; color: var(--text);
+  padding: 8px 11px; border-radius: 999px;
+  background: var(--well); border: 1px solid var(--hairline);
+}
+@media (max-width: 1000px) { .spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .spec-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Download ---------- */
+.download { background: color-mix(in srgb, var(--panel) 72%, transparent); border-block: 1px solid var(--hairline); }
+.platforms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.platform {
+  display: grid; grid-template-rows: auto auto 1fr auto; gap: 16px;
+  padding: 28px; border-radius: var(--r-card); background: var(--canvas); border: 1px solid var(--hairline);
+}
+.platform-icon { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; background: var(--well); border: 1px solid var(--hairline); }
+.platform-icon svg { width: 24px; height: 24px; }
+.platform h3 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; }
+.platform .req { font: 400 0.8rem/1.4 var(--font-mono); color: var(--faint); margin-top: 6px; }
+.platform > p { color: var(--muted); font-size: 0.94rem; }
+.platform-actions { display: grid; gap: 10px; }
+.platform-actions .btn { width: 100%; }
+.platform-actions .alt { font-size: 0.86rem; color: var(--faint); text-align: center; }
+.platform-actions .alt a { color: var(--muted); }
+.platform-actions .alt a:hover { color: var(--text); }
+.first-run { margin-top: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.note {
+  display: grid; grid-template-columns: 22px 1fr; gap: 12px; padding: 18px 20px;
+  border-radius: 12px; border: 1px dashed var(--hairline-strong); color: var(--muted); font-size: 0.9rem;
+}
+.note svg { width: 18px; height: 18px; margin-top: 2px; color: var(--faint); }
+.note strong { color: var(--text); font-weight: 600; }
+@media (max-width: 900px) { .platforms, .first-run { grid-template-columns: 1fr; } }
+
+/* ---------- Docker ---------- */
+.docker-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(32px, 5vw, 72px); align-items: start; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; counter-reset: step; }
+.steps li { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding: 22px 0; border-top: 1px solid var(--hairline); }
+.steps li:last-child { border-bottom: 1px solid var(--hairline); }
+.steps li::before {
+  content: counter(step); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  font: 500 0.85rem/1 var(--font-mono); color: var(--text); background: var(--well); border: 1px solid var(--hairline-strong);
+}
+.steps h3 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 4px; }
+.steps p { color: var(--muted); font-size: 0.93rem; }
+.steps code, .inline-code { font: 0.86em var(--font-mono); background: var(--well); padding: 2px 6px; border-radius: 5px; color: var(--text); }
+
+.terminal { border-radius: var(--r-card); border: 1px solid var(--hairline-strong); background: var(--panel); overflow: hidden; min-width: 0; }
+.term-head { display: flex; align-items: center; gap: 4px; padding: 8px; border-bottom: 1px solid var(--hairline); background: var(--canvas); }
+.tab {
+  appearance: none; border: 0; cursor: pointer; background: transparent; color: var(--muted);
+  font: 600 0.82rem/1 var(--font-body); padding: 10px 14px; border-radius: 8px; min-height: 38px;
+}
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { background: var(--text); color: var(--on-light); }
+.copy {
+  margin-left: auto; appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+  font: 500 0.8rem/1 var(--font-body); color: var(--muted); background: var(--well);
+  border: 1px solid var(--hairline); border-radius: 8px; padding: 0 12px; min-height: 36px;
+}
+.copy:hover { color: var(--text); border-color: var(--hairline-strong); }
+.copy svg { width: 14px; height: 14px; }
+.term-body { overflow-x: auto; }
+.term-body pre { margin: 0; padding: 22px 24px; font: 400 0.84rem/1.75 var(--font-mono); color: var(--text); tab-size: 2; }
+.term-body .c { color: var(--faint); }
+.term-body .k { color: #67e8f9; }
+.term-body .s { color: #c4b5fd; }
+.term-foot { padding: 14px 24px; border-top: 1px solid var(--hairline); color: var(--faint); font-size: 0.85rem; }
+.term-foot a { color: var(--muted); }
+@media (max-width: 900px) { .docker-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Web CTA ---------- */
+.web-cta {
+  position: relative; overflow: hidden; display: grid; justify-items: center; gap: 28px; text-align: center;
+  padding: clamp(32px, 5vw, 56px); border-radius: var(--r-frame); border: 1px solid var(--hairline-strong);
+  background:
+    radial-gradient(60% 120% at 100% 0%, color-mix(in srgb, var(--violet) 24%, transparent), transparent 60%),
+    radial-gradient(50% 120% at 0% 100%, color-mix(in srgb, var(--cyan) 16%, transparent), transparent 60%),
+    var(--panel);
+}
+.web-cta h2 { font-size: clamp(1.8rem, 3.4vw, 2.8rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.04; }
+.web-cta p { color: var(--muted); margin: 12px auto 0; max-width: 54ch; }
+.web-cta .btn { min-height: 52px; padding: 0 24px; }
+.web-cta .url { font: 500 0.9rem/1 var(--font-mono); color: inherit; }
+/* Lift + glow hover, shared by the header buttons and the web player button */
+.btn-lift {
+  transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease, background-color .15s ease, border-color .15s ease;
+}
+.btn-lift svg { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.btn-lift:hover, .btn-lift:focus-visible {
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 32px -10px color-mix(in srgb, var(--violet) 70%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--cyan) 22%, transparent);
+}
+.btn-lift:active { transform: translateY(-1px); }
+.btn-lift.nudge-out:hover svg, .btn-lift.nudge-out:focus-visible svg { transform: translate(3px, -3px); }
+.btn-lift.nudge-down:hover svg, .btn-lift.nudge-down:focus-visible svg { transform: translateY(2px); }
+.btn-lift.nudge-spin:hover svg, .btn-lift.nudge-spin:focus-visible svg { transform: rotate(-12deg) scale(1.1); }
+
+/* ---------- Footer ---------- */
+.site-footer { border-top: 1px solid var(--hairline); padding-block: 48px; color: var(--faint); font-size: 0.9rem; background: var(--canvas); }
+/* Fades in as it scrolls into view where scroll-driven animation is supported; fully visible otherwise */
+@supports (animation-timeline: view()) {
+  .site-footer .wrap {
+    animation: foot-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 90%;
+  }
+}
+@keyframes foot-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.site-footer .wrap { display: flex; flex-wrap: wrap; gap: 24px 48px; align-items: flex-start; justify-content: space-between; }
+.foot-brand { display: grid; gap: 12px; max-width: 34ch; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 32px 56px; }
+.foot-links div { display: grid; gap: 10px; align-content: start; }
+.foot-links a { color: var(--muted); text-decoration: none; }
+.foot-links a:hover { color: var(--text); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .progress a { transition: none; }
+  .btn-lift, .btn-lift svg { transition: none; }
+  .btn-lift:hover, .btn-lift:focus-visible, .btn-lift:hover svg, .btn-lift:focus-visible svg { transform: none !important; }
+  .logo-mark i { animation: none; }
+  .site-footer .wrap { animation: none; }
+  .spec-col, .spec-col::before, .spec-col::after { transition: none; }
+  .spec-col:hover { transform: none; }
+  .btn { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.26 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></symbol>
+  <symbol id="i-windows" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.1 10.4 4v7.1H3V5.1Zm0 13.8L10.4 20v-7.1H3v6Zm8.3 1.2L21 21.5v-8.6h-9.7v7.2Zm0-16.2v7.2H21V2.5l-9.7 1.4Z"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" d="M16.37 12.6c-.02-2.3 1.88-3.4 1.97-3.46-1.07-1.57-2.74-1.78-3.33-1.8-1.42-.14-2.77.83-3.49.83-.72 0-1.83-.81-3.01-.79a4.46 4.46 0 0 0-3.77 2.29c-1.61 2.79-.41 6.92 1.16 9.18.77 1.11 1.68 2.35 2.88 2.31 1.16-.05 1.6-.75 3-.75s1.79.75 3.01.72c1.25-.02 2.04-1.12 2.8-2.24a9.9 9.9 0 0 0 1.27-2.6 4.04 4.04 0 0 1-2.49-3.69ZM14.07 5.85c.64-.78 1.07-1.85.95-2.92-.92.04-2.04.61-2.7 1.38-.59.68-1.11 1.78-.97 2.83 1.03.08 2.07-.52 2.72-1.29Z"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.4 2.5 3.6 5.6 3.6 9.2s-1.2 6.7-3.6 9.2c-2.4-2.5-3.6-5.6-3.6-9.2S9.6 5.3 12 2.8Z"/></g></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 17 17 7m0 0H8.5M17 7v8.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></g></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5.6v12.8a1 1 0 0 0 1.52.85l10.2-6.4a1 1 0 0 0 0-1.7L9.52 4.75A1 1 0 0 0 8 5.6Z"/></symbol>
+  <symbol id="i-library" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4v16M9.5 4v16"/><path d="m14 5.2 4.6-1.2 2.4 15.6-4.6 1.2Z"/></g></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path fill="currentColor" d="M11 3.5c.4 3.9 2.6 6.1 6.5 6.5-3.9.4-6.1 2.6-6.5 6.5-.4-3.9-2.6-6.1-6.5-6.5 3.9-.4 6.1-2.6 6.5-6.5Zm7 10c.2 2 1.3 3.1 3.3 3.3-2 .2-3.1 1.3-3.3 3.3-.2-2-1.3-3.1-3.3-3.3 2-.2 3.1-1.3 3.3-3.3Z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5.5c0 4.4 3 8 7 9.5 4-1.5 7-5.1 7-9.5V6Z"/><path d="m9 12 2 2 4-4"/></g></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
+  <symbol id="i-docker" viewBox="0 0 24 24"><path fill="currentColor" d="M13.98 11.08h2.12a.19.19 0 0 0 .19-.19V9.01a.19.19 0 0 0-.19-.19h-2.12a.19.19 0 0 0-.18.19v1.88c0 .1.08.19.18.19Zm-2.95-5.43h2.12a.19.19 0 0 0 .18-.19V3.58a.19.19 0 0 0-.18-.19h-2.12a.19.19 0 0 0-.19.19v1.88c0 .1.09.19.19.19Zm0 2.71h2.12a.19.19 0 0 0 .18-.18V6.29a.19.19 0 0 0-.18-.18h-2.12a.19.19 0 0 0-.19.18v1.89c0 .1.09.18.19.18Zm-2.93 0h2.12a.19.19 0 0 0 .18-.18V6.29a.18.18 0 0 0-.18-.18H8.1a.19.19 0 0 0-.19.18v1.89c0 .1.08.18.19.18Zm-2.96 0h2.12a.19.19 0 0 0 .18-.18V6.29a.18.18 0 0 0-.18-.18H5.14a.19.19 0 0 0-.19.18v1.89c0 .1.09.18.19.18Zm5.89 2.72h2.12a.19.19 0 0 0 .18-.19V9.01a.19.19 0 0 0-.18-.19h-2.12a.19.19 0 0 0-.19.19v1.88c0 .1.09.19.19.19Zm-2.93 0h2.12a.19.19 0 0 0 .18-.19V9.01a.18.18 0 0 0-.18-.19H8.1a.19.19 0 0 0-.19.19v1.88c0 .1.08.19.19.19Zm-2.96 0h2.12a.19.19 0 0 0 .18-.19V9.01a.19.19 0 0 0-.18-.19H5.14a.19.19 0 0 0-.19.19v1.88c0 .1.09.19.19.19Zm-2.92 0h2.12a.19.19 0 0 0 .18-.19V9.01a.19.19 0 0 0-.18-.19H2.22a.19.19 0 0 0-.18.19v1.88c0 .1.08.19.18.19Zm21.54-1.19c-.06-.05-.67-.51-1.95-.51-.34 0-.68.03-1.01.09-.25-1.7-1.65-2.53-1.71-2.56l-.34-.2-.23.33c-.28.44-.49.92-.61 1.43-.23.97-.09 1.88.4 2.66-.59.33-1.55.41-1.74.42H.75a.75.75 0 0 0-.75.75c-.01 1.39.22 2.77.69 4.08.55 1.43 1.36 2.48 2.42 3.13 1.18.73 3.1 1.14 5.28 1.14.98 0 1.96-.09 2.93-.27a12.2 12.2 0 0 0 3.82-1.39 10.5 10.5 0 0 0 2.6-2.13c1.25-1.42 2-3 2.55-4.4h.22c1.37 0 2.21-.55 2.68-1.01.31-.29.55-.65.71-1.05l.1-.29-.24-.18Z"/></symbol>
+</svg>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Nebula Music home">
+      <img src="assets/logo.svg" alt="" width="34" height="34">
+      Nebula
+    </a>
+    <nav class="progress" aria-label="Page sections">
+      <a href="#overview" data-section="overview"><span>Overview</span><b><i></i></b></a>
+      <a href="#features" data-section="features"><span>Features</span><b><i></i></b></a>
+      <a href="#download" data-section="download"><span>Download</span><b><i></i></b></a>
+      <a href="#docker" data-section="docker"><span>Docker</span><b><i></i></b></a>
+      <a href="#try" data-section="try"><span>Try it</span><b><i></i></b></a>
+    </nav>
+    <div class="header-cta">
+      <a class="btn btn-secondary btn-small icon-link btn-lift nudge-spin" href="https://github.com/lilremark/Nebula-Music" target="_blank" rel="noopener" aria-label="Nebula Music on GitHub">
+        <svg><use href="#i-github"/></svg>
+      </a>
+      <a class="btn btn-primary btn-small btn-lift nudge-down" href="#download" aria-label="Download Nebula">
+        <svg><use href="#i-download"/></svg><span>Download</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero" id="overview" aria-labelledby="hero-title">
+    <div class="wrap">
+        <div class="hero-copy">
+          <div class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <a class="release-pill" href="https://github.com/lilremark/Nebula-Music/releases/latest" target="_blank" rel="noopener">
+            <b data-version>v3.0.0</b> Latest release
+          </a>
+          <h1 id="hero-title">Your music server, <span class="grad">played beautifully.</span></h1>
+          <p class="lede">
+            A music player for Navidrome, Gonic, Airsonic and other Subsonic servers.
+            Use it in your browser or on Windows and macOS.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-lift nudge-down" href="#download"><svg><use href="#i-download"/></svg>Download for desktop</a>
+            <a class="btn btn-secondary btn-lift nudge-spin" href="https://nebulamusic.vercel.app" target="_blank" rel="noopener"><svg><use href="#i-globe"/></svg>Open the web player</a>
+          </div>
+          <div class="hero-meta">
+            <span>Free</span>
+            <span>Open source</span>
+            <span>No account</span>
+          </div>
+        </div>
+
+      <div class="hero-shot">
+        <div class="frame">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>Nebula · Home</span></div>
+          <img src="assets/home.webp" width="1800" height="1125"
+               alt="Nebula home screen in dark mode with a featured album, Quick Picks and the playback dock">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="servers" aria-label="Compatible servers">
+    <div class="wrap">
+      <span class="label">Connects to</span>
+      <ul>
+        <li><a href="https://www.navidrome.org/" target="_blank" rel="noopener">Navidrome</a></li>
+        <li><a href="https://github.com/sentriz/gonic" target="_blank" rel="noopener">Gonic</a></li>
+        <li><a href="https://airsonic.github.io/" target="_blank" rel="noopener">Airsonic</a></li>
+        <li>Any Subsonic server</li>
+      </ul>
+      <span class="api">Subsonic API 1.14.0 – 1.16.1 · OpenSubsonic</span>
+    </div>
+  </section>
+
+  <section class="section" id="features" aria-labelledby="features-title">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="label">Features</span>
+        <h2 id="features-title">Built for your own library.</h2>
+        <p>Nebula connects straight to your server. No account, no tracking.</p>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-media">
+          <div class="frame">
+            <img src="assets/player.webp" width="1800" height="1125" loading="lazy"
+                 alt="Full-screen player showing Synthesizer Love by Neon Void with transport controls">
+          </div>
+        </div>
+        <div class="feature-copy">
+          <span class="tag flame">Playback</span>
+          <h3>Full-screen player.</h3>
+          <p>Artwork, controls and visualizers in one focused view.</p>
+          <ul class="ticks">
+            <li><svg><use href="#i-check"/></svg><span>Speed and pitch per track</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Five visualizers</span></li>
+            <li><svg><use href="#i-check"/></svg><span>ReplayGain and AutoEq</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Internet radio</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="feature-row flip">
+        <div class="feature-media">
+          <div class="frame">
+            <img src="assets/lyrics.webp" width="1800" height="1125" loading="lazy"
+                 alt="Synced lyrics view with the current line highlighted">
+          </div>
+        </div>
+        <div class="feature-copy">
+          <span class="tag">Lyrics</span>
+          <h3>Lyrics that follow the song.</h3>
+          <p>Synced lyrics from your server, with fallback providers when it has none.</p>
+        </div>
+      </div>
+
+      <div class="feature-row">
+        <div class="feature-media glow-strong">
+          <div class="frame">
+            <img src="assets/light.webp" width="1800" height="1125" loading="lazy"
+                 alt="Nebula in the light theme with the Now Playing panel open on the right">
+          </div>
+        </div>
+        <div class="feature-copy">
+          <span class="tag flame">Desktop</span>
+          <h3>Native on Windows and macOS.</h3>
+          <p>Everything in the web player, plus:</p>
+          <ul class="ticks">
+            <li><svg><use href="#i-check"/></svg><span>Media keys and system controls</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Always-on-top mini-player</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Automatic updates</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Local AI DJ (Windows, experimental)</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="spec" aria-label="More features">
+        <span class="label">Also included</span>
+        <div class="spec-grid">
+          <div class="spec-col">
+            <div class="spec-icon" aria-hidden="true"><svg><use href="#i-play"/></svg></div>
+            <h3>Playback</h3>
+            <ul>
+              <li>Shared queue</li>
+              <li>Automatic transcoding</li>
+              <li>Stream recovery</li>
+            </ul>
+          </div>
+          <div class="spec-col">
+            <div class="spec-icon" aria-hidden="true"><svg><use href="#i-library"/></svg></div>
+            <h3>Library</h3>
+            <ul>
+              <li>Artists, albums, playlists</li>
+              <li>Instant search</li>
+              <li>Demo mode</li>
+            </ul>
+          </div>
+          <div class="spec-col">
+            <div class="spec-icon" aria-hidden="true"><svg><use href="#i-sparkle"/></svg></div>
+            <h3>Extras</h3>
+            <ul>
+              <li>Stream Deck plugin</li>
+              <li>Zen mode</li>
+              <li>Light and dark themes</li>
+            </ul>
+          </div>
+          <div class="spec-col">
+            <div class="spec-icon" aria-hidden="true"><svg><use href="#i-shield"/></svg></div>
+            <h3>Privacy</h3>
+            <ul>
+              <li>No account</li>
+              <li>Password never stored</li>
+              <li>Play history stays local</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section download" id="download" aria-labelledby="download-title">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="label">Download</span>
+        <h2 id="download-title">Get Nebula</h2>
+      </div>
+
+      <div class="platforms">
+        <article class="platform">
+          <div class="platform-icon"><svg aria-hidden="true"><use href="#i-windows"/></svg></div>
+          <div>
+            <h3>Windows</h3>
+            <p class="req">Windows 10 22H2 or 11 · x64</p>
+          </div>
+          <p>Tray, media keys, mini-player and AI DJ.</p>
+          <div class="platform-actions">
+            <a class="btn btn-primary" data-asset="Nebula-{v}-setup.exe"
+               href="https://github.com/lilremark/Nebula-Music/releases/download/v3.0.0/Nebula-3.0.0-setup.exe">
+              <svg><use href="#i-download"/></svg>Download installer (.exe)
+            </a>
+            <span class="alt">Or the <a data-asset="Nebula-{v}-setup.appx" href="https://github.com/lilremark/Nebula-Music/releases/download/v3.0.0/Nebula-3.0.0-setup.appx">.appx package</a></span>
+          </div>
+        </article>
+
+        <article class="platform">
+          <div class="platform-icon"><svg aria-hidden="true"><use href="#i-apple"/></svg></div>
+          <div>
+            <h3>macOS</h3>
+            <p class="req">Apple Silicon (M1 and later)</p>
+          </div>
+          <p>Menu-bar controls, Now Playing and mini-player.</p>
+          <div class="platform-actions">
+            <a class="btn btn-primary" data-asset="Nebula-{v}-arm64.dmg"
+               href="https://github.com/lilremark/Nebula-Music/releases/download/v3.0.0/Nebula-3.0.0-arm64.dmg">
+              <svg><use href="#i-download"/></svg>Download for Mac (.dmg)
+            </a>
+            <span class="alt">Or the <a data-asset="Nebula-{v}-arm64.zip" href="https://github.com/lilremark/Nebula-Music/releases/download/v3.0.0/Nebula-3.0.0-arm64.zip">.zip archive</a></span>
+          </div>
+        </article>
+
+        <article class="platform">
+          <div class="platform-icon"><svg aria-hidden="true"><use href="#i-globe"/></svg></div>
+          <div>
+            <h3>Web</h3>
+            <p class="req">Any modern browser</p>
+          </div>
+          <p>Nothing to install. Works on any device.</p>
+          <div class="platform-actions">
+            <a class="btn btn-secondary" href="https://nebulamusic.vercel.app" target="_blank" rel="noopener">
+              <svg><use href="#i-arrow"/></svg>Open nebulamusic.vercel.app
+            </a>
+            <span class="alt">Or <a href="#docker">host it yourself with Docker</a></span>
+          </div>
+        </article>
+      </div>
+
+      <div class="first-run">
+        <p class="note"><svg aria-hidden="true"><use href="#i-info"/></svg><span><strong>Windows:</strong> if SmartScreen appears, choose <em>More info → Run anyway</em>.</span></p>
+        <p class="note"><svg aria-hidden="true"><use href="#i-info"/></svg><span><strong>macOS:</strong> if the app is blocked, go to <em>System Settings → Privacy &amp; Security → Open Anyway</em>.</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="docker" aria-labelledby="docker-title">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="label">Self-host</span>
+        <h2 id="docker-title">Run your own copy with Docker.</h2>
+        <p>Host the web player yourself with the <a href="https://hub.docker.com/r/lilremark/nebula-music" target="_blank" rel="noopener">official image</a>.</p>
+      </div>
+
+      <div class="docker-grid">
+        <ol class="steps">
+          <li>
+            <div>
+              <h3>Start the container</h3>
+              <p>Use <code>docker run</code> or Compose.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Open Nebula</h3>
+              <p>Go to <code>http://localhost:8080</code>.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Connect your server</h3>
+              <p>Enter your server URL and sign in. The server needs HTTPS and CORS enabled.</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <h3>Update</h3>
+              <p>Pull the latest image and restart the container.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="terminal">
+          <div class="term-head" role="tablist" aria-label="Setup method">
+            <button class="tab" role="tab" id="tab-run" aria-selected="true" aria-controls="panel-run" type="button">docker run</button>
+            <button class="tab" role="tab" id="tab-compose" aria-selected="false" aria-controls="panel-compose" type="button" tabindex="-1">Compose</button>
+            <button class="copy" type="button" id="copy-btn"><svg aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button>
+          </div>
+          <div class="term-body" role="tabpanel" id="panel-run" aria-labelledby="tab-run">
+<pre><code><span class="k">docker</span> pull lilremark/nebula-music:latest
+
+<span class="k">docker</span> run -d \
+  --name nebula-music \
+  --restart unless-stopped \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --security-opt no-new-privileges \
+  --cap-drop ALL \
+  -p 8080:8080 \
+  lilremark/nebula-music:latest</code></pre>
+          </div>
+          <div class="term-body" role="tabpanel" id="panel-compose" aria-labelledby="tab-compose" hidden>
+<pre><code><span class="c"># docker-compose.yml</span>
+<span class="k">services:</span>
+  <span class="k">nebula-music:</span>
+    image: <span class="s">lilremark/nebula-music:${NEBULA_VERSION:-latest}</span>
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - <span class="s">"${NEBULA_PORT:-8080}:8080"</span>
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: [<span class="s">"CMD"</span>, <span class="s">"wget"</span>, <span class="s">"-q"</span>, <span class="s">"--spider"</span>, <span class="s">"http://127.0.0.1:8080/healthz"</span>]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3</code></pre>
+          </div>
+          <p class="term-foot">More options in the <a href="https://github.com/lilremark/Nebula-Music/blob/main/docker/README.md" target="_blank" rel="noopener">Docker guide</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="try" style="padding-top:0" aria-labelledby="web-title">
+    <div class="wrap">
+      <div class="web-cta">
+        <div>
+          <h2 id="web-title">Try it in your browser.</h2>
+          <p>Connect your server, or explore the demo library.</p>
+        </div>
+        <a class="btn btn-primary btn-lift nudge-out" href="https://nebulamusic.vercel.app" target="_blank" rel="noopener">
+          <span class="url">nebulamusic.vercel.app</span><svg><use href="#i-arrow"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-brand">
+      <a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="34" height="34">Nebula</a>
+      <p>Self-hosted music player for Subsonic servers. MIT licensed.</p>
+    </div>
+    <div class="foot-links">
+      <div>
+        <span class="label">Get Nebula</span>
+        <a href="https://github.com/lilremark/Nebula-Music/releases/latest" target="_blank" rel="noopener">Releases</a>
+        <a href="https://nebulamusic.vercel.app" target="_blank" rel="noopener">Web player</a>
+        <a href="https://hub.docker.com/r/lilremark/nebula-music" target="_blank" rel="noopener">Docker Hub</a>
+      </div>
+      <div>
+        <span class="label">Project</span>
+        <a href="https://github.com/lilremark/Nebula-Music" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/lilremark/Nebula-Music/issues" target="_blank" rel="noopener">Report an issue</a>
+        <a href="https://github.com/lilremark/nebula-music-stream-deck-plugin" target="_blank" rel="noopener">Stream Deck plugin</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // Point download links at the newest stable release. Falls back to the
+  // hard-coded v3.0.0 links if the GitHub API is unreachable or rate-limited.
+  var REPO = "lilremark/Nebula-Music";
+  if (window.fetch) {
+    fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (rel) {
+        if (!rel || !rel.tag_name || !Array.isArray(rel.assets)) return;
+        var tag = rel.tag_name;
+        var version = tag.replace(/^v/, "");
+        var names = rel.assets.map(function (a) { return a.name; });
+        document.querySelectorAll("[data-asset]").forEach(function (el) {
+          var file = el.getAttribute("data-asset").replace("{v}", version);
+          if (names.indexOf(file) !== -1) {
+            el.href = "https://github.com/" + REPO + "/releases/download/" + tag + "/" + file;
+          }
+        });
+        document.querySelectorAll("[data-version]").forEach(function (el) { el.textContent = "v" + version; });
+      })
+      .catch(function () {});
+  }
+
+  // Section progress. The reading line slides from under the header (at the top)
+  // to the bottom of the viewport (at the end), so short final sections still fill.
+  var header = document.querySelector(".site-header");
+  var segs = Array.prototype.slice.call(document.querySelectorAll(".progress a")).map(function (a) {
+    return { link: a, bar: a.querySelector("i"), el: document.getElementById(a.getAttribute("data-section")) };
+  });
+  var ticking = false;
+  function updateProgress() {
+    ticking = false;
+    var y = window.scrollY;
+    var max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    var hh = header.offsetHeight;
+    var ref = y + hh + (Math.min(y, max) / max) * (window.innerHeight - hh);
+    segs.forEach(function (s, i) {
+      var start = s.el.getBoundingClientRect().top + y;
+      var next = segs[i + 1];
+      var end = next ? next.el.getBoundingClientRect().top + y : document.documentElement.scrollHeight;
+      var p = Math.min(1, Math.max(0, (ref - start) / Math.max(1, end - start)));
+      s.bar.style.setProperty("--p", p.toFixed(4));
+      var active = ref >= start && (ref < end || (!next && p >= 1));
+      s.link.classList.toggle("active", active);
+      if (active) s.link.setAttribute("aria-current", "true"); else s.link.removeAttribute("aria-current");
+    });
+  }
+  function requestProgress() { if (!ticking) { ticking = true; requestAnimationFrame(updateProgress); } }
+  window.addEventListener("scroll", requestProgress, { passive: true });
+  window.addEventListener("resize", requestProgress);
+  window.addEventListener("load", requestProgress);
+  updateProgress();
+
+  // Background: faint drifting waveforms in the logo's colors
+  var canvas = document.getElementById("bg");
+  var ctx = canvas.getContext && canvas.getContext("2d");
+  if (ctx) {
+    var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var W = 0, H = 0, last = 0;
+    var waves = [
+      { y: .18, a: 26, f: 1.6, s: .22, w: .10 },
+      { y: .34, a: 42, f: 1.1, s: -.16, w: .07 },
+      { y: .52, a: 30, f: 2.1, s: .28, w: .09 },
+      { y: .68, a: 48, f: .9,  s: -.12, w: .06 },
+      { y: .84, a: 22, f: 2.6, s: .2,  w: .08 }
+    ];
+    function size() {
+      // Faint, soft lines don't need retina resolution; 1x keeps each frame cheap.
+      var dpr = 1;
+      W = window.innerWidth; H = window.innerHeight;
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function draw(t) {
+      ctx.clearRect(0, 0, W, H);
+      var grad = ctx.createLinearGradient(0, 0, W, 0);
+      grad.addColorStop(0, "rgba(6,182,212,1)");
+      grad.addColorStop(1, "rgba(139,92,246,1)");
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.4;
+      waves.forEach(function (wv, i) {
+        ctx.globalAlpha = wv.w;
+        ctx.beginPath();
+        for (var x = 0; x <= W; x += 10) {
+          var u = x / W;
+          var env = Math.sin(Math.PI * u);
+          var yy = wv.y * H
+            + wv.a * env * Math.sin(u * Math.PI * 2 * wv.f + t * wv.s + i)
+            + wv.a * .35 * env * Math.sin(u * Math.PI * 2 * wv.f * 2.7 - t * wv.s * 1.6);
+          if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+        }
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
+    }
+    function frame(now) {
+      if (!document.hidden) draw(now / 1000);
+      requestAnimationFrame(frame);
+    }
+    size();
+    window.addEventListener("resize", function () { size(); if (still) draw(0); });
+    if (still) draw(0); else requestAnimationFrame(frame);
+  }
+
+  // Docker tabs
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  function select(tab) {
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute("aria-selected", on ? "true" : "false");
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+    });
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { select(t); });
+    t.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      var next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      select(next); next.focus();
+    });
+  });
+
+  // Copy the visible snippet
+  var copyBtn = document.getElementById("copy-btn");
+  var copyLabel = copyBtn.querySelector("span");
+  copyBtn.addEventListener("click", function () {
+    var panel = document.querySelector('.term-body[role="tabpanel"]:not([hidden]) code');
+    var text = panel.textContent;
+    function done(msg) {
+      copyLabel.textContent = msg;
+      setTimeout(function () { copyLabel.textContent = "Copy"; }, 1800);
+    }
+    function fallback() {
+      var range = document.createRange();
+      range.selectNodeContents(panel);
+      var sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      done("Selected");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done("Copied"); }, fallback);
+    } else { fallback(); }
+  });
+})();
+</script>
+</body>
+</html>
