@@ -67,3 +67,10 @@ sent only to the configured server over the app's proxy. Never include vault
 contents, `app://nebula` proxy URLs with embedded credentials, or full signed
 stream URLs in a security report without redacting them.
 
+Opt-in crash reports are captured in the main process only and scrubbed before
+sending (`electron/crashScrub.ts`). If you find a way for a crash report to
+carry credentials, server addresses, file paths with a user name, or other
+personal data, report it as a vulnerability. See
+[docs/privacy.md](./docs/privacy.md) and
+[ADR 0005](./docs/adr/0005-anonymous-crash-reporting.md).
+

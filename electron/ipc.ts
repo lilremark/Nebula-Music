@@ -55,6 +55,11 @@ export const IPC = {
     openDownloadPage: 'nebula:updater:open-download-page',
     status: 'nebula:updater:status',
   },
+  diagnostics: {
+    getCrashReporting: 'nebula:diagnostics:get-crash-reporting',
+    setCrashReporting: 'nebula:diagnostics:set-crash-reporting',
+    report: 'nebula:diagnostics:report',
+  },
   aiDj: {
     modelsStatus: 'nebula:aiDj:modelsStatus',
     downloadModels: 'nebula:aiDj:downloadModels',

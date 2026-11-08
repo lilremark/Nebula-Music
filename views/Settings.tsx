@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     Activity, AlertCircle, Cable, CheckCircle, Download, Headphones, Keyboard, Layout, Loader2, LogOut, Monitor,
-    Moon, Palette, RefreshCw, Search, Server, ShieldAlert, Sliders, Sun, Unplug, X
+    Moon, Palette, RefreshCw, Search, Server, ShieldAlert, ShieldCheck, Sliders, Sun, Unplug, X
 } from 'lucide-react';
+import { useCrashReporting } from '../hooks/useCrashReporting';
+import { CrashReportsDisclosure } from '../components/CrashReportsDisclosure';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
 import { SettingPanel, ToggleRow } from '../components/ui';
@@ -192,6 +194,39 @@ const DesktopSettingsPanel = () => {
                     onChange={(v) => setValue('taskbarProgressEnabled', v)}
                 />
             )}
+        </SettingPanel>
+    );
+};
+
+const CrashReportsPanel = () => {
+    const { state, setEnabled } = useCrashReporting();
+    const [saving, setSaving] = useState(false);
+
+    if (!state?.available) return null;
+
+    const change = async (enabled: boolean) => {
+        setSaving(true);
+        try {
+            await setEnabled(enabled);
+        } catch (error) {
+            console.warn('[nebula] failed to save crash report preference', error);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <SettingPanel icon={ShieldCheck} title="Crash Reports" description="Anonymous and off unless you turn it on.">
+            <ToggleRow
+                label="Share anonymous crash reports"
+                description="When Nebula crashes, send error details that help fix the problem. Turning this off also deletes your install ID."
+                checked={state.consent === 'enabled'}
+                disabled={saving}
+                onChange={(v) => void change(v)}
+            />
+            <div className="px-5 py-4">
+                <CrashReportsDisclosure />
+            </div>
         </SettingPanel>
     );
 };
@@ -1077,6 +1112,7 @@ export const SettingsView: React.FC = () => {
 
                         {activeSettingsJump === 'settings-desktop-integration' && <DesktopSettingsPanel />}
                         {activeSettingsJump === 'settings-desktop-integration' && <DesktopUpdatesPanel />}
+                        {activeSettingsJump === 'settings-desktop-integration' && <CrashReportsPanel />}
                         {djAvailable && activeSettingsJump === 'settings-ai-dj' && <AiDjSettings />}
                 </div>
             </div>

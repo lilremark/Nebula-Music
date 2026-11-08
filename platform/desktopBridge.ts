@@ -1,6 +1,7 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
 import type { UpdaterState } from '../electron/updater';
+import type { CrashReportingState, RendererErrorReport } from '../electron/crashProtocol';
 
 /**
  * The shape of the `window.desktop` bridge exposed by the Electron preload
@@ -65,6 +66,12 @@ export interface DesktopBridge {
     installAndRestart(): Promise<void>;
     openDownloadPage(): Promise<boolean>;
     onStatus(handler: (state: UpdaterState) => void): () => void;
+  };
+  diagnostics: {
+    getCrashReporting(): Promise<CrashReportingState>;
+    setCrashReporting(enabled: boolean): Promise<CrashReportingState>;
+    /** Fire-and-forget; the main process drops it unless the user opted in. */
+    report(report: RendererErrorReport): void;
   };
   aiDj?: import('./types').AiDjApi;
 }

@@ -116,6 +116,10 @@ export const createDesktopPlatform = (): Platform => {
       openDownloadPage: () => bridge.updater.openDownloadPage(),
       onStatus: (handler) => bridge.updater.onStatus(handler),
     },
+    diagnostics: {
+      getCrashReporting: () => bridge.diagnostics.getCrashReporting(),
+      setCrashReporting: (enabled) => bridge.diagnostics.setCrashReporting(enabled),
+    },
     aiDj: isLocalDjPlatform(info) ? bridge.aiDj : undefined,
     fetchJson,
     resolveMediaUrl,

@@ -63,3 +63,26 @@ it('migrates old local DJ settings to visible transcription and persists opt-out
   expect(desktopSettingsSchema.parse({ aiDj: { local: legacy } }).aiDj.local.showTranscript).toBe(true);
   expect(desktopSettingsSchema.parse({ aiDj: { local: { ...legacy, showTranscript: false } } }).aiDj.local.showTranscript).toBe(false);
 });
+
+describe('desktopSettingsSchema crash reporting', () => {
+  it('defaults to not asked, with no install id, for settings files written before the feature', () => {
+    const parsed = desktopSettingsSchema.parse({ schemaVersion: 1, trayOnClose: false, updateChannel: 'beta' });
+    expect(parsed.crashReports).toBe('unset');
+    expect(parsed.crashReportsInstallId).toBeNull();
+    expect(parsed.trayOnClose).toBe(false);
+  });
+
+  it('accepts an opt-in with a UUID install id', () => {
+    const parsed = desktopSettingsSchema.parse({
+      crashReports: 'enabled',
+      crashReportsInstallId: '6b0b9a5e-2f2e-4a0c-9c43-0d0f7f1b0a11',
+    });
+    expect(parsed.crashReports).toBe('enabled');
+    expect(parsed.crashReportsInstallId).toBe('6b0b9a5e-2f2e-4a0c-9c43-0d0f7f1b0a11');
+  });
+
+  it('rejects unknown consent values and non-UUID install ids', () => {
+    expect(desktopSettingsSchema.safeParse({ crashReports: 'yes' }).success).toBe(false);
+    expect(desktopSettingsSchema.safeParse({ crashReportsInstallId: 'alex@example.com' }).success).toBe(false);
+  });
+});

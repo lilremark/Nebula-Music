@@ -14,6 +14,7 @@ import { useAdaptiveColors } from './hooks/useAdaptiveColors';
 import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { PlaybackProgress } from './components/player/PlaybackProgress';
 import { PlatformProvider, usePlatform } from './platform/PlatformContext';
+import { installCrashForwarding } from './platform/crashForwarding';
 import { createCommandClient } from './playback/commandClient';
 import type { DesktopSnapshot, DesktopUpcomingTrack } from './playback/desktopProtocol';
 
@@ -229,6 +230,8 @@ const MiniPlayerApp: React.FC = () => (
     <MiniPlayerContent />
   </PlatformProvider>
 );
+
+installCrashForwarding();
 
 const rootElement = document.getElementById('mini-player-root');
 if (!rootElement) {

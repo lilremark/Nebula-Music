@@ -37,6 +37,19 @@ import { DjModelManager } from './aiDj/modelManager';
 import { LocalDjRuntime } from './aiDj/localRuntime';
 import { djPrepareSchema } from './aiDj/localProtocol';
 import { randomUUID } from 'node:crypto';
+import os from 'node:os';
+import { createCrashReporting, type CrashReporting } from './crashReporting';
+import { rendererErrorReportSchema } from './crashProtocol';
+
+// Injected by esbuild from NEBULA_CRASH_DSN; empty in local and fork builds,
+// which leaves crash reporting unavailable.
+declare const __NEBULA_CRASH_DSN__: string;
+const CRASH_DSN = typeof __NEBULA_CRASH_DSN__ === 'string' ? __NEBULA_CRASH_DSN__ : '';
+
+// Crash-report consent and the install id change only through the diagnostics
+// IPC, which validates the transition; the install id is never sent to a renderer.
+const RENDERER_WRITE_BLOCKED_SETTINGS = new Set(['crashReports', 'crashReportsInstallId']);
+const RENDERER_READ_BLOCKED_SETTINGS = new Set(['crashReportsInstallId']);
 
 const SCHEME = 'app';
 const PROTOCOL_URL = 'app://nebula/';
@@ -77,6 +90,7 @@ let miniPlayerWindow: BrowserWindow | null = null;
 let settingsStore: SettingsStore;
 let credentialVault: CredentialVault;
 let updater: Updater;
+let crashReporting: CrashReporting;
 let isQuitting = false;
 let lastSnapshot: DesktopSnapshot | null = null;
 
@@ -522,11 +536,12 @@ const registerIpc = (): void => {
   );
 
   handleTrusted(IPC.settings.get, (_event, key: unknown) => {
-    if (typeof key !== 'string') return null;
+    if (typeof key !== 'string' || RENDERER_READ_BLOCKED_SETTINGS.has(key)) return null;
     return settingsStore.get(key) ?? null;
   });
   handleTrusted(IPC.settings.set, async (_event, key: unknown, value: unknown) => {
     if (typeof key !== 'string') return;
+    if (RENDERER_WRITE_BLOCKED_SETTINGS.has(key)) throw new Error(`Desktop setting "${key}" is not writable here.`);
     await settingsStore.set(key, value);
     if (key === 'mediaKeysEnabled') {
       if (value === true) {
@@ -657,6 +672,21 @@ const registerIpc = (): void => {
     return url ? openExternalSafely(url) : false;
   });
 
+  handleTrusted(IPC.diagnostics.getCrashReporting, () => crashReporting.getState());
+  // Consent is changed only from Settings or the consent banner in the main window.
+  handleTrusted(IPC.diagnostics.setCrashReporting, (event, enabled: unknown) => {
+    if (event.sender !== mainWindow?.webContents || typeof enabled !== 'boolean') {
+      return crashReporting.getState();
+    }
+    return crashReporting.setConsent(enabled);
+  });
+  onTrusted(IPC.diagnostics.report, (event, report: unknown) => {
+    const parsed = rendererErrorReportSchema.safeParse(report);
+    if (!parsed.success) return;
+    const windowName = event.sender === miniPlayerWindow?.webContents ? 'mini-player' : 'main';
+    crashReporting.reportRendererError(parsed.data, windowName);
+  });
+
   // Do not register model download or inference endpoints on unsupported OSes.
   if (process.platform !== 'win32') return;
   handleTrusted(IPC.aiDj.modelsStatus, async event => {
@@ -764,6 +794,36 @@ if (!gotLock) {
       path.join(app.getPath('userData'), 'vault.json'),
       createSafeStorageCipher(),
     );
+
+    // Started before any window so an early main-process error is captured.
+    // Does nothing (and never loads the SDK) unless the user opted in.
+    crashReporting = createCrashReporting({
+      dsn: CRASH_DSN,
+      version: app.getVersion(),
+      isPackaged: app.isPackaged,
+      homeDir: os.homedir(),
+      os: {
+        name: process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : process.platform,
+        version: process.getSystemVersion(),
+      },
+      settings: settingsStore,
+      // A separate bundle, required at runtime so esbuild leaves it out of main.cjs.
+      loadSentry: async () => require(path.join(__dirname, 'sentryMain.cjs')) as typeof import('./sentryMain'),
+      randomUUID,
+    });
+    await crashReporting.start();
+    app.on('render-process-gone', (_event, contents, details) => {
+      const process = contents === mainWindow?.webContents ? 'main-window'
+        : contents === miniPlayerWindow?.webContents ? 'mini-player' : 'renderer';
+      crashReporting.reportProcessGone({ process, reason: details.reason, exitCode: details.exitCode });
+    });
+    app.on('child-process-gone', (_event, details) => {
+      crashReporting.reportProcessGone({
+        process: details.serviceName || details.name || details.type,
+        reason: details.reason,
+        exitCode: details.exitCode,
+      });
+    });
 
     // Playback does not need device capture, location, or other browser grants.
     // Cover both asynchronous requests and Chromium's synchronous checks.

@@ -26,8 +26,8 @@
     "build:electron": "node esbuild.config.mjs && vite build",
     "start:electron": "node esbuild.config.mjs && vite build && electron .",
     "preview": "vite preview",
-    "dist:win": "node scripts/prepareAiDjAssets.mjs --verify && node esbuild.config.mjs && vite build && electron-builder --win --publish never",
-    "dist:mac": "node esbuild.config.mjs && vite build && electron-builder --mac --publish never",
+    "dist:win": "node scripts/prepareAiDjAssets.mjs --verify && node esbuild.config.mjs && vite build && node scripts/sentrySourcemaps.mjs && electron-builder --win --publish never",
+    "dist:mac": "node esbuild.config.mjs && vite build && node scripts/sentrySourcemaps.mjs && electron-builder --mac --publish never",
     "postinstall": "node scripts/patchEchogarden.mjs",
     "dj:assets": "node scripts/prepareAiDjAssets.mjs",
     "dj:verify": "node esbuild.config.mjs && esbuild scripts/verifyAiDjRuntime.ts --bundle --platform=node --format=cjs --external:electron --outfile=electron/dist/verifyAiDjRuntime.cjs && electron electron/dist/verifyAiDjRuntime.cjs",
@@ -44,6 +44,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@sentry/cli": "3.8.2",
+    "@sentry/electron": "8.3.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/blueimp-md5": "^2.18.2",
     "@types/flubber": "^0.4.0",
@@ -101,7 +103,10 @@
     "microsoft-cognitiveservices-speech-sdk": {
       "ws": "^8.22.0"
     },
-    "minimatch@>=7.0.0 <11.0.1": "11.0.5"
+    "minimatch@>=7.0.0 <11.0.1": "11.0.5",
+    "@sentry/bundler-plugins": {
+      "glob": "^14.0.4"
+    }
   },
   "allowScripts": {
     "fsevents@2.3.3": true,

@@ -47,6 +47,10 @@ export default defineConfig({
     // hls.js is lazy-loaded only for browser-managed .m3u8 radio streams.
     // Its isolated async chunk is slightly above Vite's default 500 kB warning budget.
     chunkSizeWarningLimit: 600,
+    // Release CI writes maps without a sourceMappingURL comment, uploads them
+    // to Sentry for crash-report stack traces, and deletes them before
+    // packaging (scripts/sentrySourcemaps.mjs). They are never shipped.
+    sourcemap: process.env.NEBULA_SOURCEMAPS === '1' ? 'hidden' : false,
   },
   server: {
     port: 3000,

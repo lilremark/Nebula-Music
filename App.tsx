@@ -15,6 +15,7 @@ import { SearchModal } from './components/SearchModal';
 import { SetupScreen } from './components/SetupScreen';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { UpdateBanner } from './components/UpdateBanner';
+import { CrashReportsBanner } from './components/CrashReportsBanner';
 import { ServerConnectionBanner } from './components/ServerConnectionBanner';
 
 import { VISUALIZER_MODES } from './types';
@@ -189,6 +190,7 @@ export const AppContent: React.FC<{
 
       {/* Top-level update banner (desktop only) */}
       <UpdateBanner />
+      <CrashReportsBanner />
       {!isExpanded && !isZenMode && <ServerConnectionBanner />}
 
       {/* Split Screen Layout */}
@@ -247,7 +249,7 @@ export const AppContent: React.FC<{
         >
           <div className={`min-h-full nebula-player-content-space ${showDesktopPlaybackBar ? 'nebula-content-with-dock' : isPlayerVisible ? 'pb-24 lg:pb-8' : 'pb-8'}`}>
             <BlurFade key={`${currentView}-${String(viewData ?? '')}`} duration={0.3} blur="4px" offset={10}>
-              <ViewErrorBoundary key={currentView}>
+              <ViewErrorBoundary key={currentView} view={currentView}>
                 <Suspense fallback={<div className="p-8 text-neutral-500" role="status">Loading view…</div>}>
                   <ViewComponent />
                 </Suspense>

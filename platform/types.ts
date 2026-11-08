@@ -1,6 +1,7 @@
 import type { DesktopCommandEnvelope, DesktopSnapshot } from '../playback/desktopProtocol';
 import type { SubsonicCredentials } from '../types';
 import type { UpdaterState } from '../electron/updater';
+import type { CrashReportingState } from '../electron/crashProtocol';
 
 export type PlatformKind = 'web' | 'desktop';
 
@@ -90,6 +91,12 @@ export interface UpdaterApi {
   onStatus(handler: (state: UpdaterState) => void): () => void;
 }
 
+/** Opt-in crash reporting. Unavailable in the web build and in builds without a DSN. */
+export interface DiagnosticsApi {
+  getCrashReporting(): Promise<CrashReportingState>;
+  setCrashReporting(enabled: boolean): Promise<CrashReportingState>;
+}
+
 export type AiDjApi = import('../electron/aiDj/localProtocol').LocalDjApi;
 
 /**
@@ -108,6 +115,7 @@ export interface Platform {
   readonly miniPlayer: MiniPlayerControl;
   readonly power: PlatformPower;
   readonly updater: UpdaterApi;
+  readonly diagnostics: DiagnosticsApi;
   readonly aiDj?: AiDjApi;
   /** JSON fetch routed through the main process on desktop (bypasses CORS and
    * mixed-content policy for Subsonic servers). Web build uses global fetch. */
