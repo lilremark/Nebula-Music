@@ -51,11 +51,22 @@ app.on('browser-window-created', (_event, win) => {
           secureHttpDefault: await bridge?.settings.get('permitInsecureHttp'),
           maximized: await bridge?.window.isMaximized(),
           rendererMounted: Boolean(document.querySelector('#root > *, #mini-player-root > *')),
+          crashReporting: await bridge?.diagnostics.getCrashReporting(),
+          installIdReadable: (await bridge?.settings.get('crashReportsInstallId')) !== null,
+          consentWritable: await bridge?.settings.set('crashReports', 'enabled').then(() => true, () => false),
         };
       })()`);
       if (result.info?.os !== process.platform || result.djApiAvailable !== (process.platform === 'win32') || result.secureHttpDefault !== false ||
           typeof result.maximized !== 'boolean' || !result.rendererMounted) {
         throw new Error(`Invalid desktop startup result: ${JSON.stringify(result)}`);
+      }
+      // Crash reporting is opt-in: a fresh profile has not been asked, the
+      // renderer can neither grant consent through settings nor read the
+      // install id, and the Sentry SDK bundle has not been loaded.
+      const sentryLoaded = Object.keys(require.cache).some((file) => file.endsWith('sentryMain.cjs'));
+      if (result.crashReporting?.consent !== 'unset' || typeof result.crashReporting?.available !== 'boolean' ||
+          result.installIdReadable || result.consentWritable || sentryLoaded) {
+        throw new Error(`Invalid crash reporting state: ${JSON.stringify({ ...result.crashReporting, installIdReadable: result.installIdReadable, consentWritable: result.consentWritable, sentryLoaded })}`);
       }
       loaded += 1;
       if (loaded === 1) {

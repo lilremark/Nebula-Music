@@ -65,6 +65,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Check the web bundle has no source maps
+        run: test -z "$(find dist -name '*.map' -print -quit)"
       - run: npm audit --audit-level=low
       - name: Package web bundle
         run: cd dist && zip -qr "../Nebula-${{ steps.release-version.outputs.version }}-web.zip" .
@@ -148,7 +150,23 @@ jobs:
       - run: npm ci
       - run: node node_modules/electron/install.js
       - run: npm run dj:assets
-      - run: npm run dist:win
+      # Crash reporting: release builds carry the Sentry DSN (reporting stays
+      # off until the user opts in). Source maps are uploaded on tags only and
+      # always deleted before packaging. The token is scoped to this step.
+      - name: Package
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && -z "${NEBULA_CRASH_DSN}" ]]; then
+            echo "::error::Add the SENTRY_DSN repository secret to build crash reporting into release builds."
+            exit 1
+          fi
+          npm run dist:win
+        env:
+          NEBULA_CRASH_DSN: ${{ secrets.SENTRY_DSN }}
+          NEBULA_SOURCEMAPS: "1"
+          NEBULA_SOURCEMAPS_UPLOAD: ${{ github.ref_type == 'tag' && '1' || '0' }}
+          SENTRY_AUTH_TOKEN: ${{ github.ref_type == 'tag' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_ORG: remark-industries
+          SENTRY_PROJECT: nebula-music
       - run: npm run test:desktop
       - run: npm run test:dj-platforms
       - run: node scripts/releaseVersion.mjs --tag "v${RELEASE_VERSION}"
@@ -182,7 +200,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node node_modules/electron/install.js
-      - run: npm run dist:mac
+      # See the Windows job's Package step.
+      - name: Package
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && -z "${NEBULA_CRASH_DSN}" ]]; then
+            echo "::error::Add the SENTRY_DSN repository secret to build crash reporting into release builds."
+            exit 1
+          fi
+          npm run dist:mac
+        env:
+          NEBULA_CRASH_DSN: ${{ secrets.SENTRY_DSN }}
+          NEBULA_SOURCEMAPS: "1"
+          NEBULA_SOURCEMAPS_UPLOAD: ${{ github.ref_type == 'tag' && '1' || '0' }}
+          SENTRY_AUTH_TOKEN: ${{ github.ref_type == 'tag' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          SENTRY_ORG: remark-industries
+          SENTRY_PROJECT: nebula-music
       - run: npm run test:desktop
       - run: npm run test:dj-platforms
       - run: node scripts/releaseVersion.mjs --tag "v${RELEASE_VERSION}"
@@ -266,3 +298,34 @@ jobs:
         run: gh release edit "v${RELEASE_VERSION}" --draft=false --prerelease
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # Links the release's commits in Sentry (suspect commits) and finalizes it.
+  # Betas are published above, so their deploy is recorded here; stable drafts
+  # are published by hand, which records the deploy in sentry-deploy.yml.
+  sentry-release:
+    name: Finalize Sentry release
+    if: github.ref_type == 'tag' && !cancelled() && needs.draft-release.result == 'success'
+    needs: [verify, draft-release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      # Only sentry-cli is needed; no install scripts run while the token is unset.
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Finalize release
+        run: node scripts/sentryRelease.mjs finalize --version "${RELEASE_VERSION}" ${{ needs.verify.outputs.is-beta == 'true' && '--deploy' || '' }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: remark-industries
+          SENTRY_PROJECT: nebula-music

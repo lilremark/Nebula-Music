@@ -113,3 +113,10 @@ When a beta line matures:
 - Local AI DJ currently requires Windows x64; the macOS beta includes the
   current music-player UI and playback features without local AI DJ inference.
 - Stable users are never offered pre-release builds.
+- Release builds can send opt-in crash reports to Sentry, tagged with the
+  environment `beta` or `stable` by version
+  ([ADR 0005](../adr/0005-anonymous-crash-reporting.md)). Tag builds need the
+  `SENTRY_DSN` and `SENTRY_AUTH_TOKEN` repository secrets; the workflow fails
+  without the DSN. Each tag creates and finalizes a Sentry release with its
+  commits; a beta deploy is recorded on publish, and a stable deploy when its
+  draft is published (`sentry-deploy.yml`).

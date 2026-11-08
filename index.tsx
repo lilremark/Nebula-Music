@@ -3,7 +3,10 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from './context/ThemeContext';
 import { PlatformProvider } from './platform/PlatformContext';
+import { installCrashForwarding, reportRendererError } from './platform/crashForwarding';
 import './next-ui.css';
+
+installCrashForwarding();
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -37,6 +40,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
+    reportRendererError('boundary', error, { componentStack: errorInfo.componentStack });
   }
 
   public render() {

@@ -67,6 +67,11 @@ export const desktopSettingsSchema = z.object({
   permitInsecureHttp: z._default(z.boolean(), false),
   windowBounds: z._default(windowBoundsSchema, null),
   updateChannel: z._default(z.enum(['stable', 'beta']), 'stable'),
+  // Crash reporting is opt-in; 'unset' means the user has not been asked yet.
+  // The install id is a random UUID created on opt-in and cleared on opt-out.
+  // Both are written only by the diagnostics IPC, never by settings:set.
+  crashReports: z._default(z.enum(['unset', 'enabled', 'disabled']), 'unset'),
+  crashReportsInstallId: z._default(z.nullable(z.uuid()), null),
   aiDj: z._default(aiDjSettingsSchema, AI_DJ_SETTINGS_DEFAULTS),
 });
 
@@ -82,5 +87,7 @@ export const DESKTOP_SETTINGS_DEFAULTS: DesktopSettings = {
   permitInsecureHttp: false,
   windowBounds: null,
   updateChannel: 'stable',
+  crashReports: 'unset',
+  crashReportsInstallId: null,
   aiDj: { ...AI_DJ_SETTINGS_DEFAULTS },
 };

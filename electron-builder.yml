@@ -7,6 +7,7 @@ files:
   - electron/dist/main.cjs
   - electron/dist/preload.cjs
   - electron/dist/voiceWorker.cjs
+  - electron/dist/sentryMain.cjs
   - electron/assets/**/*
   - package.json
 asar: true
@@ -27,6 +28,7 @@ win:
     - electron/dist/main.cjs
     - electron/dist/preload.cjs
     - electron/dist/voiceWorker.cjs
+    - electron/dist/sentryMain.cjs
     - electron/assets/**/*
     - package.json
     - "!**/node_modules/onnxruntime-node/bin/*/{darwin,linux}/**"
@@ -64,6 +66,7 @@ mac:
     - dist/**/*
     - electron/dist/main.cjs
     - electron/dist/preload.cjs
+    - electron/dist/sentryMain.cjs
     - electron/assets/**/*
     - package.json
     - "!node_modules/**"

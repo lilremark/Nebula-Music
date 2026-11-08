@@ -1,0 +1,36 @@
+# Records a Sentry deploy when a stable release is published by hand, so the
+# `stable` environment shows when users actually started receiving it.
+# Betas are published by the Release workflow with GITHUB_TOKEN, which does not
+# trigger this event; their deploy is recorded there (sentry-release job).
+name: Sentry deploy
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Record stable deploy
+    if: ${{ !github.event.release.prerelease && startsWith(github.event.release.tag_name, 'v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Record deploy
+        run: node scripts/sentryRelease.mjs deploy --version "${TAG#v}"
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: remark-industries
+          SENTRY_PROJECT: nebula-music

@@ -1,10 +1,15 @@
 import React from 'react';
+import { reportRendererError } from '../platform/crashForwarding';
 
 /** Keep a failed route chunk from unmounting the playback controls and owner. */
-export class ViewErrorBoundary extends React.Component<React.PropsWithChildren, { failed: boolean }> {
+export class ViewErrorBoundary extends React.Component<React.PropsWithChildren<{ view?: string }>, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() { return { failed: true }; }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    reportRendererError('view-boundary', error, { componentStack: info.componentStack, view: this.props.view });
+  }
 
   render() {
     if (!this.state.failed) return this.props.children;

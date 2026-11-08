@@ -1,6 +1,7 @@
 import type {
   CredentialVault,
   DesktopSettingsApi,
+  DiagnosticsApi,
   PlaybackTransport,
   Platform,
   PlatformApp,
@@ -70,6 +71,11 @@ const webUpdater: UpdaterApi = {
   onStatus: () => noopUnsubscribe,
 };
 
+const webDiagnostics: DiagnosticsApi = {
+  getCrashReporting: async () => ({ available: false, consent: 'unset' }),
+  setCrashReporting: async () => ({ available: false, consent: 'unset' }),
+};
+
 const webInfo: PlatformInfo = {
   kind: 'web',
   os: 'web',
@@ -103,6 +109,7 @@ export const createWebPlatform = (): Platform => ({
   miniPlayer: webMiniPlayer,
   power: webPower,
   updater: webUpdater,
+  diagnostics: webDiagnostics,
   fetchJson: webSubsonicTransport.fetchJson,
   resolveMediaUrl: (url) => url,
 });

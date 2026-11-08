@@ -323,6 +323,14 @@ in the UI and stored in the browser.
 To reset the application completely, clear the site data for the Nebula origin
 in your browser.
 
+### Crash reports (desktop, opt-in)
+
+Nebula collects no analytics. The desktop app asks once whether to send
+anonymous crash reports and sends nothing unless you choose **Share**. Reports
+leave out server addresses, credentials, API keys and personal file paths, and
+you can turn them off in **Settings → Desktop → Crash Reports**. See
+[docs/privacy.md](./docs/privacy.md) for exactly what is sent.
+
 ## Keyboard Shortcuts
 
 | Action | Default |

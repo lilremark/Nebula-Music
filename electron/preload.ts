@@ -134,6 +134,11 @@ const bridge: DesktopBridge = {
       };
     },
   },
+  diagnostics: {
+    getCrashReporting: () => ipcRenderer.invoke(IPC.diagnostics.getCrashReporting),
+    setCrashReporting: (enabled: boolean) => ipcRenderer.invoke(IPC.diagnostics.setCrashReporting, enabled),
+    report: (report) => ipcRenderer.send(IPC.diagnostics.report, report),
+  },
   aiDj: info.os === 'win32' ? {
     modelsStatus: () => ipcRenderer.invoke(IPC.aiDj.modelsStatus),
     downloadModels: () => ipcRenderer.invoke(IPC.aiDj.downloadModels),
