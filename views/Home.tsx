@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
-import { Arc } from 'loading-dev';
 import { useStore } from '../context/Store';
 import { StepPlayer } from '../components/vendor/rare-step-player';
 import { Tabs } from '../components/vendor/aceternity-tabs';
@@ -71,38 +70,43 @@ const SongCard: React.FC<{ song: ISong; songs: ISong[] }> = ({ song, songs }) =>
     );
 };
 
-// Section Header
+// Section Header: one treatment for every Home section (muted icon, 20px
+// title, 32px actions). The accent colour stays reserved for state/action.
 const SectionHeader: React.FC<{
     title: string;
     icon: any;
     onShowMore?: () => void;
     onRefresh?: () => void;
+    refreshLabel?: string;
     loading?: boolean;
-}> = ({ title, icon: Icon, onShowMore, onRefresh, loading }) => (
-    <div className="flex items-center justify-between mb-6 mt-12">
-        <div className="flex items-center gap-3">
-            <Icon className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h2>
+    className?: string;
+}> = ({ title, icon: Icon, onShowMore, onRefresh, refreshLabel, loading, className = 'mt-12' }) => (
+    <div className={`nebula-section-header ${className}`}>
+        <div className="nebula-section-heading">
+            <Icon className="nebula-section-icon" aria-hidden="true" />
+            <h2>{title}</h2>
         </div>
-        <div className="flex gap-2">
-            {onRefresh && (
-                <button
-                    onClick={onRefresh}
-                    className="p-2 rounded bg-neutral-200 dark:bg-white/5 hover:bg-neutral-300 dark:hover:bg-white/10 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition"
-                    aria-label={`Refresh ${title}`}
-                >
-                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-            )}
-            {onShowMore && (
-                <button
-                    onClick={onShowMore}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-neutral-200 dark:bg-white/5 hover:bg-neutral-300 dark:hover:bg-white/10 text-neutral-700 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white text-xs transition"
-                >
-                    View All <ChevronRight className="w-3 h-3" />
-                </button>
-            )}
-        </div>
+        {(onRefresh || onShowMore) && (
+            <div className="nebula-section-actions">
+                {onRefresh && (
+                    <button
+                        type="button"
+                        onClick={onRefresh}
+                        className="nebula-section-action"
+                        data-icon-only
+                        aria-label={refreshLabel ?? `Refresh ${title}`}
+                        aria-busy={loading || undefined}
+                    >
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+                    </button>
+                )}
+                {onShowMore && (
+                    <button type="button" onClick={onShowMore} className="nebula-section-action">
+                        View All <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </button>
+                )}
+            </div>
+        )}
     </div>
 );
 
@@ -273,10 +277,10 @@ export const HomeView: React.FC = () => {
     const rotationStart = currentRotationPage * ROTATION_PAGE_SIZE;
 
     return (
-        <div data-nebula-view="home" className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
+        <div data-nebula-view="home" className="nebula-page pb-32">
             <div className="nebula-home-intro">
                 <div>
-                    <h1>Home</h1>
+                    <h1 className="nebula-page-title">Home</h1>
                 </div>
             </div>
             <HeroSection songs={randomSongs} />
@@ -285,19 +289,14 @@ export const HomeView: React.FC = () => {
             <div data-nebula-home-picks className="grid grid-cols-1 items-start gap-6 mb-12">
                 {/* Quick Picks Grid */}
                 <div>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <Flame className="w-5 h-5 text-orange-500" />
-                            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Quick Picks</h2>
-                        </div>
-                        <button
-                            onClick={async () => { setLoadingQuickPicks(true); await refreshQuickPicks(); setLoadingQuickPicks(false); }}
-                            className="p-2 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 transition dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/60 dark:hover:text-white"
-                            aria-label="Refresh quick picks"
-                        >
-                            {loadingQuickPicks ? <Arc size={18} /> : <RefreshCw className="w-4 h-4" />}
-                        </button>
-                    </div>
+                    <SectionHeader
+                        title="Quick Picks"
+                        icon={Flame}
+                        className=""
+                        refreshLabel="Refresh quick picks"
+                        onRefresh={async () => { setLoadingQuickPicks(true); await refreshQuickPicks(); setLoadingQuickPicks(false); }}
+                        loading={loadingQuickPicks}
+                    />
                     <div className="nebula-quick-grid">
                         {randomSongs.slice(0, 12).map((song, i) => (
                             <SongCard key={`${song.id}-${i}`} song={song} songs={randomSongs} />
@@ -372,7 +371,7 @@ export const HomeView: React.FC = () => {
 
 
             {/* Discovery */}
-            < SectionHeader
+            <SectionHeader
                 title="Daily Discovery"
                 icon={Compass}
                 onShowMore={() => setView('ALBUMS', { sort: 'random' })}
@@ -416,7 +415,7 @@ export const HomeView: React.FC = () => {
                     <AlbumCard key={album.id} album={album} onClick={() => setView('ALBUM_DETAIL', album.id)} />
                 ))}
             </div>
-        </div >
+        </div>
     );
 };
 

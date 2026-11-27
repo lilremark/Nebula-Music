@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../context/Store';
 import { IPlaylist, ISong } from '../types';
-import { Play, Trash2, ListMusic, Shuffle, Save, ListPlus, Info, BarChart2, Heart, Pause } from 'lucide-react';
+import { Play, Trash2, ListMusic, Shuffle, Save, ListPlus, BarChart2, Heart, Pause } from 'lucide-react';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { containsSameSongs } from '../utils/playback';
 import { CollectionHeader } from '../components/CollectionHeader';
@@ -11,6 +11,14 @@ export const PlaylistDetailView: React.FC = () => {
     const [playlist, setPlaylist] = useState<IPlaylist | null>(null);
     const [isSavedPlaylist, setIsSavedPlaylist] = useState(true);
     const [showFullNotes, setShowFullNotes] = useState(false);
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+    // The inline delete confirmation quietly disarms itself after a few seconds.
+    useEffect(() => {
+        if (!confirmingDelete) return;
+        const timer = window.setTimeout(() => setConfirmingDelete(false), 4000);
+        return () => window.clearTimeout(timer);
+    }, [confirmingDelete]);
 
     // Extract colors from playlist cover art for accent backgrounds
     const playlistArtUrl = playlist ? service.getCoverArtUrl(playlist.coverArt || playlist.id, 200) : undefined;
@@ -20,6 +28,7 @@ export const PlaylistDetailView: React.FC = () => {
         let cancelled = false;
         setPlaylist(null);
         setShowFullNotes(false);
+        setConfirmingDelete(false);
         const load = async () => {
             if (typeof viewData === 'string') {
                 let pl = playlists.find(p => p.id === viewData);
@@ -69,7 +78,7 @@ export const PlaylistDetailView: React.FC = () => {
         const s = suffix.toUpperCase();
         const isLossless = s === 'FLAC' || s === 'ALAC' || s === 'WAV';
         return (
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLossless ? 'bg-yellow-500/20 text-yellow-400' : 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/60'}`}>
+            <span data-nebula-track-quality className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLossless ? 'bg-yellow-500/20 text-yellow-400' : 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/60'}`}>
                 {s}
             </span>
         );
@@ -108,24 +117,17 @@ export const PlaylistDetailView: React.FC = () => {
                     </div>
                 )
             } metadata={
-                <div data-nebula-album-meta className="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-white/60">
-                    {playlist.songCount && (
-                        <>
-                            <span>{playlist.songCount} tracks</span>
-                            <span className="text-neutral-400 dark:text-white/50">•</span>
-                        </>
-                    )}
-                    {playlist.duration && <span>{formatTotalTime(playlist.duration)}</span>}
-                    {playlist.created && (
-                        <>
-                            <span className="text-neutral-400 dark:text-white/50">•</span>
-                            <span>Created {new Date(playlist.created).toLocaleDateString()}</span>
-                        </>
-                    )}
+                <div data-nebula-album-meta>
+                    <p className="nebula-collection-facts">
+                        {[
+                            playlist.songCount ? `${playlist.songCount} ${playlist.songCount === 1 ? 'track' : 'tracks'}` : null,
+                            playlist.duration ? formatTotalTime(playlist.duration) : null,
+                            playlist.created ? `Created ${new Date(playlist.created).toLocaleDateString()}` : null,
+                        ].filter(Boolean).join(' · ')}
+                    </p>
                 </div>
-
             } actions={
-                <div data-nebula-album-options className="flex flex-wrap gap-3">
+                <div data-nebula-album-options className="flex flex-1 min-w-0 items-center gap-3">
                     {playlist.songs && playlist.songs.length > 0 && (
                         <>
                             <button
@@ -163,26 +165,35 @@ export const PlaylistDetailView: React.FC = () => {
 
                     {isSavedPlaylist && (
                         <button
-                            onClick={() => { if (confirm('Are you sure you want to delete this playlist?')) deletePlaylist(playlist.id); }}
-                            className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition"
-                            title="Delete Playlist"
-                            aria-label="Delete playlist"
+                            type="button"
+                            data-nebula-playlist-delete
+                            data-confirming={confirmingDelete}
+                            onClick={() => {
+                                if (confirmingDelete) { setConfirmingDelete(false); deletePlaylist(playlist.id); }
+                                else setConfirmingDelete(true);
+                            }}
+                            onBlur={() => setConfirmingDelete(false)}
+                            onKeyDown={event => { if (event.key === 'Escape' && confirmingDelete) { event.stopPropagation(); setConfirmingDelete(false); } }}
+                            className="nebula-collection-delete"
+                            title={confirmingDelete ? 'Click again to delete this playlist' : 'Delete playlist'}
+                            aria-label={confirmingDelete ? 'Confirm delete playlist' : 'Delete playlist'}
                         >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
+                            {confirmingDelete && <span>Delete playlist?</span>}
                         </button>
                     )}
                 </div>
             } />
 
             {/* Main Content - full width */}
-            <div className="px-6 lg:px-10 pt-4" data-nebula-detail-content>
+            <div data-nebula-detail-content>
                 {/* Track List Section - with playlist-colored accent */}
                 <section
                     data-nebula-track-section
                     className="mb-8"
                 >
                     <div data-nebula-track-section-inner>
-                        <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-3">Tracks</h2>
+                        <h2 className="sr-only">Tracks</h2>
                         <div data-nebula-track-list>
                             {playlist.songs?.map((song, idx) => {
                                 const isCurrent = !currentRadioStation && currentSong?.id === song.id;
@@ -192,7 +203,7 @@ export const PlaylistDetailView: React.FC = () => {
                                         data-nebula-track-row
                                         data-current={isCurrent}
                                         key={`${song.id}-${idx}`}
-                                        className={`group flex items-center gap-4 px-5 py-4 cursor-pointer transition border-b border-neutral-200 dark:border-white/5 last:border-0 hover:bg-neutral-200 dark:hover:bg-white/5 ${isCurrent ? 'bg-neutral-200 dark:bg-white/5' : ''}`}
+                                        className="group flex items-center gap-4 cursor-pointer"
                                         onClick={() => playlist.songs && playSong(song, playlist.songs)}
                                     >
                                         {/* Track number / Play */}
@@ -211,11 +222,11 @@ export const PlaylistDetailView: React.FC = () => {
                                                     {isCurrent ? (
                                                         <Pause className="w-3.5 h-3.5 text-primary mx-auto" />
                                                     ) : (
-                                                        <span className={`text-sm font-medium ${isCurrent ? 'text-primary' : 'text-neutral-500 dark:text-white/60 group-hover:text-neutral-900 dark:group-hover:text-white/60'} transition`}>
+                                                        <span className="nebula-time text-neutral-500 dark:text-white/60 group-hover:opacity-0 transition">
                                                             {idx + 1}
                                                         </span>
                                                     )}
-                                                    <Play className="w-3.5 h-3.5 text-white absolute inset-0 m-auto opacity-0 group-hover:opacity-100 transition fill-current" />
+                                                    <Play className="w-3.5 h-3.5 text-neutral-900 dark:text-white absolute inset-0 m-auto opacity-0 group-hover:opacity-100 transition fill-current" />
                                                 </>
                                             )}
                                         </button>
@@ -230,14 +241,14 @@ export const PlaylistDetailView: React.FC = () => {
 
                                         {/* Play count */}
                                         {song.playCount && song.playCount > 0 && (
-                                            <div className="hidden md:flex items-center gap-1 text-[10px] text-neutral-500 dark:text-white/50 font-mono shrink-0">
-                                                <BarChart2 className="w-3 h-3" />
+                                            <div data-nebula-track-plays className="nebula-time hidden md:flex items-center gap-1 shrink-0" title={`${song.playCount} plays`}>
+                                                <BarChart2 className="w-3 h-3" aria-hidden="true" />
                                                 {song.playCount}
                                             </div>
                                         )}
 
                                         {/* Duration */}
-                                        <span data-nebula-track-duration className="text-xs text-neutral-500 dark:text-white/60 font-mono w-10 text-right shrink-0">
+                                        <span data-nebula-track-duration className="nebula-time text-right shrink-0">
                                             {formatTime(song.duration)}
                                         </span>
 
@@ -278,26 +289,17 @@ export const PlaylistDetailView: React.FC = () => {
                 </section>
                 {/* About Section */}
                 {comment && (
-                    <div className="mb-8 mt-4">
-                        <div
-                            data-nebula-about
-                            className="flex items-start gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-200 transition dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/[0.07]"
-                            onClick={() => setShowFullNotes(!showFullNotes)}
-                        >
-                            <Info className="w-4 h-4 text-neutral-500 dark:text-white/60 shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-xs font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-1">About</h3>
-                                <p className={`text-sm text-neutral-700 dark:text-white/70 leading-relaxed ${!showFullNotes ? 'line-clamp-2' : ''}`}>
-                                    {comment}
-                                </p>
-                                {comment.length > 120 && (
-                                    <span className="text-xs text-primary mt-1 inline-block">
-                                        {showFullNotes ? 'Show less' : 'Read more'}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                    <section data-nebula-about className="nebula-detail-section">
+                        <h2 className="nebula-section-title">About</h2>
+                        <p className={`nebula-about-copy ${!showFullNotes ? 'line-clamp-3' : ''}`}>
+                            {comment}
+                        </p>
+                        {comment.length > 120 && (
+                            <button type="button" className="nebula-text-button" aria-expanded={showFullNotes} onClick={() => setShowFullNotes(!showFullNotes)}>
+                                {showFullNotes ? 'Show less' : 'Read more'}
+                            </button>
+                        )}
+                    </section>
                 )}
 
 

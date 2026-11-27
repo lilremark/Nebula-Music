@@ -53,7 +53,7 @@ export const MobilePlayerBar: React.FC<MobilePlayerBarProps> = ({ onExpand }) =>
                 scrubbable={false}
                 trackClassName={settings.progressVisualization === 'waveform'
                     ? 'h-12 bg-transparent'
-                    : 'h-0.5 bg-neutral-300 dark:bg-white/10'}
+                    : 'h-0.5 dark:bg-white/10'}
             />
 
             <div

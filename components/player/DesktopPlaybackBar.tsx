@@ -76,8 +76,8 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
         showHandle
         trackClassName={`nebula-transport-waveform ${progressMode === 'waveform' && waveform ? 'has-waveform' : 'has-progress-bar'}`}
       />}
-      <span>{isRadio ? 'LIVE' : formatTime(voice.speech ? voice.position : position)}</span>
-      <span>{isRadio ? currentRadioStation?.genre || 'RADIO' : formatTime(voice.speech ? voice.duration : resolvedDuration)}</span>
+      <span className="nebula-time">{isRadio ? 'LIVE' : formatTime(voice.speech ? voice.position : position)}</span>
+      <span className="nebula-time">{isRadio ? currentRadioStation?.genre || 'RADIO' : formatTime(voice.speech ? voice.duration : resolvedDuration)}</span>
     </div>
     <div className="nebula-transport-track">
       {artwork || voice.speech ? <PlayerCover src={artwork} alt="" className="nebula-transport-art" /> : <span className="nebula-transport-art nebula-transport-art-empty"><ListMusic size={20} /></span>}
@@ -89,7 +89,7 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
         <span title={subtitle}>{subtitle}</span>
         {!isRadio && <PlaybackStatus />}
       </div>
-      {!isRadio && song && <button disabled={voice.speech} type="button" className={`nebula-transport-icon nebula-transport-like ${song.starred ? 'is-liked' : ''}`} onClick={() => toggleLike(song)} aria-label={song.starred ? 'Unlike song' : 'Like song'}><Heart size={18} fill={song.starred ? 'currentColor' : 'none'} /></button>}
+      {!isRadio && song && <button disabled={voice.speech} type="button" className={`nebula-transport-icon nebula-transport-like ${song.starred ? 'is-liked' : ''}`} onClick={() => toggleLike(song)} aria-label={song.starred ? 'Unlike song' : 'Like song'} title={song.starred ? 'Unlike' : 'Like'}><Heart size={18} fill={song.starred ? 'currentColor' : 'none'} /></button>}
     </div>
 
     <div className="nebula-transport-center">
@@ -106,10 +106,10 @@ export const DesktopPlaybackBar: React.FC<DesktopPlaybackBarProps> = ({ onExpand
         <SpeedPitchControls />
       </>}
 
-      <button type="button" className="nebula-transport-icon" onClick={onTogglePanel} aria-label={panelOpen ? 'Close now playing panel' : 'Open now playing panel'} aria-pressed={panelOpen}><ListMusic size={19} /></button>
-      <button type="button" className="nebula-transport-icon" onClick={() => setVolume(volume === 0 ? 0.7 : 0)} aria-label={volume === 0 ? 'Unmute' : 'Mute'}>{volume === 0 ? <VolumeX size={19} /> : <Volume2 size={19} />}</button>
-      <input type="range" min={0} max={1} step={0.01} value={volume} onChange={event => setVolume(Number(event.target.value))} aria-label="Volume" style={{ '--progress': `${volume * 100}%` } as React.CSSProperties} />
-      <button type="button" className="nebula-transport-icon" onClick={onExpand} aria-label="Open full screen player"><Maximize2 size={18} /></button>
+      <button type="button" className="nebula-transport-icon" onClick={onTogglePanel} aria-label={panelOpen ? 'Close now playing panel' : 'Open now playing panel'} aria-pressed={panelOpen} title={panelOpen ? 'Hide now playing' : 'Now playing & up next'}><ListMusic size={18} /></button>
+      <button type="button" className="nebula-transport-icon" onClick={() => setVolume(volume === 0 ? 0.7 : 0)} aria-label={volume === 0 ? 'Unmute' : 'Mute'} title={volume === 0 ? 'Unmute' : 'Mute'}>{volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}</button>
+      <input type="range" min={0} max={1} step={0.01} value={volume} onChange={event => setVolume(Number(event.target.value))} aria-label="Volume" title={`Volume ${Math.round(volume * 100)}%`} style={{ '--progress': `${volume * 100}%` } as React.CSSProperties} />
+      <button type="button" className="nebula-transport-icon" onClick={onExpand} aria-label="Open full screen player" title="Full screen player"><Maximize2 size={18} /></button>
     </div>
   </PlayerSurface>;
 };

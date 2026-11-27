@@ -114,7 +114,7 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                     }}
                     trackClassName={`${progressMode === 'waveform'
                         ? 'h-16 bg-transparent transition-all duration-300'
-                        : `group transition-all duration-200 ${isHoverProgress ? 'h-3' : 'h-1.5'} bg-neutral-300 dark:bg-white/10`
+                        : `group transition-all duration-200 ${isHoverProgress ? 'h-3' : 'h-1.5'} dark:bg-white/10`
                         }`}
                 />
             </div>
@@ -147,10 +147,10 @@ export const FloatingMiniPlayer: React.FC<FloatingMiniPlayerProps> = ({ onExpand
                 </div>
 
                 {/* Time display */}
-                <div className="flex items-center justify-center gap-2 text-xs font-mono text-neutral-700 dark:text-white/70 shrink-0 min-w-[86px]" data-nebula-floating-time>
-                    <span className="tabular-nums">{formatTime(voice.speech ? voice.position : currentTime)}</span>
+                <div className="nebula-time flex items-center justify-center gap-1.5 text-xs text-neutral-700 dark:text-white/70 shrink-0 min-w-[86px]" data-nebula-floating-time>
+                    <span>{formatTime(voice.speech ? voice.position : currentTime)}</span>
                     <span className="text-neutral-400 dark:text-white/50">/</span>
-                    <span className="tabular-nums">{formatTime(voice.speech ? voice.duration : duration)}</span>
+                    <span>{formatTime(voice.speech ? voice.duration : duration)}</span>
                 </div>
 
                 {/* Progress style toggle */}

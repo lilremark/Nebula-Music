@@ -62,6 +62,12 @@ wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(wav.length -
     const gain = window.__gainTargets.get(element)?.gain.value;
     return Math.abs(gain - expected) < 0.002;
   }, { index, expected });
+  // ReplayGain mode is a CustomDropdown (button trigger + option buttons), not a native select.
+  const chooseReplayGainMode = async (label) => {
+    await page.getByRole('button', { name: 'ReplayGain mode', exact: true }).click();
+    await page.locator('#replaygain-mode [data-nebula-dropdown-menu]').getByRole('button', { name: label, exact: true }).click();
+  };
+  const replayGainModeLabel = async () => (await page.getByRole('button', { name: 'ReplayGain mode', exact: true }).textContent()).trim();
   const soundSettings = async () => {
     await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
     await page.getByRole('tab', { name: 'Sound', exact: true }).click();
@@ -81,9 +87,9 @@ wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(wav.length -
       return { volume: audio.volume, src: audio.src };
     });
     await soundSettings();
-    await page.getByLabel('ReplayGain mode', { exact: true }).selectOption('track');
+    await chooseReplayGainMode('Track');
     await gainNear(0, 10 ** (-6 / 20));
-    await page.getByLabel('ReplayGain mode', { exact: true }).selectOption('album');
+    await chooseReplayGainMode('Album');
     await gainNear(0, 10 ** (-3 / 20));
     await page.getByLabel('ReplayGain preamp:', { exact: false }).fill('3');
     await gainNear(0, 1);
@@ -97,7 +103,7 @@ wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(wav.length -
       return { volume: audio.volume, src: audio.src };
     }), before);
     await page.getByLabel('ReplayGain preamp:', { exact: false }).fill('0');
-    await page.getByLabel('ReplayGain mode', { exact: true }).selectOption('track');
+    await chooseReplayGainMode('Track');
     await page.getByRole('switch', { name: 'Magic Crossfade', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('audio').currentTime > 3);
     await page.evaluate(() => {
@@ -115,10 +121,10 @@ wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(wav.length -
     await page.evaluate(() => document.querySelector('audio').dispatchEvent(new Event('ended')));
     await page.waitForFunction(() => document.querySelector('audio').src.includes('id=3'));
     await gainNear(0, 1);
-    await page.getByLabel('ReplayGain mode', { exact: true }).selectOption('off');
+    await chooseReplayGainMode('Off');
     assert.equal(await page.getByLabel('ReplayGain preamp:', { exact: false }).isDisabled(), true);
-    await page.getByLabel('ReplayGain mode', { exact: true }).selectOption('album');
-    assert.equal(await page.locator('#replaygain-mode').inputValue(), 'album');
+    await chooseReplayGainMode('Album');
+    assert.equal(await replayGainModeLabel(), 'Album');
     let persisted = false;
     for (let attempt = 0; attempt < 50 && !persisted; attempt++) {
       persisted = await page.evaluate(() => new Promise(resolve => {
@@ -134,7 +140,7 @@ wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(wav.length -
     assert.equal(persisted, true);
     await page.reload();
     await soundSettings();
-    assert.equal(await page.getByLabel('ReplayGain mode', { exact: true }).inputValue(), 'album');
+    assert.equal(await replayGainModeLabel(), 'Album');
     for (const dark of [true, false]) {
       await page.evaluate(dark => document.documentElement.classList.toggle('dark', dark), dark);
       for (const width of [1440, 390]) {
@@ -179,7 +185,7 @@ wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(wav.length -
     console.log(JSON.stringify({ replayGain: 'passed', browser: 'Chromium', peaks, screenshots: output }));
   } catch (error) {
     console.error(await page.evaluate(() => ({
-      mode: document.querySelector('#replaygain-mode')?.value,
+      mode: document.querySelector('#replaygain-mode')?.dataset.value,
       audio: [...document.querySelectorAll('audio')].map(element => ({ src: element.src, paused: element.paused, gain: window.__gainTargets.get(element)?.gain.value, context: window.__gainTargets.get(element)?.context.state })),
     })));
     await page.screenshot({ path: path.join(output, 'failure.png') });

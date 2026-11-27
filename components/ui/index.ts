@@ -6,3 +6,4 @@ export { Badge } from './Badge';
 export { Tooltip } from './Tooltip';
 export { SettingPanel } from './SettingPanel';
 export { ToggleRow } from './ToggleRow';
+export { SegmentedControl } from './SegmentedControl';

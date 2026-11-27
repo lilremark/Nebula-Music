@@ -38,6 +38,11 @@ const ArtistDetailView = lazy(() => import('./views/ArtistDetailView').then(modu
 const AlbumDetailView = lazy(() => import('./views/AlbumDetail').then(module => ({ default: module.AlbumDetailView })));
 const PlaylistDetailView = lazy(() => import('./views/PlaylistDetail').then(module => ({ default: module.PlaylistDetailView })));
 const SearchView = lazy(() => import('./views/Search').then(module => ({ default: module.SearchView })));
+// Animated content-pane background (Settings > Appearance); its chunk loads only when one is selected.
+const AppBackground = lazy(() => import('./components/backgrounds/AppBackground'));
+
+/** Scroll distance after which the page heading counts as gone (desktop top-bar title). */
+const TOP_BAR_TITLE_REVEAL_OFFSET = 72;
 
 /**
  * The production shell is also composed by the isolated Studio preview.  The
@@ -62,6 +67,7 @@ export const AppContent: React.FC<{
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(initialSidebarCollapsed);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const mainRef = useRef<HTMLElement>(null);
+  const topBarShellRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const updateViewportWidth = () => setViewportWidth(window.innerWidth);
@@ -136,6 +142,38 @@ export const AppContent: React.FC<{
       mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [currentView, viewData]);
+
+  // Large-title pattern: on desktop the top bar shows the page title only once
+  // the page's own heading has scrolled away. A passive listener flips one data
+  // attribute (CSS does the rest), so scrolling never re-renders the app.
+  useEffect(() => {
+    const main = mainRef.current;
+    const shell = topBarShellRef.current;
+    if (!main || !shell) return;
+    let revealed = false;
+    // The navigation effect above may still be smooth-scrolling the previous
+    // page back up; ignore that travel so the title does not flash.
+    let settling = main.scrollTop > TOP_BAR_TITLE_REVEAL_OFFSET;
+    shell.dataset.nebulaScrolled = 'false';
+    const sync = () => {
+      const past = main.scrollTop > TOP_BAR_TITLE_REVEAL_OFFSET;
+      if (settling) {
+        if (past) return;
+        settling = false;
+      }
+      if (past !== revealed) {
+        revealed = past;
+        shell.dataset.nebulaScrolled = past ? 'true' : 'false';
+      }
+    };
+    const settle = () => { settling = false; sync(); };
+    main.addEventListener('scroll', sync, { passive: true });
+    main.addEventListener('scrollend', settle, { passive: true });
+    return () => {
+      main.removeEventListener('scroll', sync);
+      main.removeEventListener('scrollend', settle);
+    };
+  }, [currentView, viewData, credentials, isDemoMode]);
 
   const platform = usePlatform();
 
@@ -236,8 +274,15 @@ export const AppContent: React.FC<{
           ) : null
         }
       >
+        {/* Animated background behind the top bar and scroller; unmounted with the full-screen player. */}
+        {settings.theme.background !== 'none' && !isExpanded && !isZenMode && (
+          <Suspense fallback={null}>
+            <AppBackground variant={settings.theme.background} />
+          </Suspense>
+        )}
+
         {/* Top Bar */}
-        <header className="flex flex-col shrink-0">
+        <header ref={topBarShellRef} data-nebula-topbar-shell data-nebula-scrolled="false" className="flex flex-col shrink-0">
           <TopBar onMenuClick={() => setIsNavOpen(true)} isNavOpen={isNavOpen} />
         </header>
 

@@ -212,13 +212,13 @@ app.on('browser-window-created', (_event, win) => {
         document.querySelector('.nebula-transport [aria-label="Open full screen player"]').click();
         await waitForDj(()=>document.querySelector('[data-nebula-player="fullscreen"].translate-y-0'),'full');
         const full=document.querySelector('[data-nebula-player="fullscreen"]');
-        if([...full.querySelectorAll('[data-nebula-fullscreen-tabs] button')].some(b=>['lyrics','AI DJ'].includes(b.textContent.trim()))) throw new Error('DJ options in full player');
+        if([...full.querySelectorAll('[data-nebula-fullscreen-tabs] button')].some(b=>['lyrics','ai dj'].includes(b.textContent.trim().toLowerCase()))) throw new Error('DJ options in full player');
         if(!full.querySelector('[aria-label="AI DJ cover"]')) throw new Error('Full cover');
       })()`);
       await capture('fullscreen-speaking-dark');
       await js(`(async () => {
         const full=document.querySelector('[data-nebula-player="fullscreen"]');
-        [...full.querySelectorAll('[data-nebula-fullscreen-tabs] button')].find(b=>b.textContent.trim()==='queue').click();
+        [...full.querySelectorAll('[data-nebula-fullscreen-tabs] button')].find(b=>b.textContent.trim().toLowerCase()==='queue').click();
         await waitForDj(()=>full.querySelector('.nebula-dj-queue-player [aria-label="AI DJ cover"]'),'queue cover');
         full.querySelector('[aria-label="Close player"]').click();
         document.querySelector('.nebula-transport [aria-label="Open now playing panel"]').click();

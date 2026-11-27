@@ -47,33 +47,31 @@ const StationArt: React.FC<{ sizeClass: string; imageUrl?: string; label?: strin
     );
 };
 
-const VolumeSlider: React.FC<{ className?: string; compact?: boolean }> = ({ className = '', compact = false }) => {
+// Same markup and styling (.nebula-playback-volume in next-ui.css) as the music players.
+const VolumeSlider: React.FC<{ className?: string; compact?: boolean; onDark?: boolean }> = ({ className = '', compact = false, onDark = false }) => {
     const { volume, setVolume } = useStore();
+    const iconClass = compact ? 'h-4 w-4' : 'h-5 w-5';
     return (
-        <div className={`flex items-center gap-3 ${className}`}>
+        <div className={`nebula-playback-volume ${compact ? 'is-compact' : ''} ${onDark ? 'is-on-dark' : ''} ${className}`}>
             <button
+                type="button"
                 onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
-                className={`${compact ? 'p-1.5' : 'p-2'} text-neutral-600 transition-colors hover:text-neutral-900 dark:text-white/60 dark:hover:text-white`}
                 aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+                title={volume === 0 ? 'Unmute' : 'Mute'}
             >
-                {volume === 0 ? <VolumeX className={compact ? 'h-4 w-4' : 'h-5 w-5'} /> : volume < 0.5 ? <Volume1 className={compact ? 'h-4 w-4' : 'h-5 w-5'} /> : <Volume2 className={compact ? 'h-4 w-4' : 'h-5 w-5'} />}
+                {volume === 0 ? <VolumeX className={iconClass} /> : volume < 0.5 ? <Volume1 className={iconClass} /> : <Volume2 className={iconClass} />}
             </button>
-            <div className="group relative h-1.5 flex-1 rounded bg-neutral-300 dark:bg-white/10">
-                <div
-                    className="absolute inset-y-0 left-0 rounded bg-neutral-800 dark:bg-white/60"
-                    style={{ width: `${volume * 100}%` }}
-                />
-                <input
-                    type="range"
-                    aria-label="Volume"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={volume}
-                    onChange={(e) => setVolume(parseFloat(e.target.value))}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                />
-            </div>
+            <input
+                type="range"
+                aria-label="Volume"
+                title={`Volume ${Math.round(volume * 100)}%`}
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                style={{ '--progress': `${volume * 100}%` } as React.CSSProperties}
+            />
         </div>
     );
 };
@@ -166,7 +164,7 @@ export const RadioSidebarPanel: React.FC<{ onExpand: () => void; onCollapse: () 
                 </button>
             </div>
 
-            <VolumeSlider className="mt-8 w-full max-w-xs" />
+            <VolumeSlider className="mt-6 flex w-[160px] justify-center" />
         </div>
     );
 };
@@ -296,8 +294,8 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                 </div>
             </header>
 
-            <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 pb-8 md:px-12 lg:flex-row lg:gap-20">
-                <div className="relative w-full max-w-[280px] shrink-0 md:max-w-[380px] lg:max-w-[480px]">
+            <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 pb-[clamp(12px,3vh,32px)] min-[760px]:flex-row min-[760px]:gap-[clamp(24px,4.5vw,80px)] min-[760px]:px-[clamp(24px,4vw,48px)]">
+                <div className="relative shrink-0 w-[min(380px,80vw,38vh)] min-[760px]:w-[min(480px,40vw,62vh)]">
                     <div className={`relative aspect-square overflow-hidden rounded-xl shadow-2xl transition-all duration-700 ${isRadioPlaying ? 'scale-100' : 'scale-95 opacity-80'}`}>
                         {artworkUrl ? (
                             <img src={artworkUrl} alt={title} className="h-full w-full object-cover" />
@@ -314,8 +312,8 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                     </div>
                 </div>
 
-                <div className="flex w-full max-w-lg flex-1 flex-col items-center text-center lg:items-start lg:text-left">
-                    <div className="mb-4 flex items-center gap-2">
+                <div className="flex w-full min-w-0 max-w-lg flex-1 flex-col items-center text-center min-[760px]:items-start min-[760px]:text-left">
+                    <div className="mb-[clamp(8px,2vh,16px)] flex items-center gap-2">
                         <RadioBadge />
                         {radioMetadata ? (
                             <span className="rounded border border-white/10 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/70">Metadata</span>
@@ -324,7 +322,7 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                         ) : null}
                     </div>
 
-                    <h1 className="max-w-full text-3xl font-black leading-tight text-white md:text-5xl lg:text-6xl">{title}</h1>
+                    <h1 className="line-clamp-2 max-w-full text-[length:clamp(22px,6vw,30px)] font-black leading-tight text-white min-[760px]:text-[length:clamp(24px,min(3.8vw,6.4vh),48px)]" title={title}>{title}</h1>
                     <p className="mt-3 max-w-full text-lg font-medium text-white/60 md:text-xl">{artist}</p>
                     {album && <p className="mt-2 max-w-full text-sm text-white/45">{album}</p>}
                     {subtitle && <p className="mt-3 max-w-full truncate font-mono text-xs text-white/35">{subtitle}</p>}
@@ -345,14 +343,14 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                         isPlaying={isRadioPlaying}
                         primaryColor={colors.primary}
                         secondaryColor={colors.secondary || colors.primary}
-                        className="mt-8 h-28 w-full md:h-40"
+                        className="mt-[clamp(12px,3.4vh,32px)] h-[clamp(56px,14vh,160px)] w-full"
                     />
 
-                    <div className="mt-8 flex w-full items-center justify-center gap-6 lg:justify-start">
+                    <div className="mt-[clamp(12px,3.4vh,32px)] flex w-full items-center justify-center gap-[clamp(12px,2vw,24px)] min-[760px]:justify-start">
                         <button onClick={stopRadio} className="rounded-lg bg-white/10 p-4 text-white/70 transition hover:bg-white/20 hover:text-white" aria-label="Stop radio">
                             <Square className="h-6 w-6 fill-current" />
                         </button>
-                        <button onClick={toggleRadioPlay} className="flex h-20 w-20 items-center justify-center rounded-lg bg-white text-black shadow-xl transition hover:scale-105 active:scale-95" aria-label={isRadioPlaying ? 'Pause radio' : 'Play radio'}>
+                        <button onClick={toggleRadioPlay} className="flex size-[clamp(56px,10vh,80px)] shrink-0 items-center justify-center rounded-lg bg-white text-black shadow-xl transition hover:scale-105 active:scale-95" aria-label={isRadioPlaying ? 'Pause radio' : 'Play radio'}>
                             {isRadioPlaying ? <Pause className="h-9 w-9 fill-current" /> : <Play className="ml-1 h-9 w-9 fill-current" />}
                         </button>
                         <div className="hidden items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-white/50 sm:flex">
@@ -372,7 +370,7 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                         </button>
                     </div>
 
-                    <VolumeSlider className="mt-8 w-full max-w-xs" />
+                    <VolumeSlider className="mt-[clamp(12px,3.4vh,32px)] flex w-[min(100%,240px)]" onDark />
                 </div>
             </div>
 
@@ -399,7 +397,7 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                         <div className="mb-6">
                             <div className="mb-2 flex items-center justify-between">
                                 <label className="text-xs font-semibold uppercase tracking-wide text-white/55">Pitch</label>
-                                <span className="font-mono text-xs text-white/60">{radioPitch > 0 ? '+' : ''}{radioPitch}</span>
+                                <span className="nebula-time text-xs text-white/60">{radioPitch > 0 ? '+' : ''}{radioPitch}</span>
                             </div>
                             <div className="flex items-center justify-between rounded-xl bg-white/5 p-1">
                                 <button
@@ -425,7 +423,7 @@ export const RadioFullPlayer: React.FC<{ isExpanded: boolean; onClose: () => voi
                                     <Gauge className="h-4 w-4" />
                                     <span className="text-xs font-semibold uppercase tracking-wide">Live Speed</span>
                                 </div>
-                                <span className="font-mono text-xs text-white/60">1.0x</span>
+                                <span className="nebula-time text-xs text-white/60">1.0×</span>
                             </div>
                         </div>
 

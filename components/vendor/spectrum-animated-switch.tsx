@@ -86,7 +86,7 @@ const SOFT_SPRING = { type: "spring", stiffness: 260, damping: 22 } as const
 
 const SIZES = {
   sm: { trackWidth: 32, trackHeight: 18, icon: 8 },
-  md: { trackWidth: 44, trackHeight: 24, icon: 10 },
+  md: { trackWidth: 44, trackHeight: 26, icon: 10 },
   lg: { trackWidth: 56, trackHeight: 30, icon: 12 },
 } as const
 
@@ -238,11 +238,13 @@ export function AnimatedSwitch({
       className={cn(
         "relative inline-flex shrink-0 cursor-pointer touch-manipulation select-none items-center rounded-full",
         "transition-colors duration-200 ease-out",
-        "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-neutral-300 dark:focus-visible:ring-offset-neutral-950",
-        "disabled:pointer-events-none disabled:opacity-50",
+        "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-950",
+        "disabled:cursor-not-allowed disabled:opacity-40",
+        // The knob is always white, so both tracks need to read against it:
+        // accent when on, a clearly visible neutral when off.
         checked
-          ? "bg-neutral-900 dark:bg-white"
-          : "bg-neutral-200 dark:bg-neutral-700",
+          ? "bg-primary"
+          : "bg-neutral-300 dark:bg-white/[0.18]",
         className,
       )}
       style={{ width: trackWidth, height: trackHeight }}
@@ -255,14 +257,14 @@ export function AnimatedSwitch({
 
       <motion.span
         aria-hidden="true"
-        className="absolute rounded-full bg-white shadow-xs dark:bg-neutral-900"
+        className="absolute rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.3),0_0_0_0.5px_rgb(0_0_0/0.06)]"
         style={{ top: TRACK_PADDING, left: TRACK_PADDING, height: knobSize }}
         initial={false}
         animate={{ x: knobX, width: knobWidth }}
         transition={shouldReduceMotion ? { duration: 0 } : SNAPPY_SPRING}
       >
         {hasIcons && (
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-neutral-600 dark:text-neutral-300">
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-neutral-600">
             <AnimatePresence initial={false}>
               {activeIcon != null && (
                 <motion.span

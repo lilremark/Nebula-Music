@@ -20,12 +20,19 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }
     const platform = usePlatform();
     const isMac = platform?.info.os === 'darwin';
 
+    // Collection detail views and the AI DJ own a sticky collapsing header, so
+    // the top bar never repeats their title on desktop. Every other view shows
+    // its own large heading and the bar only picks the title up once that
+    // heading has scrolled away (driven by data-nebula-scrolled in App.tsx).
+    const titleMode = currentView === 'ALBUM_DETAIL' || currentView === 'PLAYLIST_DETAIL' || currentView === 'AI_DJ' ? 'never' : 'scroll';
+
     // Get current page title
     const getPageTitle = () => {
         switch (currentView) {
             case 'HOME': return 'Home';
             case 'BROWSE': return 'Browse';
-            case 'RADIO': return 'Radio';
+            case 'AI_DJ': return 'AI DJ';
+            case 'RADIO': return 'Internet Radio';
             case 'ARTISTS': return 'Artists';
             case 'ALBUMS': return 'Albums';
             case 'SONGS': return 'Songs';
@@ -44,6 +51,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isNavOpen = false }
     return (
         <header
             data-nebula-topbar
+            data-nebula-title-mode={titleMode}
             className={`nebula-topbar relative h-16 flex items-center justify-between px-6 ${isMac ? 'pl-3' : ''} border-b border-neutral-200 dark:border-white/5 sticky top-0 z-30`}
             style={appRegion(isNavOpen ? 'no-drag' : 'drag')}
         >

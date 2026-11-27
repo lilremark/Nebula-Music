@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, SkipForward, RotateCcw, Settings2 } from 'lucide-react';
+import { Play, Pause, Square, SkipForward, RotateCcw, Settings2, Info, ListMusic } from 'lucide-react';
 import { useStore } from '../context/Store';
 import { usePlatform } from '../platform/PlatformContext';
 import { DjCover } from '../components/player/DjCover';
@@ -21,9 +21,9 @@ export function AiDjView() {
 
   return <div className="nebula-dj-view min-h-full w-full pb-32" data-nebula-view="ai-dj" style={{ '--album-color': '#6d3aa5' } as React.CSSProperties}>
     <CollectionHeader title="AI DJ" artwork={<DjCover animateIdle playing={presentation.playing} analyser={dj.voiceAnalyser} />} metadata={
-      <div data-nebula-album-meta className="text-neutral-600 dark:text-white/60">
-        <p>A mix based on your listening and likes.</p>
-        {tracks.length > 0 && <p className="mt-2 text-sm">{tracks.length} tracks · {Math.floor(duration / 60)} min</p>}
+      <div data-nebula-album-meta>
+        <p className="nebula-collection-subtitle">A mix based on your listening and likes.</p>
+        {tracks.length > 0 && <p className="nebula-collection-facts">{tracks.length} tracks · {Math.floor(duration / 60)} min</p>}
       </div>
     } actions={
       <div data-nebula-album-options className="nebula-dj-collection-actions flex items-center gap-3">
@@ -36,25 +36,25 @@ export function AiDjView() {
         <button type="button" className={actionClass} aria-label="DJ settings" title="DJ settings" onClick={() => setView('SETTINGS', 'settings-ai-dj')}><Settings2 /><span className="sr-only">DJ settings</span></button>
       </div>
     } />
-    <div data-nebula-detail-content className="px-6 lg:px-10">
-      <div className="nebula-dj-view-status" role="status">{platform?.aiDj ? !state.active && !dj.readiness?.ready ? dj.readiness?.error || 'Checking local models…' : status : 'AI DJ is available in the Windows desktop app.'}</div>
+    <div data-nebula-detail-content>
+      <div className="nebula-dj-view-status" role="status"><Info aria-hidden="true" /><span>{platform?.aiDj ? !state.active && !dj.readiness?.ready ? dj.readiness?.error || 'Checking local models…' : status : 'AI DJ is available in the Windows desktop app.'}</span></div>
       {state.active && state.preparingNext && <p className="nebula-dj-status">Preparing the next interlude…</p>}
       {state.error && <p className="nebula-dj-error" role="status">{state.error}</p>}
       {dj.config.showTranscript && state.transcript && <section className="nebula-dj-caption" aria-label="DJ transcription"><h2>Your DJ</h2><blockquote>{state.transcript}</blockquote></section>}
       <section aria-label="AI DJ queue" data-nebula-track-section className="nebula-dj-view-queue mb-8">
         <div data-nebula-track-section-inner>
-          <h2 className="nebula-dj-mix-heading text-sm font-semibold uppercase tracking-wide text-neutral-700 dark:text-white/60">Your mix<span className="text-xs font-normal normal-case tracking-normal">{tracks.length} tracks</span></h2>
+          <h2 className="nebula-dj-mix-heading">Your mix<span className="nebula-time">{tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}</span></h2>
           <div data-nebula-track-list>
             {tracks.map((song, index) => <button type="button" key={song.id + ':' + index} className="nebula-dj-track-row group flex w-full items-center gap-4 text-left" data-nebula-track-row data-current={index === currentSongIndex} aria-label={`Play ${song.title} by ${song.artist}`} aria-current={index === currentSongIndex ? 'true' : undefined} onClick={() => playQueueIndex(index)}>
               <span data-nebula-track-play className="nebula-dj-track-number relative flex shrink-0 items-center justify-center">
-                {index === currentSongIndex && isPlaying ? <Play className="text-primary" fill="currentColor" /> : <><span className="group-hover:opacity-0">{index + 1}</span><Play className="absolute opacity-0 group-hover:opacity-100" fill="currentColor" /></>}
+                {index === currentSongIndex && isPlaying ? <Play className="text-primary" fill="currentColor" /> : <><span className="nebula-time group-hover:opacity-0">{index + 1}</span><Play className="absolute opacity-0 group-hover:opacity-100" fill="currentColor" /></>}
               </span>
               <img className="nebula-dj-track-art" src={service.getCoverArtUrl(song.coverArt || song.id, 80)} alt="" loading="lazy" />
               <span className="nebula-dj-track-copy"><strong data-nebula-track-title className={index === currentSongIndex ? 'text-primary' : ''}>{song.title}</strong><small>{song.artist}</small></span>
               <span className="nebula-dj-track-album">{song.album}</span>
-              <span data-nebula-track-duration className="nebula-dj-track-duration shrink-0 text-right font-mono">{Math.floor(song.duration / 60)}:{String(Math.floor(song.duration % 60)).padStart(2, '0')}</span>
+              <span data-nebula-track-duration className="nebula-dj-track-duration nebula-time shrink-0 text-right">{Math.floor(song.duration / 60)}:{String(Math.floor(song.duration % 60)).padStart(2, '0')}</span>
             </button>)}
-            {!tracks.length && <p className="nebula-dj-empty px-8 py-12 text-center">Your mix will appear here.</p>}
+            {!tracks.length && <div className="nebula-dj-empty"><ListMusic aria-hidden="true" /><p>Your mix will appear here.</p><span>Start the DJ and the tracks it picks will line up below.</span></div>}
           </div>
         </div>
       </section>

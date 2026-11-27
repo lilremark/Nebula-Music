@@ -84,7 +84,7 @@ export const SearchModal: React.FC = () => {
     return (
         <ContentModal kind="search" onDismiss={handleClose}>
             {/* Command Palette Modal */}
-            <div role="dialog" aria-modal="true" aria-label="Search music" className="nebula-search-dialog relative w-full max-w-3xl rounded-3xl overflow-hidden flex flex-col max-h-[85vh] animate-scale-in">
+            <div role="dialog" aria-modal="true" aria-label="Search music" className="nebula-search-dialog nebula-modal relative w-full max-w-3xl max-h-[85vh] animate-scale-in">
                 {/* Search Input Header */}
                 <div className="relative flex items-center p-5 border-b border-neutral-200 dark:border-white/10 bg-gradient-to-r from-primary/[0.03] to-secondary/[0.03]">
                     {/* Gradient overlay */}
@@ -113,10 +113,10 @@ export const SearchModal: React.FC = () => {
 
                     <button
                         onClick={handleClose}
-                        className="shrink-0 p-2 rounded-xl hover:bg-neutral-200 text-neutral-500 hover:text-neutral-900 transition-all duration-200 interactive-scale dark:hover:bg-white/10 dark:hover:text-white"
+                        className="nebula-modal-close"
                         aria-label="Close search"
                     >
-                        <X className="w-5 h-5" />
+                        <X aria-hidden="true" />
                     </button>
                 </div>
 
@@ -155,7 +155,7 @@ export const SearchModal: React.FC = () => {
                                           border border-transparent hover:border-primary/30 transition-all duration-300 
                                           cursor-pointer group interactive-lift animate-slide-up stagger-${Math.min(index + 1, 8)}`}
                                     >
-                                        <div className="w-11 h-11 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center overflow-hidden mr-4 ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
+                                        <div className="w-10 h-10 shrink-0 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center overflow-hidden mr-4 ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
                                             {artist.coverArt ? <img src={service.getCoverArtUrl(artist.coverArt, 100)} className="w-full h-full object-cover" alt="" /> : <Mic2 className="w-5 h-5 text-neutral-500" />}
                                         </div>
                                         <span className="font-semibold text-neutral-900 dark:text-white group-hover:text-primary flex-1 transition-colors">{artist.name}</span>
@@ -182,7 +182,7 @@ export const SearchModal: React.FC = () => {
                                           border border-transparent hover:border-primary/30 transition-all duration-300 
                                           cursor-pointer group interactive-lift animate-slide-up stagger-${Math.min(index + 1, 8)}`}
                                     >
-                                        <div className="w-11 h-11 rounded-lg bg-neutral-200 dark:bg-neutral-800 overflow-hidden mr-4 ring-2 ring-transparent group-hover:ring-primary/30 transition-all shadow-md">
+                                        <div className="w-10 h-10 shrink-0 rounded-lg bg-neutral-200 dark:bg-neutral-800 overflow-hidden mr-4 ring-2 ring-transparent group-hover:ring-primary/30 transition-all shadow-md">
                                             <img src={service.getCoverArtUrl(album.coverArt || album.id, 100)} className="w-full h-full object-cover" alt="" />
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -212,7 +212,7 @@ export const SearchModal: React.FC = () => {
                                           border border-transparent hover:border-primary/30 transition-all duration-300 
                                           cursor-pointer group interactive-lift animate-slide-up stagger-${Math.min(index + 1, 8)}`}
                                     >
-                                        <div className="w-10 h-10 rounded-lg bg-neutral-200 dark:bg-neutral-800 overflow-hidden mr-4 relative ring-2 ring-transparent group-hover:ring-primary/30 transition-all shadow-xs">
+                                        <div className="w-10 h-10 shrink-0 rounded-lg bg-neutral-200 dark:bg-neutral-800 overflow-hidden mr-4 relative ring-2 ring-transparent group-hover:ring-primary/30 transition-all shadow-xs">
                                             <img src={service.getCoverArtUrl(song.id, 100)} className="w-full h-full object-cover" alt="" />
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Play className="w-4 h-4 text-white fill-current" />
@@ -222,7 +222,7 @@ export const SearchModal: React.FC = () => {
                                             <div className="font-semibold text-neutral-900 dark:text-white group-hover:text-primary truncate text-sm transition-colors">{song.title}</div>
                                             <div className="text-xs text-neutral-600 dark:text-neutral-500 truncate font-medium">{song.artist} • {song.album}</div>
                                         </div>
-                                        <span className="text-xs text-neutral-500 dark:text-neutral-600 font-mono ml-4 tabular-nums">
+                                        <span className="nebula-time text-xs text-neutral-500 dark:text-neutral-400 ml-4">
                                             {Math.floor(song.duration / 60)}:{song.duration % 60 < 10 ? '0' : ''}{song.duration % 60}
                                         </span>
                                     </div>
@@ -234,7 +234,7 @@ export const SearchModal: React.FC = () => {
 
                 {/* Footer */}
                 {hasResults && (
-                    <div className="p-4 glass-strong border-t border-neutral-200 dark:border-white/10 flex justify-between items-center">
+                    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--next-line)] px-4 py-3">
                         <button
                             onClick={() => {
                                 performSearch(query);
@@ -247,7 +247,7 @@ export const SearchModal: React.FC = () => {
                         </button>
 
                         <div className="flex items-center gap-3 text-xs text-neutral-600 dark:text-neutral-500 font-medium">
-                            <kbd className="px-2 py-1 bg-neutral-100 border border-neutral-200 rounded-md font-mono dark:bg-black/40 dark:border-white/20">ESC</kbd>
+                            <kbd className="rounded-md border border-[var(--next-line)] px-2 py-1 [font-family:inherit] font-semibold text-[var(--next-text)]">Esc</kbd>
                             <span>to close</span>
                         </div>
                     </div>
