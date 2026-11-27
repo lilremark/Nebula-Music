@@ -4,9 +4,13 @@ import App from './App';
 import { ThemeProvider } from './context/ThemeContext';
 import { PlatformProvider } from './platform/PlatformContext';
 import { installCrashForwarding, reportRendererError } from './platform/crashForwarding';
+import { applyStoredAppearance } from './theme/applyAppearance';
 import './next-ui.css';
+import './themes.css';
 
 installCrashForwarding();
+// Theme preset / font from the last session, before the first paint.
+applyStoredAppearance();
 
 interface ErrorBoundaryProps {
   children?: ReactNode;

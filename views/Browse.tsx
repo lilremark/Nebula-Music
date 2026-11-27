@@ -47,8 +47,8 @@ const MixCard: React.FC<{
                     <Play className="w-5 h-5 fill-current ml-0.5" />
                 </button>
 
-                {/* Icon Badge */}
-                <div className="absolute top-3 left-3 w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
+                {/* Icon Badge (shares inset and radius with the Daily Picks badge) */}
+                <div data-nebula-card-badge className="absolute w-10 h-10 bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
                     <Icon className="w-5 h-5 text-white" />
                 </div>
             </div>
@@ -93,7 +93,7 @@ const AlbumCard: React.FC<{
 
                 {/* Badge */}
                 {badge && (
-                    <div className="absolute top-3 left-3 px-2 py-1 bg-primary text-black text-[10px] font-bold uppercase tracking-wide rounded shadow">
+                    <div data-nebula-card-badge className="absolute px-2 py-1 bg-primary text-black text-[10px] font-bold uppercase tracking-wide shadow">
                         {badge}
                     </div>
                 )}
@@ -105,15 +105,16 @@ const AlbumCard: React.FC<{
 };
 
 
-// Section Header
+// Section Header: same treatment as Home (muted icon, 20px title).
 const SectionHeader: React.FC<{
     icon: any;
     title: string;
-    iconColor?: string;
-}> = ({ icon: Icon, title, iconColor = 'text-primary' }) => (
-    <div className="flex items-center gap-3 mb-6">
-        <Icon className={`w-5 h-5 ${iconColor}`} />
-        <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{title}</h2>
+}> = ({ icon: Icon, title }) => (
+    <div className="nebula-section-header">
+        <div className="nebula-section-heading">
+            <Icon className="nebula-section-icon" aria-hidden="true" />
+            <h2>{title}</h2>
+        </div>
     </div>
 );
 
@@ -469,35 +470,34 @@ export const BrowseView: React.FC = () => {
     }
 
     return (
-        <div data-nebula-view="browse" className="p-6 md:p-8 pb-32 max-w-[1600px] mx-auto">
-            {/* Header */}
-            <div data-nebula-view-header className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">Browse</h1>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isStudioPreview && (
-                        <button
-                            type="button"
-                            onClick={handleInstantMix}
-                            disabled={isInstantMixLoading}
-                            data-nebula-instant-mix-trigger
-                            className="hidden items-center gap-2 px-4 py-2 text-sm font-medium"
-                        >
-                            {isInstantMixLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                            Instant Mix
-                        </button>
-                    )}
+        <div data-nebula-view="browse" className="nebula-page pb-32">
+            {/* Header: Instant Mix is the page's primary action, Refresh the quiet secondary. */}
+            <div data-nebula-view-header className="nebula-page-header">
+                <h1 className="nebula-page-title">Browse</h1>
+                <div className="nebula-page-actions">
                     <button
-                        onClick={() => loadData(true)}
-                        className="flex items-center gap-2 px-4 py-2 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-neutral-900 transition text-sm font-medium dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/70 dark:hover:text-white"
+                        type="button"
+                        onClick={handleInstantMix}
+                        disabled={isInstantMixLoading}
+                        aria-busy={isInstantMixLoading || undefined}
+                        data-nebula-instant-mix-trigger
+                        className="nebula-header-action"
                     >
-                        <RefreshCw className="w-4 h-4" /> Refresh
+                        {isInstantMixLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="h-4 w-4 fill-current" aria-hidden="true" />}
+                        Instant Mix
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => loadData(true)}
+                        className="nebula-header-action"
+                        data-variant="quiet"
+                    >
+                        <RefreshCw className="w-4 h-4" aria-hidden="true" /> Refresh
                     </button>
                 </div>
             </div>
 
-            {isStudioPreview && instantMixError && <p data-nebula-instant-mix-error className="mb-4 text-sm text-red-500 dark:text-red-400">{instantMixError}</p>}
+            {instantMixError && <p data-nebula-instant-mix-error role="status" className="-mt-2 mb-6 text-sm text-red-500 dark:text-red-400">{instantMixError}</p>}
 
             {isStudioPreview && (
                 <>
@@ -513,23 +513,7 @@ export const BrowseView: React.FC = () => {
 
             {/* Generated Mixes */}
             <div data-nebula-generated-heading>
-                <SectionHeader icon={Sparkles} title="Generated For You" iconColor="text-yellow-500" />
-            </div>
-
-            <div data-nebula-browse-intro className="mb-4 flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-100 p-4 dark:border-white/10 dark:bg-neutral-900/60 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    {instantMixError && (
-                        <span className="text-sm text-red-500 dark:text-red-400">{instantMixError}</span>
-                    )}
-                    <button
-                        onClick={handleInstantMix}
-                        disabled={isInstantMixLoading}
-                        className="inline-flex items-center justify-center gap-2 rounded bg-neutral-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
-                    >
-                        {isInstantMixLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-                        Instant Mix
-                    </button>
-                </div>
+                <SectionHeader icon={Sparkles} title="Generated For You" />
             </div>
 
             <div data-nebula-mix-grid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
@@ -557,7 +541,7 @@ export const BrowseView: React.FC = () => {
             </div>
 
             {/* New Arrivals */}
-            <SectionHeader icon={Sparkles} title="New Arrivals" iconColor="text-blue-400" />
+            <SectionHeader icon={Sparkles} title="New Arrivals" />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-12">
                 {newAlbums.map((album) => (
                     <AlbumCard
@@ -569,7 +553,7 @@ export const BrowseView: React.FC = () => {
             </div>
 
             {/* Recommended */}
-            <SectionHeader icon={Heart} title="Recommended For You" iconColor="text-red-500" />
+            <SectionHeader icon={Heart} title="Recommended For You" />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {recommendedAlbums.map((album) => (
                     <AlbumCard

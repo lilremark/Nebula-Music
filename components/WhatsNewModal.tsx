@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ExternalLink, Gauge, Sparkles, Wrench, X, type LucideIcon } from 'lucide-react';
+// Surface, header, footer and buttons come from the shared .nebula-modal / .nebula-control-button styles (next-ui.css).
 import { APP_VERSION } from '../constants';
 import { releaseUrlForVersion } from '../electron/releaseUrl';
 import type { ReleaseChangeType, ReleaseNotes } from '../utils/releaseNotes';
@@ -46,75 +47,53 @@ export const WhatsNewModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-fade-in">
-      <div
-        className="absolute inset-0 bg-neutral-900/40 dark:bg-neutral-950/80 backdrop-blur-xs"
-        onClick={handleClose}
-      />
+      <div className="nebula-modal-scrim" onClick={handleClose} />
 
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="whats-new-title"
-        className="relative w-full max-w-lg max-h-[calc(100dvh-2rem)] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-scale-in"
+        className="nebula-modal relative w-full max-w-lg max-h-[calc(100dvh-2rem)] animate-scale-in"
       >
-
-        {/* Header */}
-        <div className="relative p-8 pb-6 shrink-0 overflow-hidden border-b border-neutral-200 dark:border-white/5 bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-800/50 dark:to-neutral-900/50">
-          <div className="absolute inset-0 bg-grid-white/[0.02] dark:bg-grid-white/[0.02] bg-[length:20px_20px]" />
-
+        <div className="nebula-modal-header">
+          <div className="nebula-modal-heading">
+            <h2 id="whats-new-title" className="nebula-modal-title">What's New</h2>
+            <p className="nebula-modal-subtitle">Version {APP_VERSION}</p>
+          </div>
           <button
+            type="button"
             onClick={handleClose}
-            className="absolute top-4 right-4 p-2 rounded-lg text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:text-white dark:hover:bg-white/5 transition-colors z-10"
+            className="nebula-modal-close"
             aria-label="Close what's new"
           >
-            <X className="w-5 h-5" />
+            <X aria-hidden="true" />
           </button>
-
-          <div className="relative z-10 flex flex-col items-center text-center">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4 border border-primary/20">
-              <Sparkles className="w-6 h-6 text-primary" />
-            </div>
-            <h2 id="whats-new-title" className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">What's New</h2>
-            <div className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-neutral-100 border border-neutral-200 dark:bg-white/5 dark:border-white/10">
-              <span className="text-primary font-mono text-[10px] font-bold uppercase tracking-wider">
-                Version {APP_VERSION}
-              </span>
-            </div>
-          </div>
         </div>
 
-        {/* Content */}
-        <div className="p-8 pt-6 flex-1 min-h-0 max-h-[60vh] overflow-y-auto custom-scrollbar bg-neutral-50 dark:bg-neutral-900/50">
-          <h3 className="text-base font-semibold text-neutral-900 dark:text-white mb-2 text-center">
-            {notes.title}
-          </h3>
-          <p className="text-[11px] uppercase tracking-widest text-neutral-500 dark:text-neutral-400 text-center mb-6">
-            Released {notes.date}
-          </p>
+        <div className="nebula-modal-body custom-scrollbar max-h-[60vh] px-5 pb-6 pt-5">
+          <h3 className="text-base font-bold text-[var(--next-text)]">{notes.title}</h3>
+          <p className="mt-1 text-xs text-[var(--next-muted)]">Released {notes.date}</p>
           {notes.summary && (
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed mb-6">{notes.summary}</p>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--next-muted)]">{notes.summary}</p>
           )}
-          <div className="space-y-6">
+          <div className="mt-6 space-y-6">
             {notes.sections.map(section => {
               const Icon = SECTION_ICONS[section.type];
               return (
-                <section key={section.type} aria-labelledby={`whats-new-${section.type}`}>
-                  <h4
-                    id={`whats-new-${section.type}`}
-                    className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-3"
-                  >
-                    <Icon className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
+                <section key={section.type} aria-labelledby={`whats-new-${section.type}`} className="nebula-whats-new-section">
+                  <h4 id={`whats-new-${section.type}`}>
+                    <Icon aria-hidden="true" />
                     {section.heading}
                   </h4>
-                  <ul className="space-y-3">
+                  <ul className="space-y-2.5">
                     {section.items.map(item => {
                       itemIndex += 1;
                       return (
                         <li
                           key={item}
-                          className={`flex items-start text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed animate-slide-up stagger-${Math.min(itemIndex, 8)}`}
+                          className={`flex items-start text-sm leading-relaxed text-[var(--next-text)] animate-slide-up stagger-${Math.min(itemIndex, 8)}`}
                         >
-                          <span className="mt-2 mr-3 w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" aria-hidden="true" />
+                          <span className="mr-3 mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" aria-hidden="true" />
                           <span>{item}</span>
                         </li>
                       );
@@ -126,22 +105,24 @@ export const WhatsNewModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-6 shrink-0 border-t border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-neutral-900 space-y-3">
+        <div className="nebula-modal-footer">
           {releaseUrl && (
             <a
               href={releaseUrl}
               target="_blank"
               rel="noreferrer"
-              className="w-full py-3 px-4 bg-primary text-white font-semibold rounded-lg hover:brightness-110 transition-all flex items-center justify-center gap-2"
+              className="nebula-control-button"
+              data-variant="quiet"
             >
               View full release notes
-              <ExternalLink className="w-4 h-4" aria-hidden="true" />
+              <ExternalLink aria-hidden="true" />
             </a>
           )}
           <button
+            type="button"
             onClick={handleClose}
-            className="w-full py-3 bg-neutral-900 text-white font-semibold rounded-lg hover:bg-neutral-800 transition-colors dark:bg-white dark:text-black dark:hover:bg-neutral-200"
+            className="nebula-control-button"
+            data-variant="primary"
           >
             Got it
           </button>

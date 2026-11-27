@@ -25,32 +25,35 @@ export const CrashReportsBanner: React.FC = () => {
     }
   };
 
+  // Shared banner layout and tones: .nebula-banner in next-ui.css.
   return (
     <section
       aria-label="Crash reports"
       data-nebula-crash-reports-banner
-      className="border-b border-primary/30 bg-primary/10 px-4 py-2 text-sm text-neutral-900 dark:text-white"
+      className="nebula-banner"
+      data-tone="info"
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-          <span>Help fix crashes by sending anonymous crash reports. Off unless you choose Share.</span>
+      <div className="nebula-banner-row">
+        <ShieldCheck className="nebula-banner-icon" aria-hidden="true" />
+        <span className="nebula-banner-copy">
+          Help fix crashes by sending anonymous crash reports. Off unless you choose Share.{' '}
           <button
             type="button"
             onClick={() => setShowDetails((v) => !v)}
             aria-expanded={showDetails}
-            className="inline-flex items-center gap-1 rounded text-xs font-semibold text-neutral-700 underline-offset-2 hover:underline dark:text-white/70"
+            className="nebula-banner-link"
           >
             What's sent?
             <ChevronDown className={`h-3 w-3 transition-transform ${showDetails ? 'rotate-180' : ''}`} aria-hidden="true" />
           </button>
-        </div>
-        <div className="flex items-center gap-2">
+        </span>
+        <div className="nebula-banner-actions">
           <button
             type="button"
             disabled={busy}
             onClick={() => answer(false)}
-            className="rounded-lg px-3 py-1 text-xs font-bold text-neutral-700 transition hover:bg-black/5 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10"
+            className="nebula-banner-button"
+            data-variant="quiet"
           >
             Not now
           </button>
@@ -58,16 +61,17 @@ export const CrashReportsBanner: React.FC = () => {
             type="button"
             disabled={busy}
             onClick={() => answer(true)}
-            className="rounded-lg bg-primary px-3 py-1 text-xs font-bold text-black transition hover:brightness-110 disabled:opacity-50"
+            className="nebula-banner-button"
+            data-variant="primary"
           >
             Share
           </button>
         </div>
       </div>
       {showDetails && (
-        <div className="pb-2 pt-3">
+        <div className="pb-2 pl-[34px] pt-3">
           <CrashReportsDisclosure />
-          <p className="mt-2 text-xs text-neutral-600 dark:text-white/50">You can change this any time in Settings → Desktop.</p>
+          <p className="mt-2 text-xs text-[var(--next-muted)]">You can change this any time in Settings → Desktop.</p>
         </div>
       )}
     </section>

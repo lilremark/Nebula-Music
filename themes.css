@@ -1,0 +1,275 @@
+/* ─── Appearance: theme presets, UI font, animated backgrounds ────────────────
+   Loaded after next-ui.css (index.tsx). Everything here is keyed off
+   attributes that theme/applyAppearance.ts puts on <html>:
+     data-nebula-theme="<preset>"   absent for the default preset
+     data-nebula-background="<id>" absent for "none"
+     style="--nebula-font: …"       absent for the default font (Manrope)
+   With no attributes set (default settings) nothing below changes a computed
+   style except the font-family indirection, which resolves to the same stack.
+
+   Each preset supplies the full --next-* token set for light and dark, plus
+   the accent through --color-primary/--color-secondary. The accent overrides
+   use !important because Store.tsx writes the user's custom colours inline on
+   <html>; a non-default preset deliberately wins over them (Settings says so). */
+
+.nebula-next, .nebula-next-setup { font-family: var(--nebula-font, 'Manrope', 'Inter', sans-serif); }
+
+/* ── Colour presets ─────────────────────────────────────────────────────── */
+
+/* Midnight: deep navy, periwinkle accent. */
+html[data-nebula-theme="midnight"] { --color-primary: 52 81 209 !important; --color-secondary: 109 79 216 !important; }
+html.dark[data-nebula-theme="midnight"] { --color-primary: 123 147 255 !important; --color-secondary: 167 139 250 !important; }
+html[data-nebula-theme="midnight"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #eef1f8; --next-rail: #e3e8f3; --next-surface: #ffffff; --next-raised: #f6f8fc;
+  --next-text: #121a33; --next-muted: #4b5675; --next-line: rgba(20, 35, 80, .12);
+}
+html.dark[data-nebula-theme="midnight"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #070b16; --next-rail: #0a1020; --next-surface: #111a2e; --next-raised: #18233c;
+  --next-text: #e6ebf7; --next-muted: #97a3bf; --next-line: rgba(150, 170, 225, .14);
+}
+
+/* Graphite: warm neutral greys, tan accent. */
+html[data-nebula-theme="graphite"] { --color-primary: 138 90 43 !important; --color-secondary: 160 120 90 !important; }
+html.dark[data-nebula-theme="graphite"] { --color-primary: 214 166 118 !important; --color-secondary: 181 164 143 !important; }
+html[data-nebula-theme="graphite"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #f1efeb; --next-rail: #e7e4de; --next-surface: #fbfaf8; --next-raised: #f6f4f0;
+  --next-text: #24211d; --next-muted: #625c53; --next-line: rgba(60, 50, 35, .13);
+}
+html.dark[data-nebula-theme="graphite"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #161514; --next-rail: #1b1a18; --next-surface: #22211f; --next-raised: #2b2a27;
+  --next-text: #ece9e4; --next-muted: #aaa59d; --next-line: rgba(255, 245, 230, .1);
+}
+
+/* Rosé: blush tones, coral accent. */
+html[data-nebula-theme="rose"] { --color-primary: 184 56 95 !important; --color-secondary: 208 112 58 !important; }
+html.dark[data-nebula-theme="rose"] { --color-primary: 240 122 155 !important; --color-secondary: 244 162 107 !important; }
+html[data-nebula-theme="rose"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #fbf1f2; --next-rail: #f5e4e7; --next-surface: #ffffff; --next-raised: #fdf6f7;
+  --next-text: #2e1a20; --next-muted: #795460; --next-line: rgba(110, 40, 60, .12);
+}
+html.dark[data-nebula-theme="rose"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #140c0f; --next-rail: #1a1014; --next-surface: #22161b; --next-raised: #2c1d24;
+  --next-text: #f6e9ec; --next-muted: #c29ea8; --next-line: rgba(255, 200, 215, .12);
+}
+
+/* Forest: moss and pine, leaf-green accent. */
+html[data-nebula-theme="forest"] { --color-primary: 44 122 76 !important; --color-secondary: 138 122 42 !important; }
+html.dark[data-nebula-theme="forest"] { --color-primary: 92 195 138 !important; --color-secondary: 200 184 102 !important; }
+html[data-nebula-theme="forest"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #eef3ee; --next-rail: #e2eae3; --next-surface: #fbfdfb; --next-raised: #f3f7f3;
+  --next-text: #15241b; --next-muted: #4b6253; --next-line: rgba(20, 60, 35, .13);
+}
+html.dark[data-nebula-theme="forest"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #0a110d; --next-rail: #0e1611; --next-surface: #142019; --next-raised: #1b2a21;
+  --next-text: #e4efe7; --next-muted: #97ae9f; --next-line: rgba(190, 240, 205, .11);
+}
+
+/* Nord: arctic slate, frost blue (after the Nord palette). */
+html[data-nebula-theme="nord"] { --color-primary: 79 114 160 !important; --color-secondary: 76 122 138 !important; }
+html.dark[data-nebula-theme="nord"] { --color-primary: 136 192 208 !important; --color-secondary: 129 161 193 !important; }
+html[data-nebula-theme="nord"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #eceff4; --next-rail: #e3e7ee; --next-surface: #f8f9fb; --next-raised: #f1f3f7;
+  --next-text: #2e3440; --next-muted: #4c566a; --next-line: rgba(46, 52, 64, .13);
+}
+html.dark[data-nebula-theme="nord"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #242933; --next-rail: #2a303c; --next-surface: #2e3440; --next-raised: #3b4252;
+  --next-text: #eceff4; --next-muted: #b4bccb; --next-line: rgba(216, 222, 233, .12);
+}
+
+/* ── ASCII / terminal presets ───────────────────────────────────────────────
+   Dark: phosphor on black. Light: a "paper terminal" (ink on paper) so the
+   Theme Mode control keeps working and Tailwind's light classes stay coherent. */
+
+html[data-nebula-theme="terminal"] { --color-primary: 21 122 50 !important; --color-secondary: 47 154 77 !important; }
+html.dark[data-nebula-theme="terminal"] { --color-primary: 57 255 106 !important; --color-secondary: 31 191 79 !important; }
+html[data-nebula-theme="terminal"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #eef2e6; --next-rail: #e4e9da; --next-surface: #f7f9f1; --next-raised: #eaefe0;
+  --next-text: #0f3d1a; --next-muted: #3a6443; --next-line: rgba(20, 80, 35, .32);
+}
+html.dark[data-nebula-theme="terminal"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #040704; --next-rail: #060a06; --next-surface: #091009; --next-raised: #0f180f;
+  --next-text: #a8f5b8; --next-muted: #62b374; --next-line: rgba(80, 255, 120, .24);
+}
+
+html[data-nebula-theme="amber"] { --color-primary: 154 88 0 !important; --color-secondary: 194 116 26 !important; }
+html.dark[data-nebula-theme="amber"] { --color-primary: 255 176 0 !important; --color-secondary: 255 140 26 !important; }
+html[data-nebula-theme="amber"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #f6efe0; --next-rail: #eee4cf; --next-surface: #fbf6ea; --next-raised: #f1e8d3;
+  --next-text: #4a2c05; --next-muted: #77511e; --next-line: rgba(120, 70, 10, .32);
+}
+html.dark[data-nebula-theme="amber"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #0a0703; --next-rail: #0d0904; --next-surface: #120d06; --next-raised: #1a1309;
+  --next-text: #ffcf7a; --next-muted: #c9964c; --next-line: rgba(255, 176, 60, .24);
+}
+
+html[data-nebula-theme="ascii-mono"] { --color-primary: 0 0 0 !important; --color-secondary: 85 85 85 !important; }
+html.dark[data-nebula-theme="ascii-mono"] { --color-primary: 232 232 232 !important; --color-secondary: 156 156 156 !important; }
+html[data-nebula-theme="ascii-mono"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #ffffff; --next-rail: #f3f3f3; --next-surface: #ffffff; --next-raised: #f1f1f1;
+  --next-text: #000000; --next-muted: #555555; --next-line: rgba(0, 0, 0, .35);
+}
+html.dark[data-nebula-theme="ascii-mono"] :is(.nebula-next, .nebula-next-setup) {
+  --next-canvas: #000000; --next-rail: #050505; --next-surface: #0b0b0b; --next-raised: #151515;
+  --next-text: #e8e8e8; --next-muted: #9c9c9c; --next-line: rgba(255, 255, 255, .24);
+}
+
+/* ── Shared fixes for every non-default preset ──────────────────────────────
+   Surfaces that hard-code Tailwind neutrals or fixed hex values. */
+
+html[data-nebula-theme] .nebula-next-setup { background: var(--next-canvas); color: var(--next-text); }
+html[data-nebula-theme] .nebula-next-setup .nebula-setup-card { border-color: var(--next-line); background: var(--next-surface); }
+
+/* Side player column: a token gradient in place of the neutral one. */
+html[data-nebula-theme] .nebula-next .nebula-side-player { background-image: linear-gradient(180deg, var(--next-rail), var(--next-canvas)); border-color: var(--next-line); }
+html[data-nebula-theme] .nebula-next [data-nebula-sidebar-player-queue-card] { border-color: var(--next-line); background: color-mix(in srgb, var(--next-surface) 70%, transparent); }
+
+/* Dropdowns everywhere (Library filters, settings, modals). */
+html[data-nebula-theme] .nebula-next [data-nebula-dropdown] > button { border-color: var(--next-line); background: var(--nebula-field-bg); color: var(--next-text); }
+html[data-nebula-theme] .nebula-next [data-nebula-dropdown] > button span { color: inherit; }
+html[data-nebula-theme] .nebula-next [data-nebula-dropdown-menu] { border-color: var(--next-line); background: var(--next-surface); color: var(--next-text); }
+html[data-nebula-theme] .nebula-next [data-nebula-dropdown-menu] button:not(.text-primary) { color: var(--next-muted); }
+html[data-nebula-theme] .nebula-next [data-nebula-dropdown-menu] button:not(.text-primary):hover { color: var(--next-text); background: var(--next-raised); }
+
+/* Waveform/progress well in the dock follows the palette. */
+html[data-nebula-theme] .nebula-transport { --next-waveform: color-mix(in srgb, var(--next-text) 26%, var(--next-surface)); }
+
+/* Text on an accent fill uses the canvas colour: every preset pairs a bright
+   accent with a dark canvas and a deep accent with a light one. */
+html.dark[data-nebula-theme] .nebula-next :is(.nebula-quick-song-play, .nebula-quick-song-add):hover { color: var(--next-canvas); }
+html[data-nebula-theme] .nebula-next :is(.bg-primary.text-black, .bg-primary.text-white) { color: var(--next-canvas); }
+
+/* Switch "off" track in light presets. */
+html[data-nebula-theme]:not(.dark) .nebula-next .nebula-setting-switch[aria-checked="false"] { background: color-mix(in srgb, var(--next-text) 22%, var(--next-surface)); }
+
+/* ── ASCII preset behaviour ─────────────────────────────────────────────── */
+
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) :is(.nebula-next, .nebula-next-setup) {
+  --nebula-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-family: var(--nebula-mono);
+  font-variant-ligatures: none;
+}
+/* Monospace everywhere, including elements with their own family (kbd, inputs, Tailwind font-*). */
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) :is(.nebula-next, .nebula-next-setup) :is(h1, h2, h3, h4, p, span, button, input, select, textarea, kbd, code, label, strong, small, a, .font-sans, .font-mono) {
+  font-family: inherit;
+  letter-spacing: 0 !important;
+}
+
+/* Square corners, except things that must stay round. */
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) :is(.nebula-next, .nebula-next-setup),
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) :is(.nebula-next, .nebula-next-setup) * {
+  border-radius: 0 !important;
+}
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) :is(.nebula-next, .nebula-next-setup) :is([role="switch"], [role="switch"] *, .nebula-speed-pitch-switch, .nebula-artist-portrait, .aspect-square.rounded-full, .animate-spin, .nebula-rail-status-dot, .nebula-aurora > span) {
+  border-radius: 9999px !important;
+}
+
+/* Flat: 1px borders instead of shadows. Focus/selection indicators are restored below. */
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) :is(.nebula-next, .nebula-next-setup) * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next :is([data-nebula-home-hero], .nebula-collection-cover, .nebula-artist-portrait, .nebula-transport, [data-nebula-player="floating"], [data-nebula-home-picks] > div:last-child) {
+  border: 1px solid var(--next-line);
+}
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-control-input:focus { box-shadow: 0 0 0 1px var(--next-accent) !important; }
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-song-row:is(:hover, [data-active="true"]) { box-shadow: inset 3px 0 var(--next-accent) !important; }
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-segmented > button:is([aria-pressed="true"], [aria-selected="true"]) { outline: 1px solid var(--next-text); outline-offset: -1px; }
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-rail-item[data-active="true"] .nebula-rail-active { outline: 1px solid var(--next-line); outline-offset: -1px; }
+
+/* Dashed hairlines between rows. */
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next :is([data-nebula-track-row], .nebula-song-row, [data-nebula-disc-header], [data-nebula-settings-panel-body] > *, .nebula-setting-group > *, .nebula-home-rotation-pagination, .nebula-modal-footer, .nebula-collection-actions, .nebula-artist-track-list) {
+  border-top-style: dashed !important;
+  border-bottom-style: dashed !important;
+}
+
+/* Uppercase section labels with a prompt marker. */
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next :is(.nebula-section-heading h2, .nebula-section-title, .nebula-home-rotation-heading h2, [data-nebula-settings-panel-heading] h2, .nebula-modal-title, [data-nebula-disc-header]) {
+  text-transform: uppercase;
+  letter-spacing: .06em !important;
+  font-size: 14px;
+  font-weight: 700;
+}
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next :is(.nebula-section-heading h2, .nebula-section-title)::before {
+  content: "> ";
+  color: var(--next-accent);
+}
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-page-title { font-weight: 800; }
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-page-title::after {
+  content: "_";
+  margin-left: .12em;
+  color: var(--next-accent);
+  animation: nebula-terminal-cursor 1.1s steps(1, end) infinite;
+}
+@keyframes nebula-terminal-cursor { 50% { opacity: 0; } }
+
+/* Transport play buttons take the phosphor colour. */
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-playback-controls .nebula-playback-toggle { background: var(--next-accent); }
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-playback-controls .nebula-playback-toggle svg { fill: var(--next-canvas); stroke: var(--next-canvas); }
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next .nebula-transport-play { background: var(--next-accent); color: var(--next-canvas); }
+html:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"], [data-nebula-theme="ascii-mono"]) .nebula-next ::selection { background: var(--next-accent); color: var(--next-canvas); }
+
+/* Subtle static CRT scanlines on the dark phosphor variants (pure CSS, never interactive). */
+html.dark:is([data-nebula-theme="terminal"], [data-nebula-theme="amber"]) .nebula-next::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgb(0 0 0 / .16) 0 1px, transparent 1px 3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-nebula-theme] .nebula-next .nebula-page-title::after { animation: none !important; }
+}
+
+/* ── Animated background: content pane becomes see-through ─────────────────
+   AppBackground mounts [data-nebula-app-background] inside the content shell,
+   behind the top bar and the scroller. Rail, top bar, cards, dock and side
+   player keep their own surfaces. */
+html[data-nebula-background] .nebula-next :is(main.custom-scrollbar, [data-nebula-view="settings"]) { background: transparent; }
+/* Detail views keep their art-derived tint but fade into the background instead of the canvas. */
+html[data-nebula-background] .nebula-next :is([data-nebula-view="album-detail"], [data-nebula-view="playlist-detail"], [data-nebula-view="ai-dj"]) {
+  background: linear-gradient(180deg, var(--collection-tint-bottom) 0px, var(--collection-tint-bottom) var(--collection-expanded-height), color-mix(in srgb, var(--album-color) 8%, transparent) calc(var(--collection-expanded-height) + 320px), transparent calc(var(--collection-expanded-height) + 760px));
+}
+html[data-nebula-background] .nebula-next .nebula-artist-hero { background: linear-gradient(180deg, color-mix(in srgb, var(--album-color) 30%, var(--next-canvas)), transparent); }
+
+/* ── Settings: appearance pickers ───────────────────────────────────────── */
+
+.nebula-appearance-block { display: grid; gap: 12px; padding: 16px 20px; }
+.nebula-appearance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.nebula-appearance-card { position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 10px; border: 1px solid var(--next-line); border-radius: 12px; background: var(--nebula-field-bg); color: var(--next-text); text-align: left; cursor: pointer; transition: border-color .16s ease, background-color .16s ease; }
+.nebula-appearance-card:hover { border-color: var(--nebula-control-line-hover); }
+.nebula-appearance-card[aria-checked="true"] { border-color: var(--next-accent); box-shadow: 0 0 0 1px var(--next-accent); }
+.nebula-appearance-card:focus-visible { outline: 2px solid var(--next-accent); outline-offset: 2px; }
+.nebula-appearance-card-name { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 13px; font-weight: 650; line-height: 1.3; }
+.nebula-appearance-card-name svg { width: 15px; height: 15px; flex: none; color: var(--next-accent); }
+.nebula-appearance-card-desc { color: var(--next-muted); font-size: 11px; line-height: 1.4; }
+.nebula-appearance-chips { display: flex; overflow: hidden; height: 28px; border-radius: 7px; box-shadow: inset 0 0 0 1px var(--next-line); }
+.nebula-appearance-chips > span { flex: 1 1 0; }
+.nebula-appearance-chips > span:last-child:nth-child(4) { flex: .6 1 0; }
+.nebula-appearance-card[data-kind="ascii"] .nebula-appearance-card-name { font-family: 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 0; }
+
+/* Background preview tiles: static CSS stand-ins for each background. */
+.nebula-bg-preview { position: relative; height: 56px; overflow: hidden; border-radius: 7px; background: var(--next-canvas); box-shadow: inset 0 0 0 1px var(--next-line); --bgp-ink: color-mix(in srgb, var(--next-text) 40%, transparent); --bgp-accent: var(--next-accent); }
+.nebula-bg-preview[data-variant="aurora"] { background:
+  radial-gradient(60% 90% at 20% 30%, color-mix(in srgb, rgb(var(--color-primary)) 55%, transparent), transparent 70%),
+  radial-gradient(55% 80% at 80% 70%, color-mix(in srgb, rgb(var(--color-secondary)) 50%, transparent), transparent 70%),
+  var(--next-canvas); }
+.nebula-bg-preview[data-variant="dot-grid"] { background-image: radial-gradient(var(--bgp-ink) 1px, transparent 1.4px); background-size: 9px 9px; }
+.nebula-bg-preview[data-variant="grid"] { background-image: linear-gradient(to right, var(--bgp-ink) 1px, transparent 1px), linear-gradient(to bottom, var(--bgp-ink) 1px, transparent 1px); background-size: 14px 14px; }
+.nebula-bg-preview[data-variant="flickering-grid"] { background-image:
+  linear-gradient(90deg, var(--next-canvas) 4px, transparent 4px),
+  linear-gradient(var(--next-canvas) 4px, transparent 4px),
+  repeating-conic-gradient(from 0deg at 50% 50%, color-mix(in srgb, var(--bgp-accent) 70%, transparent) 0 25%, color-mix(in srgb, var(--bgp-accent) 20%, transparent) 0 50%);
+  background-size: 8px 8px, 8px 8px, 16px 16px; }
+.nebula-bg-preview[data-variant="particles"] { background-image:
+  radial-gradient(circle at 12% 30%, var(--bgp-accent) 1.2px, transparent 2px),
+  radial-gradient(circle at 34% 72%, var(--bgp-accent) 1px, transparent 1.8px),
+  radial-gradient(circle at 58% 20%, var(--bgp-accent) 1.4px, transparent 2.2px),
+  radial-gradient(circle at 76% 58%, var(--bgp-accent) 1px, transparent 1.8px),
+  radial-gradient(circle at 90% 26%, var(--bgp-accent) 1.2px, transparent 2px),
+  radial-gradient(circle at 46% 46%, var(--bgp-accent) .8px, transparent 1.6px); }
+.nebula-bg-preview[data-variant^="ascii"]::before { position: absolute; inset: 4px 6px; overflow: hidden; color: var(--bgp-accent); font: 500 9px/10px 'JetBrains Mono', ui-monospace, monospace; letter-spacing: 1px; white-space: pre; opacity: .8; }
+.nebula-bg-preview[data-variant="ascii-field"]::before { content: " .:-=+*#%@%#*+=-:. .:-=+*\A :-=+*#%@@%#*+=-:. .:-=+\A -=+*#%@%%#*+=-:.  .:-=+*#\A =+*#%@%#*+=-:. .:-=+*#%@%\A +*#%%#*+=-:.  .:-=+*#%@%#"; }
+.nebula-bg-preview[data-variant="ascii-rain"]::before { content: "1  |  0  =  1  >  0  *\A 0  /  1  +  0  |  1  #\A    0     1  <  1  +   \A    1     0     0  =   \A          1     1      "; }
+.nebula-bg-preview[data-variant="none"]::before { content: "—"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--next-muted); font-size: 14px; }

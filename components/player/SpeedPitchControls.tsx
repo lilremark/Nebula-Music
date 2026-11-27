@@ -37,7 +37,7 @@ export const SpeedPitchControls: React.FC<{ showLabel?: boolean }> = ({ showLabe
   }, [open]);
   const adjust = (value: number, delta: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round((value + delta) * 10) / 10));
   const control = (name: string, value: number, min: number, max: number, set: (value: number) => void, unit: string) => <div className="nebula-speed-pitch-control">
-    <label>{name}<output>{value > 0 && name === 'Pitch' ? '+' : ''}{value.toFixed(1)}{unit}</output></label>
+    <label>{name}<output className="nebula-time">{value > 0 && name === 'Pitch' ? '+' : ''}{value.toFixed(1)}{unit}</output></label>
     <div className="nebula-speed-pitch-stepper">
       <button type="button" aria-label={`Decrease ${name.toLowerCase()}`} disabled={value <= min} onClick={() => set(adjust(value, -0.1, min, max))}><Minus size={16} /></button>
       <input aria-label={`Playback ${name.toLowerCase()}`} type="range" min={min} max={max} step="0.1" value={value} onChange={event => set(Number(event.target.value))} />
@@ -50,8 +50,10 @@ export const SpeedPitchControls: React.FC<{ showLabel?: boolean }> = ({ showLabe
       <div className="nebula-speed-pitch-heading"><strong>Speed & Pitch</strong><button type="button" aria-label="Close playback settings" onClick={() => { setOpen(false); triggerRef.current?.focus(); }}><X size={16} /></button></div>
       {control('Speed', playbackRate, 0.5, 2, setPlaybackRate, '×')}
       {control('Pitch', pitch, -12, 12, setPitch, ' st')}
-      <button type="button" aria-pressed={pitchCorrection} onClick={() => setPitchCorrection(!pitchCorrection)}><SlidersHorizontal size={15} />Independent pitch</button>
-      <button type="button" onClick={() => { setPlaybackRate(1); setPitch(0); }}>Reset speed and pitch</button>
+      <button type="button" className="nebula-speed-pitch-toggle" aria-pressed={pitchCorrection} onClick={() => setPitchCorrection(!pitchCorrection)}>
+        <SlidersHorizontal size={15} aria-hidden="true" /><span>Independent pitch</span><span className="nebula-speed-pitch-switch" aria-hidden="true" />
+      </button>
+      <button type="button" className="nebula-speed-pitch-reset" disabled={playbackRate === 1 && pitch === 0} onClick={() => { setPlaybackRate(1); setPitch(0); }}>Reset speed and pitch</button>
     </div>, document.querySelector('.nebula-next') || document.body)}
   </>;
 };

@@ -275,12 +275,13 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`w-20 md:w-24 py-2 rounded-md text-xs font-semibold uppercase tracking-wide transition-all ${activeTab === tab
-                                    ? 'bg-white text-black'
+                                aria-pressed={activeTab === tab}
+                                className={`w-[104px] px-2 py-2 rounded-md text-[12px] font-[650] whitespace-nowrap transition-all ${activeTab === tab
+                                    ? 'bg-white text-black shadow-sm'
                                     : 'text-neutral-600 dark:text-white/50 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5'
                                     }`}
                             >
-                                {tab === 'playing' ? 'Now Playing' : tab}
+                                {tab === 'playing' ? 'Now Playing' : tab === 'lyrics' ? 'Lyrics' : 'Queue'}
                             </button>
                         ))}
                     </div>
@@ -314,10 +315,13 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                 {/* Now Playing Tab */}
                 {activeTab === 'playing' && !isZenMode && (
                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                        <div className="flex min-h-full w-full flex-col lg:flex-row items-center justify-center gap-8 lg:gap-20 px-6 md:px-12 pb-8" data-nebula-fullscreen-playing>
+                        {/* Side by side down to 760px wide; artwork is sized from both
+                            viewport dimensions so art, progress, transport and volume fit
+                            without scrolling at any window >= 760x560. */}
+                        <div className="flex min-h-full w-full flex-col min-[760px]:flex-row items-center justify-center gap-6 min-[760px]:gap-[clamp(24px,4.5vw,80px)] px-6 min-[760px]:px-[clamp(24px,4vw,48px)] pb-[clamp(12px,3vh,32px)]" data-nebula-fullscreen-playing>
                         {/* Album Art */}
-                        <div className="relative w-full max-w-[380px] lg:max-w-[480px] shrink-0" data-nebula-fullscreen-art>
-                            <div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 w-full max-w-[min(55vh,480px)] ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
+                        <div className="relative shrink-0 w-[min(380px,80vw,38vh)] min-[760px]:w-[min(480px,40vw,62vh)]" data-nebula-fullscreen-art>
+                            <div className={`relative aspect-square rounded-xl overflow-hidden shadow-2xl transition-all duration-700 w-full ${isPlaying ? 'scale-100' : 'scale-95 opacity-70'}`}>
                                 <PlayerCover src={coverArt}
                                     alt={voice.speech ? 'AI DJ' : currentSong.title}
                                     className="w-full h-full object-cover"
@@ -332,20 +336,20 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                         </div>
 
                         {/* Song Info & Controls */}
-                        <div className="relative flex-1 flex flex-col items-center lg:items-start text-center lg:text-left w-full max-w-lg" data-nebula-fullscreen-info>
+                        <div className="relative min-w-0 flex-1 flex flex-col items-center min-[760px]:items-start text-center min-[760px]:text-left w-full max-w-lg" data-nebula-fullscreen-info>
                             {/* Title & Artist */}
                             <DjBadge />
-                            <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-neutral-900 dark:text-white mb-2 leading-tight">
+                            <h1 className="line-clamp-2 text-[length:clamp(22px,6vw,30px)] min-[760px]:text-[length:clamp(24px,min(3.8vw,6.4vh),48px)] font-black text-neutral-900 dark:text-white mb-[clamp(4px,1vh,8px)] leading-tight" title={voice.speech ? 'AI DJ' : currentSong.title}>
                                 {voice.speech ? 'AI DJ' : currentSong.title}
                             </h1>
                             <p
-                                className="text-lg md:text-xl text-neutral-600 dark:text-white/50 font-medium mb-2 cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
+                                className="text-[length:clamp(15px,2.6vh,20px)] text-neutral-600 dark:text-white/50 font-medium mb-1 cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
                                 onClick={() => { if (voice.speech) return; setView('ARTIST_DETAIL', currentSong.artistId); onClose(); }}
                             >
                                 {voice.speech ? voice.subtitle : currentSong.artist}
                             </p>
                             <p
-                                className="text-sm text-neutral-500 dark:text-white/50 mb-8 cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
+                                className="text-sm text-neutral-500 dark:text-white/50 mb-[clamp(12px,3.4vh,32px)] cursor-pointer hover:text-neutral-900 dark:hover:text-white transition-colors"
                                 onClick={() => { if (voice.speech) return; setView('ALBUM_DETAIL', currentSong.albumId); onClose(); }}
                             >
                                 {voice.speech ? '' : currentSong.album}
@@ -359,8 +363,8 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             </p>
 
                             {/* Progress Bar */}
-                            <div className="w-full mb-8">
-                                <div className="flex justify-end mb-2">
+                            <div className="w-full mb-[clamp(10px,3.4vh,32px)]">
+                                <div className="flex justify-end mb-[clamp(4px,1vh,8px)]">
                                     <button
                                         onClick={toggleProgressMode}
                                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider text-neutral-600 hover:text-neutral-900 bg-neutral-200 hover:bg-neutral-300 transition-all dark:text-white/70 dark:bg-white/10 dark:hover:bg-white/20 dark:hover:text-white"
@@ -382,18 +386,18 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     onScrub={handleScrub}
                                     scrubbable={!voice.speech}
                                     trackClassName={`cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
-                                        ? 'h-28 bg-transparent rounded-none'
-                                        : 'h-2 bg-neutral-300 dark:bg-white/10 rounded'
+                                        ? 'h-[clamp(48px,12vh,112px)] bg-transparent rounded-none'
+                                        : 'h-2 dark:bg-white/10 rounded'
                                         }`}
                                 />
-                                <div className="flex justify-between mt-2 text-xs font-mono text-neutral-600 dark:text-white/60">
+                                <div className="nebula-time flex justify-between mt-2 text-xs text-neutral-600 dark:text-white/60">
                                     <span>{formatTime(voice.speech ? voice.position : currentTime)}</span>
                                     <span>{formatTime(voice.speech ? voice.duration : duration)}</span>
                                 </div>
                             </div>
 
                             {/* Main Controls */}
-                            <div className="flex items-center justify-center gap-6 mb-8 w-full" data-nebula-fullscreen-transport>
+                            <div className="flex items-center justify-center gap-[clamp(8px,2vw,24px)] mb-[clamp(10px,3.4vh,32px)] w-full" data-nebula-fullscreen-transport>
                                 <button
                                     onClick={toggleRepeat}
                                     disabled={dj.state.active}
@@ -414,7 +418,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
 
                                 <button
                                     onClick={togglePlay}
-                                    className="w-20 h-20 rounded-lg bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
+                                    className="size-[clamp(56px,10vh,80px)] shrink-0 rounded-lg bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
                                     aria-label={voice.playing ? 'Pause' : 'Play'}
                                 >
                                     {voice.playing ? (
@@ -442,36 +446,33 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                 </button>
                             </div>
 
-                            {/* Volume Control */}
-                            <div className="flex items-center gap-3 w-full max-w-xs mx-auto lg:mx-0 mb-6">
-                                <button
-                                    onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
-                                    className="p-2 text-neutral-600 hover:text-neutral-900 transition-colors dark:text-white/60 dark:hover:text-white"
-                                    aria-label={volume === 0 ? 'Unmute' : 'Mute'}
-                                >
-                                    {volume === 0 ? <VolumeX className="w-5 h-5" /> :
-                                        volume < 0.5 ? <Volume1 className="w-5 h-5" /> :
-                                            <Volume2 className="w-5 h-5" />}
-                                </button>
-                                <div className="flex-1 relative h-1.5 bg-white/10 rounded group">
-                                    <div
-                                        className="absolute inset-y-0 left-0 bg-white/60 rounded"
-                                        style={{ width: `${volume * 100}%` }}
-                                    />
+                            {/* Volume + Speed & Pitch share one row to keep the composition short */}
+                            <div className="flex w-full flex-wrap items-center justify-center min-[760px]:justify-start gap-x-4 gap-y-2" data-nebula-fullscreen-volume>
+                                <div className="nebula-playback-volume flex w-[220px] max-w-full">
+                                    <button
+                                        type="button"
+                                        onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
+                                        aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+                                        title={volume === 0 ? 'Unmute' : 'Mute'}
+                                    >
+                                        {volume === 0 ? <VolumeX className="w-5 h-5" /> :
+                                            volume < 0.5 ? <Volume1 className="w-5 h-5" /> :
+                                                <Volume2 className="w-5 h-5" />}
+                                    </button>
                                     <input
                                         type="range"
                                         aria-label="Volume"
+                                        title={`Volume ${Math.round(volume * 100)}%`}
                                         min="0"
                                         max="1"
                                         step="0.01"
                                         value={volume}
                                         onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                        style={{ '--progress': `${volume * 100}%` } as React.CSSProperties}
                                     />
                                 </div>
+                                <SpeedPitchControls showLabel />
                             </div>
-
-                            <SpeedPitchControls showLabel />
                         </div>
                         </div>
                     </div>
@@ -531,7 +532,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                             </div>}
                             <div className="flex items-center justify-between py-4">
                                 <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Up Next</h2>
-                                <span className="text-sm text-neutral-600 dark:text-white/60">{queue.length} songs</span>
+                                <span className="nebula-time text-sm text-neutral-600 dark:text-white/60">{queue.length === 1 ? '1 song' : `${queue.length} songs`}</span>
                             </div>
                             <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 {queue.map((song, idx) => (
@@ -542,7 +543,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                         className={`flex items-center p-3 rounded-lg transition-all cursor-pointer hover:bg-neutral-100 dark:hover:bg-white/5 mb-1 ${idx === currentSongIndex ? 'bg-neutral-200 dark:bg-white/10' : ''
                                             }`}
                                     >
-                                        <div className="w-8 text-center font-mono text-sm mr-4 text-neutral-500 dark:text-white/60">
+                                        <div className="nebula-time w-8 text-center text-sm mr-4 text-neutral-500 dark:text-white/60">
                                             {idx === currentSongIndex && isPlaying ? (
                                                 <div className="flex justify-center gap-0.5">
                                                     <div className="w-0.5 h-3 bg-neutral-900 dark:bg-white animate-pulse" />
@@ -560,7 +561,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                             </div>
                                             <div className="text-sm text-neutral-600 dark:text-white/60 truncate">{song.artist}</div>
                                         </div>
-                                        <span className="text-sm font-mono text-neutral-500 dark:text-white/50 ml-4">
+                                        <span className="nebula-time text-sm text-neutral-500 dark:text-white/50 ml-4">
                                             {formatTime(song.duration)}
                                         </span>
                                     </div>
@@ -615,7 +616,7 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <span className="w-12 text-right font-mono text-sm text-white/60">{formatTime(voice.speech ? voice.position : currentTime)}</span>
+                                        <span className="nebula-time w-12 text-right text-sm text-white/60">{formatTime(voice.speech ? voice.position : currentTime)}</span>
                                         <PlaybackProgress
                                             progress={displayProgress}
                                             mode={progressMode}
@@ -626,12 +627,13 @@ export const Player: React.FC<PlayerProps> = ({ isExpanded, onClose }) => {
                                             waveform={waveform}
                                             onScrub={handleScrub}
                                             scrubbable={!voice.speech}
+                                            surface="dark"
                                             trackClassName={`flex-1 cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
                                                 ? 'h-16 bg-transparent rounded-none'
                                                 : 'h-1.5 bg-white/10 rounded'
                                                 }`}
                                         />
-                                        <span className="w-12 font-mono text-sm text-white/60">{formatTime(voice.speech ? voice.duration : duration)}</span>
+                                        <span className="nebula-time w-12 text-sm text-white/60">{formatTime(voice.speech ? voice.duration : duration)}</span>
                                     </div>
                                 </div>
 

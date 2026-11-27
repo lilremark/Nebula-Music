@@ -13,6 +13,8 @@ import { db } from '../services/db';
 import { toDataUrlArtwork } from '../services/mediaSessionArtwork';
 import { sanitizeServerUrlForSettings } from '../electron/urlSanitize';
 import { defaultAccent } from '../design-system/tokens';
+import { DEFAULT_APPEARANCE, normalizeThemeSettings } from '../constants/appearance';
+import { applyAppearance, persistAppearance } from '../theme/applyAppearance';
 import { applyEqPreamp, getEqPreampGain } from '../services/eqPreamp';
 import { applyReplayGain, DEFAULT_REPLAY_GAIN, normalizeReplayGainSettings } from '../services/replayGain';
 import { observeMusicStatus, type MusicPlaybackStatus } from '../playback/musicStatus';
@@ -91,7 +93,7 @@ interface StoreContextType extends AppState {
 const StoreContext = createContext<StoreHandle<StoreContextType> | undefined>(undefined);
 
 const DEFAULT_SETTINGS: AppSettings = {
-  theme: { ...defaultAccent },
+  theme: { ...defaultAccent, ...DEFAULT_APPEARANCE },
   sidebar: {
     collapsed: false,
     showHome: true,
@@ -101,6 +103,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     showAlbums: true,
     showSongs: true,
     showPlaylists: true,
+    sections: { discover: true, library: true, playlists: true },
   },
   shortcuts: {
     playPause: ' ',
@@ -788,7 +791,7 @@ export const StoreProvider: React.FC<{
         setSettings(prev => ({
           ...prev,
           ...savedSettings,
-          theme: { ...prev.theme, ...savedSettings.theme },
+          theme: normalizeThemeSettings({ ...prev.theme, ...savedSettings.theme }),
           sidebar: { ...prev.sidebar, ...savedSettings.sidebar },
           shortcuts: { ...prev.shortcuts, ...savedSettings.shortcuts },
           replayGain: normalizeReplayGainSettings(savedSettings.replayGain),
@@ -1576,6 +1579,17 @@ export const StoreProvider: React.FC<{
     document.documentElement.style.setProperty('--color-secondary', hexToRgb(settings.theme.secondaryColor));
   }, [settings.theme]);
 
+  // Theme preset, UI font and background attributes on <html>. Waits for the
+  // saved settings so the boot-time copy (applied from localStorage in
+  // index.tsx) is not briefly replaced by the defaults.
+  const { preset: themePreset, font: themeFont, background: themeBackground } = settings.theme;
+  useEffect(() => {
+    if (!isInitialized) return;
+    const choice = { preset: themePreset, font: themeFont, background: themeBackground };
+    applyAppearance(choice);
+    persistAppearance(choice);
+  }, [isInitialized, themePreset, themeFont, themeBackground]);
+
   const setPitch = useCallback((val: number) => {
     setPitchState(val);
   }, []);
@@ -2206,7 +2220,7 @@ export const StoreProvider: React.FC<{
       const updated = {
         ...prev,
         ...newSettings,
-        theme: { ...prev.theme, ...(newSettings.theme || {}) },
+        theme: normalizeThemeSettings({ ...prev.theme, ...(newSettings.theme || {}) }),
         sidebar: { ...prev.sidebar, ...(newSettings.sidebar || {}) },
         shortcuts: { ...prev.shortcuts, ...(newSettings.shortcuts || {}) },
         replayGain: normalizeReplayGainSettings({ ...prev.replayGain, ...newSettings.replayGain }),

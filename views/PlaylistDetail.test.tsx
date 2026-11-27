@@ -61,6 +61,28 @@ describe('playlist navigation and playback controls', () => {
     expect(store.playSong).not.toHaveBeenCalled();
   });
 
+  it('asks for an inline confirmation before deleting a saved playlist', async () => {
+    await render();
+    const remove = () => container.querySelector<HTMLButtonElement>('[data-nebula-playlist-delete]')!;
+    expect(remove().getAttribute('aria-label')).toBe('Delete playlist');
+    await act(async () => remove().click());
+    expect(store.deletePlaylist).not.toHaveBeenCalled();
+    expect(remove().dataset.confirming).toBe('true');
+    expect(remove().textContent).toContain('Delete playlist?');
+    await act(async () => remove().click());
+    expect(store.deletePlaylist).toHaveBeenCalledExactlyOnceWith('playlist');
+  });
+
+  it('disarms the delete confirmation when focus leaves the button', async () => {
+    await render();
+    const remove = () => container.querySelector<HTMLButtonElement>('[data-nebula-playlist-delete]')!;
+    await act(async () => remove().click());
+    await act(async () => { remove().dispatchEvent(new FocusEvent('focusout', { bubbles: true })); });
+    expect(remove().dataset.confirming).toBe('false');
+    await act(async () => remove().click());
+    expect(store.deletePlaylist).not.toHaveBeenCalled();
+  });
+
   it('pauses an active playlist without replacing its queue', async () => {
     store.queue = playlist.songs;
     store.isPlaying = true;

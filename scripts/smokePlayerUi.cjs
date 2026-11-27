@@ -375,9 +375,10 @@ app.on('browser-window-created', (_event, win) => {
         const nav = document.querySelector('[data-nebula-settings-jumps]');
         const buttons = [...nav.querySelectorAll('button')];
         const bounds = buttons.map(button => button.getBoundingClientRect());
-        if (bounds.some(bound => bound.height < 39) || bounds.slice(1).some((bound, i) => bound.top === bounds[i].top && bound.left - bounds[i].right < 7))
+        // Segmented control: 36px segments, 4px apart.
+        if (bounds.some(bound => bound.height < 35) || bounds.slice(1).some((bound, i) => bound.top === bounds[i].top && bound.left - bounds[i].right < 3))
           throw new Error('Settings section buttons are cramped');
-        const expected = { Connection: ['Server Connection'], Sound: ['Equalizer', 'Playback'], Interface: ['Appearance', 'Player Display', 'Visualizer Style', 'Navigation Items', 'Keyboard Shortcuts'], Integrations: ['Stream Deck'], 'AI DJ': ['AI DJ'], Desktop: ['Desktop Integration', 'Updates'] };
+        const expected = { Connection: ['Server Connection'], Sound: ['Equalizer', 'Playback', 'ReplayGain'], Interface: ['Appearance', 'Player Display', 'Visualizer Style', 'Navigation Items', 'Keyboard Shortcuts'], Integrations: ['Stream Deck'], 'AI DJ': ['AI DJ'], Desktop: ['Desktop Integration', 'Updates'] };
         for (const button of buttons) {
           button.click();
           await new Promise(resolve => setTimeout(resolve, 50));
@@ -500,7 +501,7 @@ app.on('browser-window-created', (_event, win) => {
         if (document.querySelector('.nebula-browse-categories')) throw new Error('Browse shortcuts remained');
         railButton('Search').click();
         await waitFor(() => document.querySelector('[data-nebula-content-modal="search"]'), 'search dialog');
-        assertOverlay('search', 2);
+        assertOverlay('search', 4);
         click('[data-nebula-modal-backdrop]');
         railButton('Albums').click();
         await waitFor(() => document.querySelector('[data-nebula-library="albums"] [data-nebula-library-filters]'), 'album filters');
@@ -518,8 +519,9 @@ app.on('browser-window-created', (_event, win) => {
         await waitFor(() => album.style.getPropertyValue('--album-color').startsWith('#'), 'artwork palette');
         const hero = album.querySelector('[data-nebula-detail-hero-inner]');
         if (hero.querySelector(':scope > button') || !document.querySelector('[aria-label="Go back"]')) throw new Error('Album back navigation is incorrect');
-        if (album.querySelector('[data-nebula-detail-cover]').getBoundingClientRect().width < 279 || parseFloat(getComputedStyle(album.querySelector('h1')).fontSize) < 36)
-          throw new Error('Album hero was not enlarged');
+        // Expanded header: cover clamp(180px, 18vw, 264px), title clamp(28px, 3.2vw, 46px).
+        if (album.querySelector('[data-nebula-detail-cover]').getBoundingClientRect().width < 179 || parseFloat(getComputedStyle(album.querySelector('h1')).fontSize) < 28)
+          throw new Error('Album hero is smaller than the expanded header minimum');
         if (parseFloat(getComputedStyle(album.querySelector('[data-nebula-track-title]')).fontSize) < 16 || album.querySelector('[data-nebula-track-actions] button').getBoundingClientRect().height < 40)
           throw new Error('Album track controls are too small');
         if (!getComputedStyle(album).backgroundImage.includes('gradient')) throw new Error('Album colors are not blended');
@@ -570,7 +572,7 @@ app.on('browser-window-created', (_event, win) => {
           const header = document.querySelector('[data-nebula-collection-header]');
           document.querySelector('[data-nebula-main-scroll]').scrollTo({ top: 0, behavior: 'instant' });
           for (let i = 0; i < 100 && header.dataset.compact !== 'false'; i++) await new Promise(resolve => setTimeout(resolve, 25));
-          if (header.dataset.compact !== 'false' || header.querySelector('[data-nebula-detail-cover]').getBoundingClientRect().width < 279) throw new Error('Collection header did not expand again');
+          if (header.dataset.compact !== 'false' || header.querySelector('[data-nebula-detail-cover]').getBoundingClientRect().width < 179) throw new Error('Collection header did not expand again');
         })()`);
       };
       await checkCollection('album');
@@ -609,7 +611,7 @@ app.on('browser-window-created', (_event, win) => {
       fs.writeFileSync(path.join(profile, 'collection-mobile.png'), (await win.webContents.capturePage()).toPNG());
       win.setContentSize(1100, 600);
       await new Promise(resolve => setTimeout(resolve, 500));
-      const compact = await win.webContents.executeJavaScript(`(() => {
+      const compact = await win.webContents.executeJavaScript(`(async () => {
         const body = document.querySelector('.nebula-rail-body');
         if (getComputedStyle(body).overflowY !== 'hidden' || body.scrollHeight > body.clientHeight + 1) throw new Error('Sidebar still needs scrolling');
         const core = document.querySelector('.nebula-rail-core').getBoundingClientRect();
@@ -617,8 +619,31 @@ app.on('browser-window-created', (_event, win) => {
         const count = document.querySelectorAll('.nebula-rail-playlist').length;
         const navRows = [...document.querySelectorAll('.nebula-rail-core .nebula-rail-item')].map(item => item.getBoundingClientRect());
         if (navRows.some((row, index) => index > 0 && row.top < navRows[index - 1].bottom - 1)) throw new Error('Sidebar navigation is not vertical');
-        if (count > 4) throw new Error('Too many sidebar playlists');
-        return { compactSidebar: true, playlistCount: count };
+        // Every playlist is listed; only the playlist list scrolls, and every disclosure heading stays inside the rail.
+        const list = document.querySelector('.nebula-rail-playlist-list');
+        if (String(count) !== document.querySelector('.nebula-rail-playlists .nebula-rail-heading-count')?.textContent) throw new Error('Sidebar does not list every playlist');
+        if (!list || getComputedStyle(list).overflowY !== 'auto') throw new Error('Sidebar playlist list is not its own scroller');
+        const bodyBottom = body.getBoundingClientRect().bottom;
+        const headings = [...document.querySelectorAll('.nebula-rail-disclosure')];
+        if (headings.length !== 3 || headings.some(heading => heading.getAttribute('aria-expanded') !== 'true' || heading.getBoundingClientRect().height < 24 || heading.getBoundingClientRect().bottom > bodyBottom + 1)) throw new Error('Sidebar disclosure headings are missing or clipped');
+        // Collapsing Discover frees height for playlists without making the rail body scroll.
+        const listHeight = list.clientHeight;
+        const discover = headings.find(heading => heading.textContent.trim() === 'Discover');
+        discover.click();
+        await new Promise(resolve => setTimeout(resolve, 60));
+        for (const animation of document.getAnimations()) if (animation instanceof CSSTransition) animation.finish();
+        await new Promise(resolve => setTimeout(resolve, 60));
+        const freed = list.clientHeight;
+        const group = document.getElementById(discover.getAttribute('aria-controls'));
+        if (discover.getAttribute('aria-expanded') !== 'false' || !group.inert || group.getBoundingClientRect().height > 1) throw new Error('Discover did not collapse');
+        if (body.scrollHeight > body.clientHeight + 1) throw new Error('Collapsed Discover makes the sidebar scroll');
+        if (freed < Math.min(list.scrollHeight, listHeight + 100)) throw new Error('Playlists did not grow into the freed height: ' + listHeight + ' -> ' + freed);
+        discover.click();
+        await new Promise(resolve => setTimeout(resolve, 60));
+        for (const animation of document.getAnimations()) if (animation instanceof CSSTransition) animation.finish();
+        await new Promise(resolve => setTimeout(resolve, 60));
+        if (discover.getAttribute('aria-expanded') !== 'true') throw new Error('Discover did not expand again');
+        return { compactSidebar: true, playlistCount: count, playlistListHeight: listHeight, playlistListHeightWithDiscoverCollapsed: freed };
       })()`);
       console.log(JSON.stringify(compact));
       fs.writeFileSync(path.join(profile, 'sidebar-compact.png'), (await win.webContents.capturePage()).toPNG());
@@ -640,8 +665,8 @@ app.on('browser-window-created', (_event, win) => {
         })()`);
       }
       console.log(JSON.stringify({ sidebarHeightSweep: true }));
-      const tallPlaylists = await win.webContents.executeJavaScript(`document.querySelectorAll('.nebula-rail-playlist').length`);
-      if (tallPlaylists < compact.playlistCount || tallPlaylists > 4) throw new Error('Playlist shortcuts do not fit the available height');
+      const tallPlaylistList = await win.webContents.executeJavaScript(`document.querySelector('.nebula-rail-playlist-list').clientHeight`);
+      if (tallPlaylistList < compact.playlistListHeight) throw new Error('Playlist list does not grow with the available height');
       win.setContentSize(1100, 850);
       await win.webContents.executeJavaScript(`(async () => {
         const radio = [...document.querySelectorAll('.nebula-rail button')].find(button => button.textContent.trim() === 'Internet Radio');

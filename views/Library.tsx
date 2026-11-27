@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { useStore } from '../context/Store';
 import { IAlbum, ISong, IArtist, View } from '../types';
-import { Play, Music, Mic2, MoreVertical, Plus, ListPlus, Search, Disc, ChevronLeft, ChevronRight, ArrowUp, Filter, X, Calendar, Tag, ArrowDownUp, ChevronDown, Heart, Star, ListMusic } from 'lucide-react';
+import { Play, Music, Mic2, MoreVertical, Plus, ListPlus, Search, Disc, ChevronLeft, ChevronRight, ArrowUp, Filter, X, Calendar, Tag, ArrowDownUp, ChevronDown, Heart, ListMusic } from 'lucide-react';
 import { CustomDropdown } from '../components/CustomDropdown';
 
 const ITEMS_PER_PAGE = 60;
@@ -53,7 +53,7 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
     const years = Array.from({ length: 12 }, (_, i) => startYear + i);
 
     return (
-        <div data-nebula-year-picker className="relative min-w-[120px]" ref={pickerRef}>
+        <div data-nebula-year-picker className="relative" ref={pickerRef}>
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
             <input
                 ref={inputRef}
@@ -63,7 +63,7 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
                 onFocus={() => setIsOpen(true)}
                 aria-label="Filter by year"
                 placeholder="Year"
-                className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 pl-10 pr-8 text-sm focus:border-primary/60 focus:bg-white focus:outline-hidden text-neutral-900 transition-all placeholder-neutral-500 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white"
+                className="w-full pl-10 pr-8 text-sm transition-all"
             />
             <button
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-neutral-500 hover:text-neutral-900 z-10 dark:hover:text-white"
@@ -78,6 +78,7 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
 
             {isOpen && (
                 <div
+                    data-nebula-year-picker-menu
                     className="absolute w-64 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-white/10 rounded-2xl shadow-float-3 z-50 overflow-hidden animate-scale-in"
                     style={dropdownStyle}
                 >
@@ -104,21 +105,32 @@ const YearPicker: React.FC<{ value: string, onChange: (val: string) => void }> =
     );
 };
 
-const ViewHeader = ({ currentView, children }: { currentView: View, children?: React.ReactNode }) => (
-    <div data-nebula-view-header className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-6 animate-fade-in">
-        <h1 className="text-4xl md:text-5xl font-black capitalize flex items-center tracking-tight text-neutral-900 dark:text-white hidden md:flex">
-            {currentView === 'ARTISTS' && <div className="p-2 bg-purple-500/20 rounded-xl mr-4 border border-purple-500/30"><Mic2 className="w-8 h-8 text-purple-400" /></div>}
-            {currentView === 'ALBUMS' && <div className="p-2 bg-blue-500/20 rounded-xl mr-4 border border-blue-500/30"><Disc className="w-8 h-8 text-blue-400" /></div>}
-            {currentView === 'SONGS' && <div className="p-2 bg-green-500/20 rounded-xl mr-4 border border-green-500/30"><Music className="w-8 h-8 text-green-400" /></div>}
-            {currentView === 'PLAYLISTS' && <div className="p-2 bg-orange-500/20 rounded-xl mr-4 border border-orange-500/30"><ListPlus className="w-8 h-8 text-orange-400" /></div>}
-            {currentView === 'LIKED_SONGS' && <div className="p-2 bg-red-500/20 rounded-xl mr-4 border border-red-500/30"><Heart className="w-8 h-8 text-red-500 fill-current" /></div>}
-            {currentView === 'LIKED_ALBUMS' && <div className="p-2 bg-yellow-500/20 rounded-xl mr-4 border border-yellow-500/30"><Star className="w-8 h-8 text-yellow-500 fill-current" /></div>}
-            {currentView === 'LIKED_SONGS' ? 'Liked Songs' : currentView === 'LIKED_ALBUMS' ? 'Liked Albums' : currentView.toLowerCase()}
-        </h1>
+const LIBRARY_TITLES: Partial<Record<View, string>> = {
+    ARTISTS: 'Artists',
+    ALBUMS: 'Albums',
+    SONGS: 'Songs',
+    PLAYLISTS: 'Playlists',
+    LIKED_SONGS: 'Liked Songs',
+    LIKED_ALBUMS: 'Liked Albums',
+};
 
-        <div className="flex flex-wrap items-center w-full lg:w-auto gap-3">
-            {children}
-        </div>
+const pluralize = (count: number | undefined, singular: string) => {
+    const n = count ?? 0;
+    return `${n} ${n === 1 ? singular : `${singular}s`}`;
+};
+
+/**
+ * Title on the left, one right-aligned controls cluster on the same row. The
+ * header is positioned with its own z-index so filter menus always paint above
+ * the collection grid below it (see next-ui.css).
+ */
+const ViewHeader = ({ currentView, children }: { currentView: View, children?: React.ReactNode }) => (
+    <div data-nebula-view-header className="nebula-page-header">
+        {/* On phones the library tabs act as the heading. */}
+        <h1 className="nebula-page-title hidden md:block">
+            {LIBRARY_TITLES[currentView] ?? currentView.toLowerCase()}
+        </h1>
+        {children}
     </div>
 );
 
@@ -133,7 +145,7 @@ const MobileLibraryTabs = () => {
     ];
 
     return (
-        <div data-nebula-library-tabs className="md:hidden w-full overflow-x-auto pb-6 -mx-6 px-6 scrollbar-hide">
+        <div data-nebula-library-tabs className="md:hidden w-full overflow-x-auto pb-6 -mx-4 px-4 scrollbar-hide">
             <div className="flex items-center gap-2">
                 {tabs.map(tab => (
                     <button
@@ -166,18 +178,20 @@ const FilterBar: React.FC<{
     setSelectedYear: (val: string) => void;
     genres: string[];
     resetFilters: () => void;
-}> = ({ currentView, filter, setFilter, setPage, sortType, setSortType, selectedGenre, setSelectedGenre, selectedYear, setSelectedYear, genres, resetFilters }) => (
-    <div data-nebula-library-filters className="flex flex-wrap items-center gap-3 w-full md:w-auto p-1">
+    /** Extra view action rendered as the last control of the cluster (Playlists "New"). */
+    trailing?: React.ReactNode;
+}> = ({ currentView, filter, setFilter, setPage, sortType, setSortType, selectedGenre, setSelectedGenre, selectedYear, setSelectedYear, genres, resetFilters, trailing }) => (
+    <div data-nebula-library-filters className="flex items-center gap-2">
         {/* Text Search */}
-        <div className="relative flex-1 min-w-[200px] group">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-neutral-900 transition-colors dark:group-focus-within:text-white" />
+        <div data-nebula-library-search className="relative group">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-neutral-900 transition-colors dark:group-focus-within:text-white pointer-events-none" />
             <input
                 type="text"
                 value={filter}
                 onChange={(e) => { setFilter(e.target.value); setPage(0); }}
                 aria-label="Search collection"
                 placeholder="Search collection..."
-                className="w-full bg-white border border-neutral-300 rounded-xl py-2.5 pl-10 pr-8 text-sm focus:border-primary/60 focus:bg-white focus:outline-hidden text-neutral-900 transition-all placeholder-neutral-500 dark:bg-white/5 dark:border-white/5 dark:focus:border-white/20 dark:focus:bg-white/10 dark:text-white"
+                className="w-full pl-10 pr-8 text-sm transition-all"
             />
             {filter && (
                 <button onClick={() => setFilter('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900 p-1 rounded-full hover:bg-neutral-200 transition dark:hover:text-white dark:hover:bg-white/10" aria-label="Clear search">
@@ -200,7 +214,8 @@ const FilterBar: React.FC<{
                     { value: 'byYear', label: 'By Year' }
                 ]}
                 icon={<ArrowDownUp className="w-4 h-4" />}
-                className="min-w-[150px] flex-1 md:flex-none"
+                ariaLabel="Sort albums"
+                clearable={false}
             />
         )}
 
@@ -216,15 +231,16 @@ const FilterBar: React.FC<{
                     ]}
                     placeholder="All Genres"
                     icon={<Tag className="w-4 h-4" />}
-                    className="min-w-[150px] flex-1 md:flex-none"
+                    ariaLabel="Filter by genre"
                 />
 
                 <YearPicker value={selectedYear} onChange={(val) => { setSelectedYear(val); setPage(0); }} />
 
                 {(selectedGenre || selectedYear) && (
                     <button
+                        type="button"
                         onClick={resetFilters}
-                        className="p-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-600 hover:text-neutral-900 transition shadow-xs border border-neutral-200 dark:bg-white/5 dark:hover:bg-white/20 dark:text-neutral-300 dark:hover:text-white dark:border-white/5"
+                        data-nebula-library-clear
                         title="Clear Filters"
                         aria-label="Clear filters"
                     >
@@ -233,6 +249,7 @@ const FilterBar: React.FC<{
                 )}
             </>
         )}
+        {trailing}
     </div>
 );
 
@@ -354,25 +371,23 @@ export const LibraryView: React.FC = () => {
     const isSongView = currentView === 'SONGS' || currentView === 'LIKED_SONGS';
 
     return (
-        <div data-nebula-view="library" data-nebula-library={currentView.toLowerCase()} className="p-6 md:p-12 min-h-full flex flex-col max-w-[1800px] mx-auto animate-fade-in">
+        <div data-nebula-view="library" data-nebula-library={currentView.toLowerCase()} className="nebula-page pb-12 min-h-full flex flex-col animate-fade-in">
             <MobileLibraryTabs />
 
             <ViewHeader currentView={currentView}>
-                <FilterBar currentView={currentView} filter={filter} setFilter={setFilter} setPage={setPage} sortType={sortType} setSortType={handleSetSortType} selectedGenre={selectedGenre} setSelectedGenre={handleSetSelectedGenre} selectedYear={selectedYear} setSelectedYear={handleSetSelectedYear} genres={genres} resetFilters={resetFilters} />
-                {currentView === 'PLAYLISTS' && (
-                    <div className="flex items-center ml-auto lg:ml-0 pl-2">
-                        {isCreating ? (
-                            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-xl overflow-hidden border border-neutral-200 dark:border-white/10 animate-fade-in shadow-lg">
-                                <input autoFocus className="bg-transparent px-4 py-2.5 text-sm focus:outline-hidden text-neutral-900 dark:text-white w-40" placeholder="Playlist Name" value={newPlName} onChange={(e) => setNewPlName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newPlName.trim()) { createPlaylist(newPlName); setNewPlName(''); setIsCreating(false); } else if (e.key === 'Escape') setIsCreating(false); }} />
-                                <button onClick={() => setIsCreating(false)} className="px-3 text-neutral-500 hover:text-neutral-900 border-l border-neutral-200 dark:border-white/10 h-full transition-colors dark:text-neutral-400 dark:hover:text-white" aria-label="Cancel create playlist"><X className="w-4 h-4" /></button>
-                            </div>
-                        ) : (
-                            <button onClick={() => setIsCreating(true)} className="flex items-center justify-center px-6 py-2.5 bg-primary text-black rounded-full text-sm font-bold hover:bg-white transition shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95">
-                                <Plus className="w-5 h-5 mr-1" /> New
-                            </button>
-                        )}
-                    </div>
-                )}
+                <FilterBar
+                    currentView={currentView} filter={filter} setFilter={setFilter} setPage={setPage} sortType={sortType} setSortType={handleSetSortType} selectedGenre={selectedGenre} setSelectedGenre={handleSetSelectedGenre} selectedYear={selectedYear} setSelectedYear={handleSetSelectedYear} genres={genres} resetFilters={resetFilters}
+                    trailing={currentView === 'PLAYLISTS' && (isCreating ? (
+                        <div data-nebula-library-new-form className="flex items-center overflow-hidden">
+                            <input autoFocus aria-label="Playlist name" className="bg-transparent px-3 text-sm focus:outline-hidden w-40" placeholder="Playlist Name" value={newPlName} onChange={(e) => setNewPlName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && newPlName.trim()) { createPlaylist(newPlName); setNewPlName(''); setIsCreating(false); } else if (e.key === 'Escape') setIsCreating(false); }} />
+                            <button type="button" onClick={() => setIsCreating(false)} aria-label="Cancel create playlist"><X className="w-4 h-4" /></button>
+                        </div>
+                    ) : (
+                        <button type="button" data-nebula-library-new onClick={() => setIsCreating(true)} className="nebula-header-action">
+                            <Plus className="w-4 h-4" aria-hidden="true" /> New
+                        </button>
+                    ))}
+                />
             </ViewHeader>
 
             {shouldShowPagination && page > 0 && <PaginationControls />}
@@ -432,8 +447,8 @@ export const LibraryView: React.FC = () => {
                                     <div className={currentView === 'ARTISTS' ? 'text-center' : ''}>
                                         <h3 className="font-semibold text-neutral-900 dark:text-white truncate text-sm mb-1">{item.name}</h3>
                                         {currentView !== 'ARTISTS' && currentView !== 'PLAYLISTS' && <p className="text-xs text-neutral-600 dark:text-white/60 truncate">{item.artist}</p>}
-                                        {currentView === 'ARTISTS' && <p className="text-xs text-neutral-600 dark:text-white/60">{item.albumCount} Albums</p>}
-                                        {currentView === 'PLAYLISTS' && <p className="text-xs text-neutral-600 dark:text-white/60">{item.songCount} Songs</p>}
+                                        {currentView === 'ARTISTS' && <p className="text-xs text-neutral-600 dark:text-white/60">{pluralize(item.albumCount, 'Album')}</p>}
+                                        {currentView === 'PLAYLISTS' && <p className="text-xs text-neutral-600 dark:text-white/60">{pluralize(item.songCount, 'Song')}</p>}
                                     </div>
                                 </div>
                             ))}

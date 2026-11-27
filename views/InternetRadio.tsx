@@ -75,22 +75,18 @@ export const InternetRadioView: React.FC = () => {
     };
 
     return (
-        <div data-nebula-view="radio" className="p-6 md:p-8 pb-32 max-w-[1500px] mx-auto">
-            <div data-nebula-view-header className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div>
-                    <div className="mb-2 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary">
-                        <Radio className="h-4 w-4" />
-                        Internet Radio
+        <div data-nebula-view="radio" className="nebula-page pb-32">
+            <div data-nebula-view-header className="nebula-page-header">
+                <h1 className="nebula-page-title">Internet Radio</h1>
+                {/* The empty state carries its own centred action; never show two. */}
+                {radioStations.length > 0 && (
+                    <div className="nebula-page-actions">
+                        <button type="button" onClick={openNewStationModal} className="nebula-header-action">
+                            <Plus className="h-4 w-4" aria-hidden="true" />
+                            New Station
+                        </button>
                     </div>
-                    <h1 className="text-3xl font-black text-neutral-900 dark:text-white">Radio Stations</h1>
-                </div>
-                <button
-                    onClick={openNewStationModal}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-primary dark:hover:text-white"
-                >
-                    <Plus className="h-4 w-4" />
-                    New Station
-                </button>
+                )}
             </div>
 
             {radioStations.length === 0 ? (
@@ -98,11 +94,8 @@ export const InternetRadioView: React.FC = () => {
                     <Radio className="mx-auto mb-4 h-12 w-12 text-neutral-400 dark:text-white/30" />
                     <h2 className="text-lg font-bold text-neutral-900 dark:text-white">No stations yet</h2>
                     <p className="mt-2 text-sm text-neutral-600 dark:text-white/60">Add a station stream URL to start listening.</p>
-                    <button
-                        onClick={openNewStationModal}
-                        className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-black transition hover:brightness-110"
-                    >
-                        <Plus className="h-4 w-4" />
+                    <button type="button" onClick={openNewStationModal} className="nebula-header-action mt-6">
+                        <Plus className="h-4 w-4" aria-hidden="true" />
                         New Station
                     </button>
                 </div>

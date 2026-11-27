@@ -1,0 +1,79 @@
+/* Animated content-pane backgrounds (AppBackground.tsx, lazy chunk).
+   Kept deliberately faint: they sit behind text. Colours come from the theme
+   tokens so every preset and light/dark mode works without extra rules.
+   Infinite animations pause with html[data-window-hidden] (next-ui.css). */
+
+.nebula-app-background {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--next-text);
+  contain: strict;
+}
+
+/* Aurora (after Aceternity Aurora Background / Magic UI): blurred accent blobs drifting slowly. */
+.nebula-aurora { position: absolute; inset: 0; opacity: .42; }
+html.dark .nebula-aurora { opacity: .38; }
+.nebula-aurora > span {
+  position: absolute;
+  width: 62vmax;
+  height: 46vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: .32;
+  will-change: transform;
+  animation: nebula-aurora-drift 34s ease-in-out infinite alternate;
+}
+.nebula-aurora > span:nth-child(1) { top: -22vmax; left: -12vmax; background: rgb(var(--color-primary)); }
+.nebula-aurora > span:nth-child(2) { top: -8vmax; right: -24vmax; background: rgb(var(--color-secondary)); animation-duration: 42s; animation-delay: -12s; }
+.nebula-aurora > span:nth-child(3) { bottom: -30vmax; left: 18vmax; background: color-mix(in srgb, rgb(var(--color-primary)) 50%, rgb(var(--color-secondary))); opacity: .22; animation-duration: 48s; animation-delay: -24s; }
+@keyframes nebula-aurora-drift {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(9vmax, 5vmax, 0) rotate(14deg) scale(1.12); }
+  100% { transform: translate3d(-6vmax, 8vmax, 0) rotate(-8deg) scale(.94); }
+}
+
+/* Dot grid / grid (after Magic UI Dot Pattern / Grid Pattern): static pattern, soft radial mask. */
+.nebula-pattern {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 18%, #000 20%, transparent 78%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 18%, #000 20%, transparent 78%);
+}
+.nebula-pattern-dots {
+  background-image: radial-gradient(color-mix(in srgb, currentColor 26%, transparent) 1px, transparent 1.6px);
+  background-size: 22px 22px;
+}
+.nebula-pattern-grid > div {
+  position: absolute;
+  inset: -48px 0 0 -48px;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, currentColor 8%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, currentColor 8%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  will-change: transform;
+  animation: nebula-grid-drift 18s linear infinite;
+}
+@keyframes nebula-grid-drift { to { transform: translate3d(48px, 48px, 0); } }
+
+/* Canvas scenes: drawn at full strength in the accent, dimmed here. */
+.nebula-app-background-canvas { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--next-accent); }
+.nebula-app-background-canvas[data-scene="flickering-grid"] {
+  opacity: .32;
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 0%, #000 25%, transparent 85%);
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 0%, #000 25%, transparent 85%);
+}
+.nebula-app-background-canvas[data-scene="particles"] { opacity: .55; }
+.nebula-app-background-canvas[data-scene="ascii-field"] {
+  opacity: .15;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+}
+.nebula-app-background-canvas[data-scene="ascii-rain"] { opacity: .2; }
+html:not(.dark) .nebula-app-background-canvas[data-scene="ascii-field"] { opacity: .13; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nebula-next .nebula-app-background *, .nebula-next .nebula-app-background { animation: none !important; }
+}

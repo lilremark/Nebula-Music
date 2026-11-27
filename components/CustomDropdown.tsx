@@ -11,6 +11,8 @@ interface CustomDropdownProps {
     disabled?: boolean;
     ariaLabel?: string;
     clearable?: boolean;
+    /** Optional per-option inline style (e.g. previewing each font in its own typeface). */
+    optionStyle?: (value: string) => React.CSSProperties | undefined;
 }
 
 export const CustomDropdown: React.FC<CustomDropdownProps> = ({
@@ -23,6 +25,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     disabled = false,
     ariaLabel,
     clearable = true,
+    optionStyle,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -71,22 +74,26 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
     const displayText = selectedOption ? selectedOption.label : placeholder;
 
     return (
-        <div data-nebula-dropdown className={`relative ${className}`} ref={dropdownRef}>
+        // data-open lifts the open dropdown above later siblings (next-ui.css),
+        // so its menu is never painted over by content that follows it.
+        <div data-nebula-dropdown data-open={isOpen ? 'true' : undefined} className={`relative ${className}`} ref={dropdownRef}>
             {/* Trigger button */}
             <button
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
+                onKeyDown={(event) => { if (event.key === 'Escape' && isOpen) { event.stopPropagation(); setIsOpen(false); } }}
                 disabled={disabled}
                 aria-label={ariaLabel}
+                aria-haspopup="true"
                 aria-expanded={isOpen}
-                className={`w-full border rounded-xl py-2.5 px-4 text-sm focus:border-primary/60 focus:outline-hidden transition-all flex items-center justify-between gap-2
+                className="w-full border rounded-xl py-2.5 px-4 text-sm focus:border-primary/60 focus:outline-hidden transition-all flex items-center justify-between gap-2
                     bg-neutral-100 border-neutral-300 text-neutral-900 hover:bg-neutral-50
                     dark:bg-neutral-900 dark:border-white/10 dark:text-white dark:hover:bg-neutral-800
-                    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-100 dark:disabled:hover:bg-neutral-900 ${className}`}
+                    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-100 dark:disabled:hover:bg-neutral-900"
             >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     {icon && <span className="text-neutral-500 shrink-0">{icon}</span>}
-                    <span className={`truncate ${!selectedOption ? 'text-neutral-500' : 'text-neutral-900 dark:text-white'}`}>
+                    <span className={`truncate ${!selectedOption ? 'text-neutral-500' : 'text-neutral-900 dark:text-white'}`} style={selectedOption ? optionStyle?.(selectedOption.value) : undefined}>
                         {displayText}
                     </span>
                 </div>
@@ -116,6 +123,7 @@ export const CustomDropdown: React.FC<CustomDropdownProps> = ({
                                         ? 'bg-primary/20 text-primary font-semibold'
                                         : 'text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-white/10 dark:hover:text-white'
                                     }`}
+                                style={optionStyle?.(option.value)}
                             >
                                 {option.label}
                             </button>

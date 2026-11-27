@@ -7,16 +7,18 @@ import { useCrashReporting } from '../hooks/useCrashReporting';
 import { CrashReportsDisclosure } from '../components/CrashReportsDisclosure';
 import { useStore } from '../context/Store';
 import { useTheme } from '../context/ThemeContext';
-import { SettingPanel, ToggleRow } from '../components/ui';
+import { SegmentedControl, SettingPanel, ToggleRow } from '../components/ui';
 import { usePlatform } from '../platform/PlatformContext';
 import { isLocalDjPlatform } from '../platform/aiDjAvailability';
 import { InsecureHttpSetting } from '../components/InsecureHttpSetting';
 import { isInsecureHttpUrl, useInsecureHttpSetting } from '../hooks/useInsecureHttpSetting';
 import type { UpdaterState } from '../electron/updater';
-import { VISUALIZER_MODES, type ReplayGainSettings } from '../types';
+import { VISUALIZER_MODES, type ReplayGainSettings, type VisualizerMode } from '../types';
 import { EQ_PRESETS, EQ_BAND_LABELS, EQ_PRESET_LABELS } from '../constants/eqPresets';
 import { getAutoEqPreampDb } from '../services/eqPreamp';
 import { CustomDropdown } from '../components/CustomDropdown';
+import { BackgroundPicker, FontSelect, ThemePresetPicker } from '../components/appearance/AppearancePickers';
+import { getBackgroundOption, getFontOption, getThemePreset } from '../constants/appearance';
 import { getUpdateAction } from '../components/updateAction';
 import { AiDjSettings } from '../components/AiDjSettings';
 import {
@@ -29,8 +31,8 @@ import {
 import { useStreamDeckBridge } from '../context/StreamDeckBridgeContext';
 import { STREAM_DECK_DEFAULT_PORT } from '../services/streamDeckProtocol';
 
-const rowClass = 'flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-neutral-100 dark:hover:bg-white/5';
-const inputClass = 'w-full rounded-lg border border-neutral-300 bg-neutral-100 px-4 py-3 text-sm text-neutral-900 placeholder-neutral-500 transition-all hover:bg-neutral-50 focus:border-primary/60 focus:outline-hidden focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-neutral-950/70 dark:text-white dark:placeholder-white/30 dark:hover:bg-neutral-900';
+// Row, field and control styles live in next-ui.css (.nebula-setting-*, .nebula-control-*).
+const inputClass = 'nebula-control-input';
 const SETTINGS_JUMPS = [
     ['settings-server-connection', 'Connection'],
     ['settings-equalizer', 'Sound'],
@@ -40,84 +42,106 @@ const SETTINGS_JUMPS = [
     ['settings-desktop-integration', 'Desktop'],
 ] as const;
 
-const StaticRow = ({ label, description }: { label: string; description?: string }) => (
-    <div className={`${rowClass}`}>
-        <span className="min-w-0">
-            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
-            {description && <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</span>}
+/** Label (and optional description) on the left, one right-aligned control. */
+const SettingRow = ({ label, description, labelFor, controlWidth, children }: {
+    label: React.ReactNode;
+    description?: React.ReactNode;
+    /** id of a native control to associate the visible label with */
+    labelFor?: string;
+    controlWidth?: 'sm' | 'md';
+    children: React.ReactNode;
+}) => (
+    <div className="nebula-setting-row">
+        <span className="nebula-setting-copy">
+            {labelFor
+                ? <label htmlFor={labelFor} className="nebula-setting-label">{label}</label>
+                : <span className="nebula-setting-label">{label}</span>}
+            {description && <span className="nebula-setting-desc">{description}</span>}
         </span>
-        <span className="shrink-0 rounded-full bg-neutral-200 px-3 py-1 text-xs font-bold text-neutral-600 dark:bg-white/10 dark:text-white/50">On</span>
+        <span className="nebula-setting-control" data-width={controlWidth}>{children}</span>
     </div>
 );
 
-const ShortcutRow = ({ id, label, value, editingKey, setEditingKey }: { id: string; label: string; value: string, editingKey: string | null, setEditingKey: (k: string | null) => void }) => (
-    <div className={rowClass}>
-        <span className="text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
-        <button
-            type="button"
-            onClick={() => setEditingKey(id)}
-            className={`min-w-24 rounded-lg px-4 py-2 text-xs font-bold transition-all ${editingKey === id
-                ? 'bg-primary text-black shadow-lg shadow-primary/20'
-                : 'bg-neutral-200 text-neutral-800 hover:bg-neutral-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/15'
-                }`}
-        >
-            {editingKey === id ? 'Press key' : (value === ' ' ? 'SPACE' : value.toUpperCase())}
-        </button>
-    </div>
+const StaticRow = ({ label, description }: { label: string; description?: string }) => (
+    <SettingRow label={label} description={description}>
+        <span className="nebula-setting-value">On</span>
+    </SettingRow>
 );
+
+// Friendly names for stored KeyboardEvent.key values: [visible glyph, spoken name].
+const SHORTCUT_KEY_NAMES: Record<string, [string, string]> = {
+    ' ': ['Space', 'Space'],
+    Spacebar: ['Space', 'Space'],
+    ArrowLeft: ['←', 'Left arrow'],
+    ArrowRight: ['→', 'Right arrow'],
+    ArrowUp: ['↑', 'Up arrow'],
+    ArrowDown: ['↓', 'Down arrow'],
+    Escape: ['Esc', 'Escape'],
+    Enter: ['Enter', 'Enter'],
+    Backspace: ['⌫', 'Backspace'],
+    Delete: ['Del', 'Delete'],
+    Tab: ['Tab', 'Tab'],
+    PageUp: ['Page Up', 'Page Up'],
+    PageDown: ['Page Down', 'Page Down'],
+    Control: ['Ctrl', 'Control'],
+    Meta: ['Meta', 'Meta'],
+};
+
+const formatShortcutKey = (key: string): [string, string] => {
+    const named = SHORTCUT_KEY_NAMES[key];
+    if (named) return named;
+    if (key.length === 1) return [key.toUpperCase(), key.toUpperCase()];
+    const spaced = key.replace(/([a-z])([A-Z0-9])/g, '$1 $2');
+    return [spaced, spaced];
+};
+
+const ShortcutRow = ({ id, label, value, editingKey, setEditingKey }: { id: string; label: string; value: string, editingKey: string | null, setEditingKey: (k: string | null) => void }) => {
+    const editing = editingKey === id;
+    const [glyph, spoken] = formatShortcutKey(value);
+    return (
+        <SettingRow label={label}>
+            <button
+                type="button"
+                onClick={() => setEditingKey(id)}
+                data-editing={editing ? 'true' : undefined}
+                aria-label={editing ? `${label}: press a key` : `${label} shortcut: ${spoken}. Change`}
+                className="nebula-setting-kbd"
+            >
+                {editing ? 'Press a key' : <kbd>{glyph}</kbd>}
+            </button>
+        </SettingRow>
+    );
+};
 
 const ColorRow = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
-    <div className={rowClass}>
-        <div className="min-w-0">
-            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
-            <span className="mt-1 block font-mono text-xs text-neutral-600 dark:text-white/50">{value}</span>
-        </div>
-        <label className="relative h-10 w-14 shrink-0 overflow-hidden rounded-lg border border-neutral-300 bg-neutral-100 shadow-inner dark:border-white/15 dark:bg-white/10">
-            <span className="absolute inset-1 rounded-md" style={{ backgroundColor: value }} />
+    <SettingRow label={label}>
+        <label className="nebula-setting-swatch">
+            <span className="nebula-time">{value.toUpperCase()}</span>
+            <span className="nebula-setting-swatch-chip" style={{ backgroundColor: value }} aria-hidden="true" />
             <input
                 type="color"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 aria-label={label}
             />
         </label>
-    </div>
+    </SettingRow>
 );
 
-const OptionRow = ({ label, description, options, value, onChange }: {
+const OptionRow = ({ label, description, options, value, onChange, disabled }: {
     label: string;
     description?: string;
     options: { value: string; label: string; icon?: React.ElementType }[];
     value: string;
-    onChange: (v: string) => void
+    onChange: (v: string) => void;
+    disabled?: boolean;
 }) => (
-    <div className="px-5 py-4">
-        <div className="mb-3">
-            <span className="block text-sm font-semibold text-neutral-900 dark:text-white">{label}</span>
-            {description && <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">{description}</span>}
-        </div>
-        <div className="grid grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-white/5">
-            {options.map(opt => {
-                const Icon = opt.icon;
-                return (
-                    <button
-                        type="button"
-                        key={opt.value}
-                        onClick={() => onChange(opt.value)}
-                        className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-xs font-bold transition-all ${value === opt.value
-                            ? 'bg-white text-neutral-950 shadow-xs dark:bg-white dark:text-black'
-                            : 'text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
-                            }`}
-                    >
-                        {Icon && <Icon className="h-4 w-4" />}
-                        {opt.label}
-                    </button>
-                );
-            })}
-        </div>
-    </div>
+    <SettingRow label={label} description={description}>
+        <SegmentedControl ariaLabel={label} value={value} options={options} onChange={onChange} disabled={disabled} />
+    </SettingRow>
 );
+
+const sentenceCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
 
 const DesktopSettingsPanel = () => {
     const platform = usePlatform();
@@ -224,7 +248,7 @@ const CrashReportsPanel = () => {
                 disabled={saving}
                 onChange={(v) => void change(v)}
             />
-            <div className="px-5 py-4">
+            <div className="nebula-setting-block">
                 <CrashReportsDisclosure />
             </div>
         </SettingPanel>
@@ -283,71 +307,56 @@ const DesktopUpdatesPanel = () => {
 
     return (
         <SettingPanel icon={Download} title="Updates">
-            <div className="px-5 py-6">
-                <div className="flex flex-col items-center text-center">
-                    <span role="status" data-nebula-update-status={phase} className={`rounded-lg px-4 py-2 text-xs font-bold ${badgeClass}`}>
-                        {badgeLabel}
-                    </span>
-                    <span className="mt-3 block text-lg font-bold text-neutral-900 dark:text-white">
+            <SettingRow
+                label={(
+                    <span className="nebula-setting-title-line">
                         {currentVersion ? `Nebula ${currentVersion}` : 'Nebula'}
-                        {hasUpdate && updateState?.newVersion && <small className="block mt-1 text-sm font-medium text-neutral-600 dark:text-white/60">Version {updateState.newVersion} available</small>}
+                        <span role="status" data-nebula-update-status={phase} className={`nebula-setting-badge ${badgeClass}`}>
+                            {badgeLabel}
+                        </span>
                     </span>
-                    <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+                )}
+                description={(
+                    <>
+                        {hasUpdate && updateState?.newVersion && <span className="block">Version {updateState.newVersion} available</span>}
                         {updateState?.installMode === 'manual'
                             ? 'Unsigned macOS builds download updates from GitHub for manual installation.'
                             : updateState?.message ?? 'Updates are checked against GitHub Releases.'}
-                    </span>
-
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (action.kind === 'check') void platform.updater.check();
-                            if (action.kind === 'download') void platform.updater.openDownloadPage();
-                            if (action.kind === 'install') void platform.updater.installAndRestart();
-                        }}
-                        disabled={action.kind === 'none'}
-                        className="mt-5 flex w-56 items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                        {action.kind === 'download' || action.kind === 'install' ? (
-                            <Download className="h-4 w-4" />
-                        ) : (
-                            <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
+                        {updateState?.installMode === 'automatic' && phase === 'downloading' && (
+                            <span className="nebula-setting-progress">
+                                <span style={{ width: `${updateState?.progress ?? 0}%` }} />
+                            </span>
                         )}
-                        {action.label}
-                    </button>
-
-                    {updateState?.installMode === 'automatic' && phase === 'downloading' && (
-                        <div className="mt-3 h-1.5 w-56 overflow-hidden rounded-full bg-white/10">
-                            <div
-                                className="h-full rounded-full bg-primary transition-all"
-                                style={{ width: `${updateState?.progress ?? 0}%` }}
-                            />
-                        </div>
+                    </>
+                )}
+            >
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (action.kind === 'check') void platform.updater.check();
+                        if (action.kind === 'download') void platform.updater.openDownloadPage();
+                        if (action.kind === 'install') void platform.updater.installAndRestart();
+                    }}
+                    disabled={action.kind === 'none'}
+                    className="nebula-control-button"
+                    data-variant="primary"
+                >
+                    {action.kind === 'download' || action.kind === 'install' ? (
+                        <Download aria-hidden="true" />
+                    ) : (
+                        <RefreshCw aria-hidden="true" className={busy ? 'animate-spin' : ''} />
                     )}
-                </div>
-
-                <div className="mt-6 flex flex-col items-center">
-                    <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Update channel</span>
-                    <span className="mt-1 block text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-                        Beta delivers pre-release builds from the beta channel.
-                    </span>
-                    <div className={`mt-3 grid w-48 grid-cols-2 gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-white/5 ${enabled ? '' : 'pointer-events-none opacity-50'}`}>
-                        {[{ value: 'stable', label: 'Stable' }, { value: 'beta', label: 'Beta' }].map(option => (
-                            <button
-                                type="button"
-                                key={option.value}
-                                onClick={() => changeChannel(option.value)}
-                                className={`rounded-md px-3 py-2.5 text-xs font-bold transition-all ${channel === option.value
-                                    ? 'bg-white text-neutral-950 shadow-xs dark:bg-white dark:text-black'
-                                    : 'text-neutral-600 hover:bg-neutral-200 hover:text-neutral-900 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
-                                    }`}
-                            >
-                                {option.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+                    {action.label}
+                </button>
+            </SettingRow>
+            <OptionRow
+                label="Update channel"
+                description="Beta delivers pre-release builds from the beta channel."
+                options={[{ value: 'stable', label: 'Stable' }, { value: 'beta', label: 'Beta' }]}
+                value={channel}
+                onChange={changeChannel}
+                disabled={!enabled}
+            />
         </SettingPanel>
     );
 };
@@ -356,6 +365,7 @@ export const SettingsView: React.FC = () => {
     const platform = usePlatform();
     const { settings, updateSettings, connectToSubsonic, isDemoMode, credentials, visualizerMode, setVisualizerMode, disconnect } = useStore();
     const { mode, setTheme } = useTheme();
+    const activePreset = getThemePreset(settings.theme.preset);
     const streamDeckBridge = useStreamDeckBridge();
 
     const [url, setUrl] = useState(credentials?.serverUrl || '');
@@ -531,14 +541,14 @@ export const SettingsView: React.FC = () => {
 
     return (
         <div data-nebula-view="settings" className="h-full overflow-y-auto bg-neutral-50 text-neutral-900 custom-scrollbar dark:bg-neutral-950 dark:text-white">
-            <div data-nebula-settings-canvas className="w-full px-6 py-8 pb-32 lg:px-10">
-                <header data-nebula-settings-header className="mb-8">
+            <div data-nebula-settings-canvas>
+                <header data-nebula-settings-header>
                     <div data-nebula-settings-intro>
-                        <h1 className="text-3xl font-black tracking-tight text-neutral-950 dark:text-white">Settings</h1>
+                        <h1 className="nebula-page-title">Settings</h1>
                     </div>
                 </header>
 
-                <nav data-nebula-settings-jumps role="tablist" aria-label="Settings sections">
+                <nav data-nebula-settings-jumps className="nebula-segmented" role="tablist" aria-label="Settings sections">
                     {settingsJumps.map(([panelId, label]) => (
                         <button
                             key={panelId}
@@ -566,105 +576,110 @@ export const SettingsView: React.FC = () => {
                     ))}
                 </nav>
 
-                <div data-nebula-settings-stack id="settings-options" role="tabpanel" aria-labelledby={activeSettingsJump + '-tab'} className="space-y-5">
+                <div data-nebula-settings-stack id="settings-options" role="tabpanel" aria-labelledby={activeSettingsJump + '-tab'}>
                         {activeSettingsJump === 'settings-server-connection' && (<SettingPanel icon={Server} title="Server Connection" description="Subsonic-compatible server credentials are stored locally.">
-                            <form onSubmit={handleConnect} className="divide-y divide-neutral-200 dark:divide-white/10">
-                                <div className="grid grid-cols-2 gap-1 px-5 py-4">
-                                    {([
-                                        ['password', 'Password'],
-                                        ['apiKey', 'API Key'],
-                                    ] as const).map(([mode, label]) => (
-                                        <button
-                                            key={mode}
-                                            type="button"
-                                            onClick={() => {
-                                                setAuthMode(mode);
-                                                setPass('');
-                                                setConnStatus('idle');
-                                            }}
-                                            className={`rounded-lg px-3 py-2.5 text-xs font-bold transition ${authMode === mode
-                                                ? 'bg-neutral-900 text-white shadow-xs dark:bg-white dark:text-black'
-                                                : 'bg-neutral-100 text-neutral-600 hover:text-neutral-900 dark:bg-white/5 dark:text-white/50 dark:hover:text-white'
-                                                }`}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className="px-5 py-4">
-                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Server URL</label>
-                                    <input
-                                        type="text"
-                                        value={url}
-                                        onChange={e => setUrl(e.target.value)}
-                                        placeholder="https://music.example.com"
-                                        className={`${inputClass} ${isInsecure ? 'border-yellow-500/60 focus:border-yellow-500 focus:ring-yellow-500/20' : ''}`}
-                                    />
-                                    {isInsecure && (
-                                        <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400">
-                                            <ShieldAlert className="h-3.5 w-3.5" />
-                                            HTTPS is recommended for remote servers.
+                            <form onSubmit={handleConnect} className="nebula-setting-group">
+                                <OptionRow
+                                    label="Sign in with"
+                                    options={[{ value: 'password', label: 'Password' }, { value: 'apiKey', label: 'API Key' }]}
+                                    value={authMode}
+                                    onChange={mode => {
+                                        setAuthMode(mode as 'password' | 'apiKey');
+                                        setPass('');
+                                        setConnStatus('idle');
+                                    }}
+                                />
+                                <div className="nebula-setting-block">
+                                    <div className="nebula-setting-fields">
+                                        <div className="nebula-setting-field-wide">
+                                            <label htmlFor="settings-server-url" className="nebula-setting-field-label">Server URL</label>
+                                            <input
+                                                id="settings-server-url"
+                                                type="text"
+                                                value={url}
+                                                onChange={e => setUrl(e.target.value)}
+                                                placeholder="https://music.example.com"
+                                                data-warning={isInsecure ? 'true' : undefined}
+                                                className={inputClass}
+                                            />
+                                            {isInsecure && (
+                                                <p className="nebula-setting-hint" data-tone="warning">
+                                                    <ShieldAlert aria-hidden="true" />
+                                                    HTTPS is recommended for remote servers.
+                                                </p>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                                <div className={`grid gap-px divide-y divide-neutral-200 dark:divide-white/10 ${authMode === 'password' ? 'md:grid-cols-2 md:divide-x md:divide-y-0' : ''}`}>
-                                    {authMode === 'password' && <div className="px-5 py-4">
-                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Username</label>
-                                        <input
-                                            type="text"
-                                            value={user}
-                                            onChange={e => setUser(e.target.value)}
-                                            placeholder="admin"
-                                            className={inputClass}
-                                        />
-                                    </div>}
-                                    <div className="px-5 py-4">
-                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">{authMode === 'apiKey' ? 'API Key' : 'Password'}</label>
-                                        <input
-                                            type="password"
-                                            value={pass}
-                                            onChange={e => setPass(e.target.value)}
-                                            placeholder={authMode === 'apiKey' ? 'API key' : 'Password'}
-                                            className={inputClass}
-                                        />
+                                        {authMode === 'password' && <div>
+                                            <label htmlFor="settings-username" className="nebula-setting-field-label">Username</label>
+                                            <input
+                                                id="settings-username"
+                                                type="text"
+                                                value={user}
+                                                onChange={e => setUser(e.target.value)}
+                                                placeholder="admin"
+                                                className={inputClass}
+                                            />
+                                        </div>}
+                                        <div>
+                                            <label htmlFor="settings-password" className="nebula-setting-field-label">{authMode === 'apiKey' ? 'API Key' : 'Password'}</label>
+                                            <input
+                                                id="settings-password"
+                                                type="password"
+                                                value={pass}
+                                                onChange={e => setPass(e.target.value)}
+                                                placeholder={authMode === 'apiKey' ? 'API key' : 'Password'}
+                                                className={inputClass}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="px-5 py-4">
+                                <div className="nebula-setting-block">
                                     <InsecureHttpSetting setting={httpSetting} />
-                                    <div className="flex flex-col gap-3 sm:flex-row">
-                                        <button
-                                            type="submit"
-                                            disabled={connStatus === 'loading' || !httpSetting.canConnect(url)}
-                                            className="flex flex-1 items-center justify-center rounded-lg bg-neutral-900 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-neutral-800 disabled:cursor-wait disabled:opacity-70 dark:bg-white dark:text-black dark:hover:bg-primary"
-                                        >
-                                            {connStatus === 'loading' ? 'Connecting...' : 'Save & Connect'}
-                                        </button>
-                                        {(credentials || isDemoMode) && (
+                                    <div className="nebula-setting-actions">
+                                        <span className="nebula-setting-actions-status" aria-live="polite">
+                                            {connStatus === 'success' && (
+                                                <span className="nebula-setting-hint" data-tone="success">
+                                                    <CheckCircle aria-hidden="true" />
+                                                    Connected successfully
+                                                </span>
+                                            )}
+                                            {connStatus === 'error' && (
+                                                <span className="nebula-setting-hint" data-tone="error">
+                                                    <AlertCircle aria-hidden="true" />
+                                                    Connection failed
+                                                </span>
+                                            )}
+                                            {isDemoMode && connStatus === 'idle' && (
+                                                <span className="nebula-setting-hint">Currently in Demo Mode</span>
+                                            )}
+                                        </span>
+                                        {/* Demo mode has no server to disconnect, but still needs a way back to sign-in. */}
+                                        {isDemoMode && (
+                                            <button type="button" onClick={disconnect} className="nebula-control-button" data-variant="quiet">
+                                                <LogOut aria-hidden="true" />
+                                                Exit Demo Mode
+                                            </button>
+                                        )}
+                                        {credentials && !isDemoMode && (
                                             <button
                                                 type="button"
                                                 onClick={disconnect}
-                                                className="flex items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-3.5 text-sm font-bold text-red-600 transition hover:bg-red-500/20 dark:text-red-400"
+                                                className="nebula-control-button"
+                                                data-variant="danger"
                                             >
-                                                <LogOut className="h-4 w-4" />
+                                                <LogOut aria-hidden="true" />
                                                 Disconnect Server
                                             </button>
                                         )}
+                                        <button
+                                            type="submit"
+                                            disabled={connStatus === 'loading' || !httpSetting.canConnect(url)}
+                                            className="nebula-control-button"
+                                            data-variant="primary"
+                                        >
+                                            {connStatus === 'loading' ? 'Connecting...' : 'Save & Connect'}
+                                        </button>
                                     </div>
-                                    {connStatus === 'success' && (
-                                        <div className="mt-3 flex items-center justify-center gap-2 text-sm font-medium text-green-600 dark:text-green-400">
-                                            <CheckCircle className="h-4 w-4" />
-                                            Connected successfully
-                                        </div>
-                                    )}
-                                    {connStatus === 'error' && (
-                                        <div className="mt-3 flex items-center justify-center gap-2 text-sm font-medium text-red-600 dark:text-red-400">
-                                            <AlertCircle className="h-4 w-4" />
-                                            Connection failed
-                                        </div>
-                                    )}
-                                    {isDemoMode && connStatus === 'idle' && (
-                                        <p className="mt-3 text-center text-xs text-neutral-600 dark:text-white/50">Currently in Demo Mode</p>
-                                    )}
                                 </div>
                             </form>
                         </SettingPanel>)}
@@ -681,12 +696,11 @@ export const SettingsView: React.FC = () => {
                                     },
                                 })}
                             />
-                            <div className="px-5 py-4">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <div>
-                                        <span className="block text-sm font-semibold text-neutral-900 dark:text-white">Connection status</span>
-                                        <span className="mt-1 block max-w-xl text-xs leading-relaxed text-neutral-600 dark:text-white/50">
-                                            {streamDeckBridge.status.message || {
+                            <SettingRow
+                                label="Connection status"
+                                description={(
+                                    <>
+                                        {streamDeckBridge.status.message || {
                                                 disabled: 'The browser bridge is off.',
                                                 connecting: 'Looking for the Stream Deck plugin.',
                                                 'pairing-required': 'Connected locally. Enter the pairing code from Stream Deck.',
@@ -696,147 +710,153 @@ export const SettingsView: React.FC = () => {
                                                 'protocol-mismatch': 'The plugin and Nebula use incompatible bridge versions.',
                                                 error: 'The local bridge encountered an error.',
                                             }[streamDeckBridge.status.state]}
-                                        </span>
-                                    </div>
-                                    <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-                                        streamDeckBridge.status.state === 'connected'
-                                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                            : streamDeckBridge.status.state === 'disabled'
-                                                ? 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/50'
-                                                : streamDeckBridge.status.state === 'protocol-mismatch' || streamDeckBridge.status.state === 'error'
-                                                    ? 'bg-red-500/15 text-red-600 dark:text-red-400'
-                                                    : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                                    }`}>
-                                        {streamDeckBridge.status.state.replace('-', ' ')}
-                                    </span>
-                                </div>
-                                <div className="mt-3 rounded-md bg-neutral-100 px-3 py-2 font-mono text-xs text-neutral-700 dark:bg-black/30 dark:text-white/60">
-                                    {streamDeckBridge.status.endpoint}
-                                </div>
-                            </div>
-                            <div className="grid gap-px divide-y divide-neutral-200 dark:divide-white/10 md:grid-cols-2 md:divide-x md:divide-y-0">
-                                <div className="px-5 py-4">
-                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Local port</label>
+                                        {streamDeckBridge.status.endpoint && (
+                                            <span className="nebula-setting-endpoint">{streamDeckBridge.status.endpoint}</span>
+                                        )}
+                                    </>
+                                )}
+                            >
+                                <span className={`nebula-setting-badge ${
+                                    streamDeckBridge.status.state === 'connected'
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                                        : streamDeckBridge.status.state === 'disabled'
+                                            ? 'bg-neutral-200 text-neutral-600 dark:bg-white/10 dark:text-white/60'
+                                            : streamDeckBridge.status.state === 'protocol-mismatch' || streamDeckBridge.status.state === 'error'
+                                                ? 'bg-red-500/15 text-red-700 dark:text-red-400'
+                                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                                }`}>
+                                    {sentenceCase(streamDeckBridge.status.state.replace('-', ' '))}
+                                </span>
+                            </SettingRow>
+                            <SettingRow
+                                label="Local port"
+                                labelFor="stream-deck-port"
+                                description="Use the same port in the plugin. Disable the bridge before changing it."
+                                controlWidth="sm"
+                            >
+                                <input
+                                    id="stream-deck-port"
+                                    type="number"
+                                    min={1024}
+                                    max={65535}
+                                    value={settings.streamDeck?.port ?? STREAM_DECK_DEFAULT_PORT}
+                                    disabled={settings.streamDeck?.enabled}
+                                    onChange={(event) => {
+                                        const port = Number(event.target.value);
+                                        if (Number.isInteger(port) && port >= 1024 && port <= 65535) {
+                                            updateSettings({
+                                                streamDeck: {
+                                                    enabled: settings.streamDeck?.enabled ?? false,
+                                                    port,
+                                                },
+                                            });
+                                        }
+                                    }}
+                                    className={`${inputClass} nebula-time`}
+                                />
+                            </SettingRow>
+                            <form
+                                className="nebula-setting-row"
+                                onSubmit={async (event) => {
+                                    event.preventDefault();
+                                    setPairingError('');
+                                    try {
+                                        await streamDeckBridge.pair(pairingCode);
+                                        setPairingCode('');
+                                    } catch (error) {
+                                        setPairingError(error instanceof Error ? error.message : 'Pairing failed.');
+                                    }
+                                }}
+                            >
+                                <span className="nebula-setting-copy">
+                                    <label htmlFor="stream-deck-pairing-code" className="nebula-setting-label">Pairing code</label>
+                                    {pairingError && <span className="nebula-setting-hint" data-tone="error">{pairingError}</span>}
+                                </span>
+                                <span className="nebula-setting-control">
                                     <input
-                                        type="number"
-                                        min={1024}
-                                        max={65535}
-                                        value={settings.streamDeck?.port ?? STREAM_DECK_DEFAULT_PORT}
-                                        disabled={settings.streamDeck?.enabled}
-                                        onChange={(event) => {
-                                            const port = Number(event.target.value);
-                                            if (Number.isInteger(port) && port >= 1024 && port <= 65535) {
-                                                updateSettings({
-                                                    streamDeck: {
-                                                        enabled: settings.streamDeck?.enabled ?? false,
-                                                        port,
-                                                    },
-                                                });
+                                        id="stream-deck-pairing-code"
+                                        type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
+                                        maxLength={6}
+                                        value={pairingCode}
+                                        onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        placeholder="000000"
+                                        aria-label="Six-digit Stream Deck pairing code"
+                                        className={`${inputClass} nebula-time nebula-setting-code-input`}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={pairingCode.length !== 6 || !settings.streamDeck?.enabled}
+                                        className="nebula-control-button"
+                                        data-variant="primary"
+                                    >
+                                        Pair
+                                    </button>
+                                </span>
+                            </form>
+                            <div className="nebula-setting-block">
+                                <div className="nebula-setting-actions">
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setPairingError('');
+                                            try {
+                                                await streamDeckBridge.unpair();
+                                            } catch (error) {
+                                                setPairingError(error instanceof Error ? error.message : 'Unable to revoke pairing.');
                                             }
                                         }}
-                                        className={inputClass}
-                                    />
-                                    <p className="mt-2 text-xs text-neutral-600 dark:text-white/50">Use the same port in the plugin. Disable the bridge before changing it.</p>
+                                        className="nebula-control-button"
+                                        data-variant="danger"
+                                    >
+                                        <Unplug aria-hidden="true" />
+                                        Revoke pairing
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={streamDeckBridge.reconnect}
+                                        disabled={!settings.streamDeck?.enabled}
+                                        className="nebula-control-button"
+                                    >
+                                        <RefreshCw aria-hidden="true" />
+                                        Reconnect
+                                    </button>
                                 </div>
-                                <form
-                                    className="px-5 py-4"
-                                    onSubmit={async (event) => {
-                                        event.preventDefault();
-                                        setPairingError('');
-                                        try {
-                                            await streamDeckBridge.pair(pairingCode);
-                                            setPairingCode('');
-                                        } catch (error) {
-                                            setPairingError(error instanceof Error ? error.message : 'Pairing failed.');
-                                        }
-                                    }}
-                                >
-                                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Pairing code</label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            autoComplete="one-time-code"
-                                            maxLength={6}
-                                            value={pairingCode}
-                                            onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                                            placeholder="000000"
-                                            aria-label="Six-digit Stream Deck pairing code"
-                                            className={`${inputClass} font-mono tracking-[0.3em]`}
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={pairingCode.length !== 6 || !settings.streamDeck?.enabled}
-                                            className="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                                        >
-                                            Pair
-                                        </button>
-                                    </div>
-                                    {pairingError && <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{pairingError}</p>}
-                                </form>
-                            </div>
-                            <div className="flex flex-wrap gap-2 px-5 py-4">
-                                <button
-                                    type="button"
-                                    onClick={streamDeckBridge.reconnect}
-                                    disabled={!settings.streamDeck?.enabled}
-                                    className="flex items-center gap-2 rounded-lg bg-neutral-200 px-4 py-2 text-xs font-bold text-neutral-800 transition hover:bg-neutral-300 disabled:opacity-40 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
-                                >
-                                    <RefreshCw className="h-3.5 w-3.5" />
-                                    Reconnect
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        setPairingError('');
-                                        try {
-                                            await streamDeckBridge.unpair();
-                                        } catch (error) {
-                                            setPairingError(error instanceof Error ? error.message : 'Unable to revoke pairing.');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 rounded-lg bg-red-500/10 px-4 py-2 text-xs font-bold text-red-600 transition hover:bg-red-500/20 dark:text-red-400"
-                                >
-                                    <Unplug className="h-3.5 w-3.5" />
-                                    Revoke pairing
-                                </button>
                             </div>
                         </SettingPanel>)}
 
                         {activeSettingsJump === 'settings-equalizer' && (<SettingPanel icon={Sliders} title="Equalizer" description="Shape playback with presets or individual frequency bands.">
-                            <div className="px-5 py-4">
-                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                                    <ToggleRow
-                                        label="Enable Equalizer"
-                                        checked={settings.eq.enabled}
-                                        onChange={(v) => updateSettings({ eq: { ...settings.eq, enabled: v } })}
-                                    />
-                                    <div className="min-w-48">
-                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Preset</label>
-                                        <CustomDropdown
-                                            value={settings.eq.preset}
-                                            onChange={(newPreset) => {
-                                                const typedPreset = newPreset as typeof settings.eq.preset;
-                                                const newBands = typedPreset === 'custom' ? settings.eq.bands : { ...EQ_PRESETS[typedPreset] };
-                                                updateSettings({
-                                                    eq: {
-                                                        ...settings.eq,
-                                                        preset: typedPreset,
-                                                        bands: { ...settings.eq.bands, ...newBands }
-                                                    }
-                                                });
-                                            }}
-                                            options={Object.entries(EQ_PRESET_LABELS).map(([key, label]) => ({
-                                                value: key,
-                                                label,
-                                            }))}
-                                            disabled={!settings.eq.enabled}
-                                            className="text-xs font-bold"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className={`mt-6 transition-all duration-500 ${settings.eq.enabled ? 'opacity-100' : 'pointer-events-none opacity-40 grayscale'}`}>
+                            <ToggleRow
+                                label="Enable Equalizer"
+                                checked={settings.eq.enabled}
+                                onChange={(v) => updateSettings({ eq: { ...settings.eq, enabled: v } })}
+                            />
+                            <SettingRow label="Preset" controlWidth="md">
+                                <CustomDropdown
+                                    ariaLabel="Preset"
+                                    clearable={false}
+                                    value={settings.eq.preset}
+                                    onChange={(newPreset) => {
+                                        const typedPreset = newPreset as typeof settings.eq.preset;
+                                        const newBands = typedPreset === 'custom' ? settings.eq.bands : { ...EQ_PRESETS[typedPreset] };
+                                        updateSettings({
+                                            eq: {
+                                                ...settings.eq,
+                                                preset: typedPreset,
+                                                bands: { ...settings.eq.bands, ...newBands }
+                                            }
+                                        });
+                                    }}
+                                    options={Object.entries(EQ_PRESET_LABELS).map(([key, label]) => ({
+                                        value: key,
+                                        label,
+                                    }))}
+                                    disabled={!settings.eq.enabled}
+                                />
+                            </SettingRow>
+                            <div className="nebula-setting-block">
+                                <div className={`transition-all duration-500 ${settings.eq.enabled ? 'opacity-100' : 'pointer-events-none opacity-40 grayscale'}`}>
                                     <div className="relative overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100 p-5 dark:border-white/10 dark:bg-black/20">
                                         <div
                                             className="absolute inset-0 opacity-10"
@@ -908,14 +928,16 @@ export const SettingsView: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="mt-5 rounded-lg border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+                                <div className="nebula-setting-subcard mt-5">
                                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                         <div className="min-w-0">
-                                            <div className="flex items-center gap-2 text-sm font-bold text-neutral-900 dark:text-white">
-                                                <Headphones className="h-4 w-4 text-primary" />
-                                                AutoEq Headphone Calibration
+                                            <div className="nebula-setting-label">
+                                                <span className="nebula-setting-title-line">
+                                                    <Headphones className="h-4 w-4 text-primary" aria-hidden="true" />
+                                                    AutoEq Headphone Calibration
+                                                </span>
                                             </div>
-                                            <p className="mt-1 text-xs leading-relaxed text-neutral-600 dark:text-white/50">
+                                            <p className="nebula-setting-desc">
                                                 Search AutoEq fixed-band profiles and apply them to Nebula's 10-band EQ.
                                             </p>
                                             {settings.eq.autoEq && (
@@ -942,29 +964,31 @@ export const SettingsView: React.FC = () => {
                                             type="button"
                                             onClick={refreshAutoEqIndex}
                                             disabled={autoEqStatus === 'loading' || autoEqStatus === 'applying'}
-                                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs font-bold text-neutral-800 transition hover:bg-neutral-200 disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                                            className="nebula-control-button shrink-0"
                                         >
-                                            <RefreshCw className={`h-3.5 w-3.5 ${autoEqStatus === 'loading' ? 'animate-spin' : ''}`} />
+                                            <RefreshCw aria-hidden="true" className={autoEqStatus === 'loading' ? 'animate-spin' : ''} />
                                             Refresh
                                         </button>
                                     </div>
 
                                     <div className="mt-4">
-                                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-neutral-600 dark:text-white/50">Headphone or Earbud Model</label>
+                                        <label htmlFor="autoeq-search" className="nebula-setting-field-label">Headphone or earbud model</label>
                                         <div className="relative">
-                                            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" aria-hidden="true" />
                                             <input
+                                                id="autoeq-search"
                                                 type="search"
                                                 value={autoEqQuery}
                                                 onChange={(e) => setAutoEqQuery(e.target.value)}
                                                 placeholder="Search Sony WH-1000XM5, HD 650, AirPods Pro..."
-                                                className={`${inputClass} pl-10 pr-10`}
+                                                data-icon="both"
+                                                className={inputClass}
                                             />
                                             {(autoEqStatus === 'loading' || autoEqStatus === 'applying') && (
-                                                <Loader2 className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />
+                                                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />
                                             )}
                                         </div>
-                                        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-neutral-500 dark:text-white/35">
+                                        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-neutral-500 dark:text-white/45">
                                             <span>Index cache: {autoEqLastFetchedLabel}</span>
                                             <span>AutoEq preamp applies with the EQ to music and radio, providing headroom for boosted bands. Clearing the profile removes its preamp and keeps your band settings.</span>
                                         </div>
@@ -989,9 +1013,9 @@ export const SettingsView: React.FC = () => {
                                                         type="button"
                                                         onClick={() => applyAutoEqProfile(entry)}
                                                         disabled={autoEqStatus === 'applying'}
-                                                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-bold text-black transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+                                                        className="nebula-control-button shrink-0"
                                                     >
-                                                        {autoEqStatus === 'applying' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Headphones className="h-3.5 w-3.5" />}
+                                                        {autoEqStatus === 'applying' ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Headphones aria-hidden="true" />}
                                                         Apply AutoEq
                                                     </button>
                                                 </div>
@@ -1012,22 +1036,35 @@ export const SettingsView: React.FC = () => {
                         </SettingPanel>)}
 
                         {activeSettingsJump === 'settings-equalizer' && (<SettingPanel icon={Sliders} title="ReplayGain" description="Use loudness tags supplied by your music server to balance playback volume.">
-                            <div className="px-5 py-4">
-                                <label htmlFor="replaygain-mode" className="mb-2 block text-sm font-semibold text-neutral-900 dark:text-white">ReplayGain mode</label>
-                                <select id="replaygain-mode" className={inputClass} value={settings.replayGain.mode}
-                                    onChange={event => updateSettings({ replayGain: { ...settings.replayGain, mode: event.target.value as ReplayGainSettings['mode'] } })}>
-                                    <option value="off">Off</option>
-                                    <option value="track">Track</option>
-                                    <option value="album">Album</option>
-                                </select>
-                                <p className="mt-2 text-xs leading-relaxed text-neutral-600 dark:text-white/50">Track balances individual songs. Album preserves volume differences within an album. Missing tags use the other mode or the server fallback; untagged songs stay unchanged.</p>
-                            </div>
-                            <div className="px-5 py-4">
-                                <label htmlFor="replaygain-preamp" className="mb-3 block text-sm font-semibold text-neutral-900 dark:text-white">ReplayGain preamp: {settings.replayGain.preampDb > 0 ? '+' : ''}{settings.replayGain.preampDb} dB</label>
-                                <input id="replaygain-preamp" type="range" min="-12" max="12" step="0.5" className="w-full accent-primary"
+                            <SettingRow
+                                label="ReplayGain mode"
+                                description="Track balances individual songs. Album preserves volume differences within an album. Missing tags use the other mode or the server fallback; untagged songs stay unchanged."
+                                controlWidth="md"
+                            >
+                                {/* The trigger's accessible name matches the visible label. */}
+                                <span id="replaygain-mode" data-value={settings.replayGain.mode}>
+                                    <CustomDropdown
+                                        ariaLabel="ReplayGain mode"
+                                        clearable={false}
+                                        value={settings.replayGain.mode}
+                                        onChange={mode => updateSettings({ replayGain: { ...settings.replayGain, mode: mode as ReplayGainSettings['mode'] } })}
+                                        options={[
+                                            { value: 'off', label: 'Off' },
+                                            { value: 'track', label: 'Track' },
+                                            { value: 'album', label: 'Album' },
+                                        ]}
+                                    />
+                                </span>
+                            </SettingRow>
+                            <SettingRow
+                                label={<>ReplayGain preamp: <span className="nebula-time">{settings.replayGain.preampDb > 0 ? '+' : ''}{settings.replayGain.preampDb} dB</span></>}
+                                labelFor="replaygain-preamp"
+                                controlWidth="md"
+                            >
+                                <input id="replaygain-preamp" type="range" min="-12" max="12" step="0.5" className="nebula-setting-range"
                                     disabled={settings.replayGain.mode === 'off'} value={settings.replayGain.preampDb}
                                     onChange={event => updateSettings({ replayGain: { ...settings.replayGain, preampDb: Number(event.target.value) } })} />
-                            </div>
+                            </SettingRow>
                             <ToggleRow label="Prevent ReplayGain clipping" description="Limit gain using available peak tags. EQ boosts and overlapping fades can still raise the output level."
                                 checked={settings.replayGain.preventClipping} disabled={settings.replayGain.mode === 'off'}
                                 onChange={preventClipping => updateSettings({ replayGain: { ...settings.replayGain, preventClipping } })} />
@@ -1043,21 +1080,70 @@ export const SettingsView: React.FC = () => {
                                 value={mode}
                                 onChange={(v) => setTheme(v as 'light' | 'dark')}
                             />
-                            <ColorRow
-                                label="Primary Color"
-                                value={settings.theme.primaryColor}
-                                onChange={(v) => updateSettings({ theme: { ...settings.theme, primaryColor: v } })}
-                            />
-                            <ColorRow
-                                label="Secondary Color"
-                                value={settings.theme.secondaryColor}
-                                onChange={(v) => updateSettings({ theme: { ...settings.theme, secondaryColor: v } })}
-                            />
-                            <ColorRow
-                                label="Background Tint"
-                                value={settings.theme.backgroundColor}
-                                onChange={(v) => updateSettings({ theme: { ...settings.theme, backgroundColor: v } })}
-                            />
+                            <div className="nebula-appearance-block">
+                                <span className="nebula-setting-copy">
+                                    <span className="nebula-setting-label">Theme</span>
+                                    <span className="nebula-setting-desc">{activePreset.description}</span>
+                                </span>
+                                <ThemePresetPicker
+                                    value={activePreset.id}
+                                    mode={mode}
+                                    accents={[settings.theme.primaryColor, settings.theme.secondaryColor]}
+                                    onChange={(preset) => updateSettings({ theme: { ...settings.theme, preset } })}
+                                />
+                            </div>
+                            <SettingRow
+                                label="Font"
+                                description={activePreset.kind === 'ascii'
+                                    ? `${activePreset.name} uses JetBrains Mono while it is active. Your choice applies again with any other theme.`
+                                    : 'Typeface for the whole interface.'}
+                                controlWidth="md"
+                            >
+                                <FontSelect
+                                    value={getFontOption(settings.theme.font).id}
+                                    onChange={(font) => updateSettings({ theme: { ...settings.theme, font } })}
+                                />
+                            </SettingRow>
+                            {activePreset.id === 'default' ? (<>
+                                <ColorRow
+                                    label="Primary Color"
+                                    value={settings.theme.primaryColor}
+                                    onChange={(v) => updateSettings({ theme: { ...settings.theme, primaryColor: v } })}
+                                />
+                                <ColorRow
+                                    label="Secondary Color"
+                                    value={settings.theme.secondaryColor}
+                                    onChange={(v) => updateSettings({ theme: { ...settings.theme, secondaryColor: v } })}
+                                />
+                                <ColorRow
+                                    label="Background Tint"
+                                    value={settings.theme.backgroundColor}
+                                    onChange={(v) => updateSettings({ theme: { ...settings.theme, backgroundColor: v } })}
+                                />
+                            </>) : (
+                                <SettingRow
+                                    label="Custom colors"
+                                    description={`${activePreset.name} sets its own colors. Your primary and secondary colors are kept and return with the Nebula theme.`}
+                                >
+                                    <button
+                                        type="button"
+                                        className="nebula-control-button"
+                                        onClick={() => updateSettings({ theme: { ...settings.theme, preset: 'default' } })}
+                                    >
+                                        Use Nebula theme
+                                    </button>
+                                </SettingRow>
+                            )}
+                            <div className="nebula-appearance-block">
+                                <span className="nebula-setting-copy">
+                                    <span className="nebula-setting-label">Animated background</span>
+                                    <span className="nebula-setting-desc">A subtle backdrop behind the content area. Pauses when the window is hidden and stays still with reduced motion.</span>
+                                </span>
+                                <BackgroundPicker
+                                    value={getBackgroundOption(settings.theme.background).id}
+                                    onChange={(background) => updateSettings({ theme: { ...settings.theme, background } })}
+                                />
+                            </div>
                         </SettingPanel>)}
 
                         {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Monitor} title="Player Display">
@@ -1074,21 +1160,12 @@ export const SettingsView: React.FC = () => {
                         </SettingPanel>)}
 
                         {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Activity} title="Visualizer Style">
-                            <div className="grid grid-cols-3 gap-2 px-5 py-4">
-                                {VISUALIZER_MODES.map((mode) => (
-                                    <button
-                                        type="button"
-                                        key={mode}
-                                        onClick={() => setVisualizerMode(mode)}
-                                        className={`rounded-lg px-3 py-2.5 text-xs font-bold transition-all ${visualizerMode === mode
-                                            ? 'bg-primary text-black shadow-lg shadow-primary/20'
-                                            : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-white/5 dark:text-white/60 dark:hover:bg-white/10 dark:hover:text-white'
-                                            }`}
-                                    >
-                                        {mode}
-                                    </button>
-                                ))}
-                            </div>
+                            <OptionRow
+                                label="Style"
+                                options={VISUALIZER_MODES.map(visualizer => ({ value: visualizer, label: sentenceCase(visualizer) }))}
+                                value={visualizerMode}
+                                onChange={(v) => setVisualizerMode(v as VisualizerMode)}
+                            />
                         </SettingPanel>)}
 
                         {activeSettingsJump === 'settings-appearance' && (<SettingPanel icon={Layout} title="Navigation Items">

@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useStore } from '../context/Store';
 import { IAlbum, ISong } from '../types';
-import { Play, Shuffle, Heart, ListPlus, BarChart2, Disc, Pause, Info } from 'lucide-react';
+import { Play, Shuffle, Heart, ListPlus, BarChart2, Disc, Pause } from 'lucide-react';
 import { useAdaptiveColors } from '../hooks/useAdaptiveColors';
 import { containsSameSongs } from '../utils/playback';
 import { CollectionHeader } from '../components/CollectionHeader';
+import { AlbumCard, COLLECTION_GRID_CLASS } from '../components/DetailCards';
 
 export const AlbumDetailView: React.FC = () => {
     const { viewData, setView, service, playSong, togglePlay, isPlaying, queue, currentSongIndex, currentRadioStation, openPlaylistModal, toggleLike } = useStore();
@@ -120,23 +121,20 @@ export const AlbumDetailView: React.FC = () => {
                     className="w-full h-full object-cover"
                 />
             } metadata={
-                <div data-nebula-album-meta className="flex flex-wrap items-center gap-2 text-sm text-neutral-600 dark:text-white/60 mb-4">
+                <div data-nebula-album-meta>
                     <button
-                        className="hover:text-neutral-900 transition font-medium dark:hover:text-white"
+                        type="button"
+                        className="nebula-collection-artist"
+                        title={album.artist}
                         onClick={() => album.artistId && setView('ARTIST_DETAIL', album.artistId)}
                     >
                         {album.artist}
                     </button>
-                    {album.year && (
-                        <>
-                            <span className="text-neutral-400 dark:text-white/50">•</span>
-                            <span>{album.year}</span>
-                        </>
-                    )}
-                    <span className="text-neutral-400 dark:text-white/50">•</span>
-                    <span>{displayedSongCount} {displayedSongCount === 1 ? 'song' : 'songs'}, {formatTotalTime(displayedDuration)}</span>
+                    <p className="nebula-collection-facts">
+                        {album.year ? <>{album.year}<span aria-hidden="true"> · </span></> : null}
+                        {displayedSongCount} {displayedSongCount === 1 ? 'song' : 'songs'}, {formatTotalTime(displayedDuration)}
+                    </p>
                 </div>
-
             } actions={
                 <div data-nebula-album-options className="flex flex-wrap items-center gap-2">
                     <button
@@ -171,14 +169,14 @@ export const AlbumDetailView: React.FC = () => {
             } />
 
             {/* Main Content - full width */}
-            <div className="px-6 lg:px-10 pt-4" data-nebula-detail-content>
+            <div data-nebula-detail-content>
                 {/* Track List Section - with album-colored accent */}
                 <section
                     data-nebula-track-section
                     className="mb-8"
                 >
                     <div data-nebula-track-section-inner>
-                        <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-3">Tracks</h2>
+                        <h2 className="sr-only">Tracks</h2>
                         <div data-nebula-track-list>
                             {album.songs?.map((song, idx) => {
                                 const isCurrent = !currentRadioStation && currentSong?.id === song.id;
@@ -189,15 +187,15 @@ export const AlbumDetailView: React.FC = () => {
                                 return (
                                     <React.Fragment key={song.id}>
                                         {showDiscHeader && (
-                                            <div className="flex items-center gap-2 px-4 py-2 bg-neutral-200 dark:bg-white/5 text-xs font-bold text-neutral-700 dark:text-white/50 uppercase tracking-wide border-b border-neutral-300 dark:border-white/10">
-                                                <Disc className="w-3.5 h-3.5 text-primary" />
+                                            <div data-nebula-disc-header className="flex items-center gap-2">
+                                                <Disc className="w-3.5 h-3.5" aria-hidden="true" />
                                                 Disc {discNumber}
                                             </div>
                                         )}
                                         <div
                                             data-nebula-track-row
                                             data-current={isCurrent}
-                                            className={`group flex items-center gap-4 px-5 py-4 cursor-pointer transition border-b border-neutral-200 dark:border-white/5 last:border-0 hover:bg-neutral-100 dark:hover:bg-white/5 ${isCurrent ? 'bg-neutral-100 dark:bg-white/5' : ''}`}
+                                            className="group flex items-center gap-4 cursor-pointer"
                                             onClick={() => album.songs && playSong(song, album.songs)}
                                         >
                                             {/* Track number / Play */}
@@ -213,7 +211,7 @@ export const AlbumDetailView: React.FC = () => {
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <span className={`text-xs font-mono group-hover:opacity-0 transition ${isCurrent ? 'text-primary' : 'text-neutral-600 dark:text-white/60'}`}>
+                                                        <span className={`nebula-time group-hover:opacity-0 transition ${isCurrent ? 'text-primary' : 'text-neutral-600 dark:text-white/60'}`}>
                                                             {idx + 1}
                                                         </span>
                                                         <Play className="w-3.5 h-3.5 text-neutral-900 dark:text-white absolute inset-0 m-auto opacity-0 group-hover:opacity-100 transition fill-current" />
@@ -235,14 +233,14 @@ export const AlbumDetailView: React.FC = () => {
 
                                             {/* Play count */}
                                             {song.playCount && song.playCount > 0 && (
-                                                <div className="hidden md:flex items-center gap-1 text-[10px] text-neutral-500 dark:text-white/50 font-mono shrink-0">
-                                                    <BarChart2 className="w-3 h-3" />
+                                                <div data-nebula-track-plays className="nebula-time hidden md:flex items-center gap-1 shrink-0" title={`${song.playCount} plays`}>
+                                                    <BarChart2 className="w-3 h-3" aria-hidden="true" />
                                                     {song.playCount}
                                                 </div>
                                             )}
 
                                             {/* Duration */}
-                                            <span data-nebula-track-duration className="text-xs text-neutral-500 dark:text-white/60 font-mono w-10 text-right shrink-0">
+                                            <span data-nebula-track-duration className="nebula-time text-right shrink-0">
                                                 {formatTime(song.duration)}
                                             </span>
 
@@ -280,54 +278,32 @@ export const AlbumDetailView: React.FC = () => {
 
                 {/* About Section */}
                 {album.info?.notes && (
-                    <div className="mb-8 mt-4">
-                        <div
-                            data-nebula-about
-                            className="flex items-start gap-3 p-4 bg-neutral-100 border border-neutral-200 rounded-lg cursor-pointer hover:bg-neutral-200 transition dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/[0.07]"
-                            onClick={() => setShowFullNotes(!showFullNotes)}
-                        >
-                            <Info className="w-4 h-4 text-neutral-500 dark:text-white/60 shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-xs font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-1">About</h3>
-                                <p className={`text-sm text-neutral-700 dark:text-white/70 leading-relaxed ${!showFullNotes ? 'line-clamp-2' : ''}`}>
-                                    {album.info.notes}
-                                </p>
-                                {album.info.notes.length > 120 && (
-                                    <span className="text-xs text-primary mt-1 inline-block">
-                                        {showFullNotes ? 'Show less' : 'Read more'}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                    <section data-nebula-about className="nebula-detail-section">
+                        <h2 className="nebula-section-title">About</h2>
+                        <p className={`nebula-about-copy ${!showFullNotes ? 'line-clamp-3' : ''}`}>
+                            {album.info.notes}
+                        </p>
+                        {album.info.notes.length > 120 && (
+                            <button type="button" className="nebula-text-button" aria-expanded={showFullNotes} onClick={() => setShowFullNotes(!showFullNotes)}>
+                                {showFullNotes ? 'Show less' : 'Read more'}
+                            </button>
+                        )}
+                    </section>
                 )}
 
                 {/* Related Albums */}
                 {relatedAlbums.length > 0 && (
-                    <section className="mb-8" data-nebula-related>
-                        <div className="border-t border-neutral-200 dark:border-white/10 pt-6 mb-4" />
-                        <h2 className="text-sm font-semibold text-neutral-700 dark:text-white/60 uppercase tracking-wide mb-4">More by {album.artist}</h2>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                    <section className="nebula-detail-section" data-nebula-related>
+                        <h2 className="nebula-section-title">More by {album.artist}</h2>
+                        <div data-nebula-collection-grid className={COLLECTION_GRID_CLASS}>
                             {relatedAlbums.map((related) => (
-                                <div
+                                <AlbumCard
                                     key={related.id}
-                                    className="group cursor-pointer"
-                                    onClick={() => setView('ALBUM_DETAIL', related.id)}
-                                >
-                                    <div className="relative aspect-square rounded-lg overflow-hidden bg-neutral-200 dark:bg-neutral-900 mb-2">
-                                        <img
-                                            src={service.getCoverArtUrl(related.coverArt || related.id, 200)}
-                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                            loading="lazy"
-                                            alt={related.name}
-                                        />
-                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                                            <Play className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition fill-current" />
-                                        </div>
-                                    </div>
-                                    <h3 className="text-xs font-medium text-neutral-900 dark:text-white truncate">{related.name}</h3>
-                                    <p className="text-[10px] text-neutral-600 dark:text-white/60">{related.year}</p>
-                                </div>
+                                    title={related.name}
+                                    subtitle={related.year}
+                                    imageUrl={service.getCoverArtUrl(related.coverArt || related.id, 400)}
+                                    onOpen={() => setView('ALBUM_DETAIL', related.id)}
+                                />
                             ))}
                         </div>
                     </section>

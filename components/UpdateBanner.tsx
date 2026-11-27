@@ -19,28 +19,28 @@ export const UpdateBanner: React.FC = () => {
   if (!state || !shouldShowDownloadedUpdateBanner(state) || dismissed) return null;
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-900 dark:text-emerald-300">
-      <div className="flex items-center gap-2">
-        <Download className="h-4 w-4 shrink-0" />
-        <span>
-          Nebula {state.newVersion ?? ''} is ready to install.
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
+    // Shared banner layout and tones: .nebula-banner in next-ui.css.
+    <div className="nebula-banner nebula-banner-row" data-tone="success">
+      <Download className="nebula-banner-icon" aria-hidden="true" />
+      <span className="nebula-banner-copy">
+        Nebula {state.newVersion ?? ''} is ready to install.
+      </span>
+      <div className="nebula-banner-actions">
         <button
           type="button"
           onClick={() => platform.updater.installAndRestart()}
-          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-emerald-500"
+          className="nebula-banner-button"
+          data-variant="primary"
         >
           Restart &amp; Install
         </button>
         <button
           type="button"
           onClick={() => setDismissed(true)}
-          className="p-1 rounded text-emerald-800 hover:bg-emerald-500/20 dark:text-emerald-200"
+          className="nebula-banner-dismiss"
           aria-label="Dismiss update notice"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
     </div>

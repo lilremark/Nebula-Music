@@ -15,6 +15,8 @@ interface PlaybackProgressProps {
     trackClassName?: string;
     trackStyle?: React.CSSProperties;
     showHandle?: boolean;
+    /** 'dark' keeps the bright elapsed fill in light theme (for surfaces that stay dark, e.g. Zen controls). */
+    surface?: 'auto' | 'dark';
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -64,6 +66,7 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     trackClassName = '',
     trackStyle,
     showHandle = true,
+    surface = 'auto',
 }) => {
     const trackRef = useRef<HTMLDivElement>(null);
     const [barCount, setBarCount] = useState(320);
@@ -89,7 +92,9 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
     const resolvedBaseColor = baseColor || withAlpha(accentColor, effectiveMode === 'waveform' ? 0.28 : 0.18);
     const resolvedMarkerColor = markerColor || accentColor;
     const resolvedSecondaryColor = secondaryColor || resolvedMarkerColor;
-    // Keep the elapsed bar bright even when the artwork palette is dark.
+    // Keep the elapsed bar bright even when the artwork palette is dark. Light
+    // theme swaps this for a dark artwork mix in next-ui.css using the
+    // --nebula-progress-* variables below, so the inline (dark) output is unchanged.
     const progressGradient = `linear-gradient(90deg, color-mix(in srgb, white 88%, ${accentColor}), color-mix(in srgb, white 75%, ${resolvedSecondaryColor}))`;
     const markerGradient = `linear-gradient(180deg, ${resolvedSecondaryColor}, ${accentColor})`;
 
@@ -97,25 +102,29 @@ export const PlaybackProgress: React.FC<PlaybackProgressProps> = ({
         <div
             ref={trackRef}
             data-nebula-progress={effectiveMode}
+            data-nebula-progress-surface={surface}
             className={`relative ${effectiveMode === 'waveform' ? 'overflow-hidden' : 'overflow-visible'} ${trackClassName}`}
             style={{
                 ...trackStyle,
-            }}
+                '--nebula-progress-accent': accentColor,
+                '--nebula-progress-secondary': resolvedSecondaryColor,
+            } as React.CSSProperties}
         >
             {effectiveMode === 'waveform' ? (
                 <>
-                    <div className="absolute inset-0">
+                    <div className="absolute inset-0" data-nebula-progress-base>
                         <WaveformBars peaks={displayPeaks!} color={resolvedBaseColor} />
                     </div>
                     <div
-                    className="absolute inset-0 overflow-hidden pointer-events-none"
+                        data-nebula-progress-played
+                        className="absolute inset-0 overflow-hidden pointer-events-none"
                         style={{ clipPath: progressClipPath }}
                     >
                         <WaveformBars peaks={displayPeaks!} color={accentColor} secondary={resolvedSecondaryColor} />
                     </div>
                 </>
             ) : (
-                <div className="absolute inset-0 overflow-hidden" style={{ borderRadius: 'inherit', backgroundColor: resolvedBaseColor }}>
+                <div data-nebula-progress-track className="absolute inset-0 overflow-hidden" style={{ borderRadius: 'inherit', backgroundColor: resolvedBaseColor }}>
                     <div data-nebula-progress-fill className="absolute inset-0" style={{ clipPath: progressClipPath, backgroundImage: progressGradient }} />
                 </div>
             )}

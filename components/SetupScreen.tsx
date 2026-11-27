@@ -15,6 +15,7 @@ import logo from '../logo.svg';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
+import { SegmentedControl } from './ui/SegmentedControl';
 import { WindowControls } from './window/WindowControls';
 import { InsecureHttpSetting } from './InsecureHttpSetting';
 import { isInsecureHttpUrl, useInsecureHttpSetting } from '../hooks/useInsecureHttpSetting';
@@ -81,34 +82,24 @@ export const SetupScreen: React.FC = () => {
             </div>
 
             <form onSubmit={handleConnect} className="space-y-2">
-              <div className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-100 p-1 dark:bg-white/5">
-                {([
-                  ['password', 'Password'],
-                  ['apiKey', 'API Key'],
-                ] as const).map(([mode, label]) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => {
-                      setAuthMode(mode);
-                      setPass('');
-                      resetError();
-                    }}
-                    className={`rounded-lg px-3 py-2 text-xs font-bold transition ${authMode === mode
-                      ? 'bg-white text-neutral-950 shadow-xs dark:bg-white dark:text-black'
-                      : 'text-neutral-500 hover:text-neutral-900 dark:text-white/50 dark:hover:text-white'
-                      }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <SegmentedControl
+                ariaLabel="Sign-in method"
+                stretch
+                value={authMode}
+                options={[{ value: 'password', label: 'Password' }, { value: 'apiKey', label: 'API Key' }]}
+                onChange={(mode) => {
+                  setAuthMode(mode);
+                  setPass('');
+                  resetError();
+                }}
+              />
 
               <div>
-                <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
+                <label htmlFor="setup-server-url" className="nebula-setting-field-label">
                   Server URL
                 </label>
                 <Input
+                  id="setup-server-url"
                   required
                   type="text"
                   value={url}
@@ -124,10 +115,11 @@ export const SetupScreen: React.FC = () => {
               </div>
 
               {authMode === 'password' && <div>
-                <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
+                <label htmlFor="setup-username" className="nebula-setting-field-label">
                   Username
                 </label>
                 <Input
+                  id="setup-username"
                   required
                   type="text"
                   value={user}
@@ -143,10 +135,11 @@ export const SetupScreen: React.FC = () => {
               </div>}
 
               <div>
-                <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-white/40">
+                <label htmlFor="setup-password" className="nebula-setting-field-label">
                   {authMode === 'apiKey' ? 'API Key' : 'Password'}
                 </label>
                 <Input
+                  id="setup-password"
                   required
                   type="password"
                   value={pass}
@@ -183,18 +176,18 @@ export const SetupScreen: React.FC = () => {
                   loading={status === 'loading'}
                   disabled={!httpSetting.canConnect(url)}
                   icon={status === 'loading' ? undefined : <ArrowRight className="h-4 w-4" />}
-                  className="w-full justify-center rounded-2xl"
+                  className="w-full justify-center"
                 >
                   Connect Server
                 </Button>
 
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="ghost"
                   size="md"
                   icon={<Sparkles className="h-4 w-4" />}
                   onClick={enableDemoMode}
-                  className="w-full justify-center rounded-2xl"
+                  className="w-full justify-center"
                 >
                   Try Demo Mode
                 </Button>

@@ -148,11 +148,20 @@ export interface AutoEqProfileSelection {
   appliedAt: number;
 }
 
+export type SidebarSectionId = 'discover' | 'library' | 'playlists';
+export type SidebarSectionState = Record<SidebarSectionId, boolean>;
+
 export interface AppSettings {
   theme: {
     primaryColor: string; // hex
     secondaryColor: string; // hex
     backgroundColor: string; // hex - for background tint
+    /** Theme preset id (constants/appearance.ts); unknown ids fall back to 'default'. */
+    preset: import('./constants/appearance').ThemePresetId;
+    /** UI font id; ASCII presets override it with JetBrains Mono while active. */
+    font: import('./constants/appearance').FontId;
+    /** Animated content-pane background id; 'none' mounts nothing. */
+    background: import('./constants/appearance').BackgroundId;
   };
   sidebar: {
     collapsed: boolean;
@@ -163,6 +172,8 @@ export interface AppSettings {
     showAlbums: boolean;
     showSongs: boolean;
     showPlaylists: boolean;
+    /** Disclosure state of the navigation groups; `true` means expanded. */
+    sections: SidebarSectionState;
   };
   shortcuts: ShortcutBindings;
   eq: {

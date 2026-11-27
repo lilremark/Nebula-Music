@@ -51,7 +51,6 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
     const { dj, playQueueIndex } = useStore();
     const voice = useDjPlayback();
     const { currentTime, duration, setCurrentTime } = useAudioProgress(audioRef);
-    const [isHoveringVolume, setIsHoveringVolume] = useState(false);
     const [visualProgress, setVisualProgress] = useState(0);
     const [isQueueCollapsed, setIsQueueCollapsed] = useState(false);
 
@@ -197,10 +196,10 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                         }}
                         trackClassName={`cursor-pointer transition-all duration-300 ${progressMode === 'waveform'
                             ? 'h-16 bg-transparent rounded-none'
-                            : 'h-2 bg-neutral-300 dark:bg-white/10 rounded'
+                            : 'h-2 dark:bg-white/10 rounded'
                             }`}
                     />
-                    <div className="flex justify-between mt-1.5 text-[10px] text-neutral-600 dark:text-white/60 font-mono tabular-nums">
+                    <div className="nebula-time flex justify-between mt-1.5 text-[11px] text-neutral-600 dark:text-white/60">
                         <span>{formatTime(voice.speech ? voice.position : currentTime)}</span>
                         <span>{formatTime(voice.speech ? voice.duration : duration)}</span>
                     </div>
@@ -273,37 +272,29 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                 {/* Volume */}
                 <div
                     data-nebula-sidebar-player-volume
-                    className="flex items-center justify-center gap-1 shrink-0 mt-3"
-                    onMouseEnter={() => setIsHoveringVolume(true)}
-                    onMouseLeave={() => setIsHoveringVolume(false)}
+                    className="nebula-playback-volume flex w-[160px] shrink-0 mt-2"
                 >
                     <button
+                        type="button"
                         onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
-                        className="p-2 text-neutral-600 dark:text-white/60 hover:text-neutral-900 dark:hover:text-white transition-colors"
                         aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+                        title={volume === 0 ? 'Unmute' : 'Mute'}
                     >
                         {volume === 0 ? <VolumeX className="w-5 h-5" /> :
                             volume < 0.5 ? <Volume1 className="w-5 h-5" /> :
                                 <Volume2 className="w-5 h-5" />}
                     </button>
-                    <div className={`overflow-hidden transition-all duration-200 ${isHoveringVolume ? 'w-24' : 'w-0'}`}>
-                        <div className="relative h-1 bg-neutral-300 dark:bg-white/10 rounded-full my-3">
-                            <div
-                                className="absolute inset-y-0 left-0 bg-neutral-600 dark:bg-white/60 rounded-full"
-                                style={{ width: `${volume * 100}%` }}
-                            />
-                            <input
-                                type="range"
-                                aria-label="Volume"
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                value={volume}
-                                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            />
-                        </div>
-                    </div>
+                    <input
+                        type="range"
+                        aria-label="Volume"
+                        title={`Volume ${Math.round(volume * 100)}%`}
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={volume}
+                        onChange={(e) => setVolume(parseFloat(e.target.value))}
+                        style={{ '--progress': `${volume * 100}%` } as React.CSSProperties}
+                    />
                 </div>
             </div>
 
@@ -316,7 +307,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                     >
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-neutral-600 dark:text-white/60 uppercase tracking-wider">Up Next</span>
-                            <span className="text-[10px] font-mono text-neutral-500 dark:text-white/50">{queue.length - (currentSongIndex + 1)} tracks</span>
+                            <span className="nebula-time text-[11px] font-medium text-neutral-500 dark:text-white/50">{queue.length - (currentSongIndex + 1) === 1 ? '1 track' : `${queue.length - (currentSongIndex + 1)} tracks`}</span>
                         </div>
                         {isQueueCollapsed ? (
                             <PanelRightClose className="w-4 h-4 text-neutral-500 dark:text-white/50 rotate-90" />
@@ -350,7 +341,7 @@ export const NowPlayingPanel: React.FC<NowPlayingPanelProps> = ({ onExpand, onCo
                                         <p className="text-xs font-medium text-neutral-900 dark:text-white truncate">{song.title}</p>
                                         <p className="text-[10px] text-neutral-600 dark:text-white/60 truncate">{song.artist}</p>
                                     </div>
-                                    <span className="text-[10px] font-mono text-neutral-500 dark:text-white/50 truncate">
+                                    <span className="nebula-time text-[11px] text-neutral-500 dark:text-white/50 shrink-0">
                                         {formatTime(song.duration)}
                                     </span>
                                 </div>
