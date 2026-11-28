@@ -10,7 +10,7 @@ import {
   LockKeyhole,
 } from 'lucide-react';
 import { useStore } from '../context/Store';
-import { CoverFlow } from './CoverFlow';
+import { QuantumNebula } from './QuantumNebula';
 import logo from '../logo.svg';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -62,14 +62,14 @@ export const SetupScreen: React.FC = () => {
         <WindowControls />
       </div>
 
-      {/* Left: cover flow (hidden below lg) */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-[55%] lg:block">
-        <CoverFlow />
+      {/* Left: interactive Quantum Nebula blending slowly toward the right (hidden below lg) */}
+      <div className="absolute inset-y-0 left-0 z-0 hidden w-[75%] lg:block">
+        <QuantumNebula />
       </div>
 
       {/* Right: sign-in form */}
-      <div className="absolute inset-y-0 right-0 flex w-full items-center justify-center px-5 py-6 lg:w-[45%]">
-        <div className="w-full max-w-sm">
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-full items-center justify-center px-5 py-6 lg:w-[45%]">
+        <div className="pointer-events-auto w-full max-w-sm">
           <Card
             elevation={1}
             hover={false}
