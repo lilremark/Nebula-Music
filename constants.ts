@@ -2,7 +2,7 @@
 import { IAlbum, IArtist, ISong, IPlaylist } from './types';
 
 // Release notes for this version: docs/release/v<APP_VERSION>.md (shown in What's New).
-export const APP_VERSION = '3.0.2-beta.3';
+export const APP_VERSION = '3.0.2-beta.4';
 
 export const MOCK_ARTISTS: IArtist[] = [
   { id: 'ar1', name: 'Neon Void', albumCount: 2 },
